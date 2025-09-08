@@ -32,12 +32,27 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 	var block *Block
 	var err error
 
-	// For now, always get the best block
-	// TODO: Implement proper block lookup by hash and index
-	block, err = b.vechainClient.GetBestBlock()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get best block: %v", err), http.StatusInternalServerError)
-		return
+	if request.BlockIdentifier.Hash != nil && *request.BlockIdentifier.Hash != "" {
+		// Get block by hash
+		block, err = b.vechainClient.GetBlockByHash(*request.BlockIdentifier.Hash)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get block by hash: %v", err), http.StatusInternalServerError)
+			return
+		}
+	} else if request.BlockIdentifier.Index != nil {
+		// Get block by number
+		block, err = b.vechainClient.GetBlockByNumber(*request.BlockIdentifier.Index)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get block by number: %v", err), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Get best block
+		block, err = b.vechainClient.GetBestBlock()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get best block: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Convert to Rosetta format
@@ -132,11 +147,22 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 	var block *Block
 	var err error
 
-	// For now, always get the best block
-	// TODO: Implement proper block lookup by hash and index
-	block, err = b.vechainClient.GetBestBlock()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get best block: %v", err), http.StatusInternalServerError)
+	if request.BlockIdentifier.Hash != "" {
+		// Get block by hash
+		block, err = b.vechainClient.GetBlockByHash(request.BlockIdentifier.Hash)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get block by hash: %v", err), http.StatusInternalServerError)
+			return
+		}
+	} else if request.BlockIdentifier.Index != 0 {
+		// Get block by number
+		block, err = b.vechainClient.GetBlockByNumber(request.BlockIdentifier.Index)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get block by number: %v", err), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "Block identifier is required", http.StatusBadRequest)
 		return
 	}
 

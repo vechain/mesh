@@ -133,6 +133,33 @@ func (c *VeChainClient) GetBlockByNumber(blockNumber int64) (*Block, error) {
 	}, nil
 }
 
+// GetBlockByHash fetches a block by its hash
+func (c *VeChainClient) GetBlockByHash(blockHash string) (*Block, error) {
+	block, err := c.client.Block(blockHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get block by hash: %w", err)
+	}
+
+	return &Block{
+		Number:       int64(block.Number),
+		ID:           block.ID.String(),
+		Size:         int(block.Size),
+		ParentID:     block.ParentID.String(),
+		Timestamp:    int64(block.Timestamp),
+		GasLimit:     int64(block.GasLimit),
+		Beneficiary:  block.Beneficiary.String(),
+		GasUsed:      int64(block.GasUsed),
+		TotalScore:   int64(block.TotalScore),
+		TxsRoot:      block.TxsRoot.String(),
+		TxsFeatures:  int(block.TxsFeatures),
+		StateRoot:    block.StateRoot.String(),
+		ReceiptsRoot: block.ReceiptsRoot.String(),
+		Signer:       block.Signer.String(),
+		IsTrunk:      block.IsTrunk,
+		Transactions: convertTransactionsFromAPI(block.Transactions),
+	}, nil
+}
+
 // GetAccount fetches account details by address
 func (c *VeChainClient) GetAccount(address string) (*Account, error) {
 	addr, err := thor.ParseAddress(address)
