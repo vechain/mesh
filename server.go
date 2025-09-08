@@ -87,7 +87,7 @@ func (v *VeChainMeshServer) setupRoutes() {
 
 // healthCheck endpoint to verify server status
 func (v *VeChainMeshServer) healthCheck(w http.ResponseWriter, r *http.Request) {
-	response := map[string]interface{}{
+	response := map[string]any{
 		"status":    "healthy",
 		"timestamp": time.Now().Unix(),
 		"service":   "VeChain Mesh API",

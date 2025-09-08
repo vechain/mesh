@@ -83,7 +83,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		Peers: []*types.Peer{
 			{
 				PeerID: "vechain-node",
-				Metadata: map[string]interface{}{
+				Metadata: map[string]any{
 					"address": "vechain-node",
 				},
 			},

@@ -74,13 +74,13 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 				Currency: &types.Currency{
 					Symbol:   "VTHO",
 					Decimals: 18,
-					Metadata: map[string]interface{}{
+					Metadata: map[string]any{
 						"contractAddress": "0x0000000000000000000000000000456E65726779",
 					},
 				},
 			},
 		},
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"sequence_number": 1,
 		},
 	}

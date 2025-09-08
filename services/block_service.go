@@ -82,7 +82,7 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 				Hash: tx.ID,
 			},
 			Operations: operations,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]any{
 				"chainTag":     tx.ChainTag,
 				"blockRef":     tx.BlockRef,
 				"expiration":   tx.Expiration,
@@ -100,7 +100,7 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 			ParentBlockIdentifier: parentBlockIdentifier,
 			Timestamp:             block.Timestamp * 1000, // Convert to milliseconds
 			Transactions:          transactions,
-			Metadata: map[string]interface{}{
+			Metadata: map[string]any{
 				"size":         block.Size,
 				"gasLimit":     block.GasLimit,
 				"gasUsed":      block.GasUsed,
@@ -182,7 +182,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 			Hash: foundTx.ID,
 		},
 		Operations: operations,
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"chainTag":     foundTx.ChainTag,
 			"blockRef":     foundTx.BlockRef,
 			"expiration":   foundTx.Expiration,

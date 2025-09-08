@@ -56,7 +56,7 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 		AccountIdentifier: &types.AccountIdentifier{
 			Address: address.Hex(),
 		},
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"derivation_path": "m/44'/818'/0'/0/0", // VeChain BIP44 path
 		},
 	}
@@ -75,14 +75,14 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 
 	// Extract operations and determine required public keys
 	var requiredPublicKeys []*types.AccountIdentifier
-	var clauses []map[string]interface{}
+	var clauses []map[string]any
 
 	for _, op := range request.Operations {
 		if op.Type == "Transfer" {
 			requiredPublicKeys = append(requiredPublicKeys, op.Account)
 
 			// Extract clause information
-			clause := map[string]interface{}{
+			clause := map[string]any{
 				"to":    op.Account.Address,
 				"value": op.Amount.Value,
 				"data":  "0x00",
@@ -95,7 +95,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 	}
 
 	response := &types.ConstructionPreprocessResponse{
-		Options: map[string]interface{}{
+		Options: map[string]any{
 			"clauses": clauses,
 		},
 		RequiredPublicKeys: requiredPublicKeys,
@@ -129,7 +129,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 
 	// Calculate gas based on operations
 	gas := int64(21000) // Base gas for simple transfer
-	if clauses, ok := request.Options["clauses"].([]interface{}); ok {
+	if clauses, ok := request.Options["clauses"].([]any); ok {
 		gas = int64(len(clauses)) * 21000 // 21000 gas per clause
 	}
 
@@ -137,7 +137,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	blockRef := bestBlock.ID[len(bestBlock.ID)-16:] // Remove 0x and take last 8 bytes
 
 	response := &types.ConstructionMetadataResponse{
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"blockRef": blockRef,
 			"chainTag": chainTag,
 			"gas":      gas,
@@ -148,7 +148,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 				Currency: &types.Currency{
 					Symbol:   "VTHO",
 					Decimals: 18,
-					Metadata: map[string]interface{}{
+					Metadata: map[string]any{
 						"contractAddress": "0x0000000000000000000000000000456E65726779",
 					},
 				},
@@ -372,7 +372,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				Currency: &types.Currency{
 					Symbol:   "VTHO",
 					Decimals: 18,
-					Metadata: map[string]interface{}{
+					Metadata: map[string]any{
 						"contractAddress": "0x0000000000000000000000000000456E65726779",
 					},
 				},
@@ -384,7 +384,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	response := &types.ConstructionParseResponse{
 		Operations:               operations,
 		AccountIdentifierSigners: signers,
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"chainTag":     vechainTx.ChainTag(),
 			"blockRef":     fmt.Sprintf("0x%x", vechainTx.BlockRef()),
 			"expiration":   vechainTx.Expiration(),
@@ -527,7 +527,7 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 	// Get transaction ID
 	txID := vechainTx.ID()
 
-	response := map[string]interface{}{
+	response := map[string]any{
 		"transaction_identifier": &types.TransactionIdentifier{
 			Hash: txID.String(),
 		},
@@ -555,7 +555,7 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 	// Submit transaction to VeChain network
 	// Note: This would require implementing the actual submission logic
 	// For now, we'll return a mock response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"transaction_identifier": &types.TransactionIdentifier{
 			Hash: "0x" + hex.EncodeToString(crypto.Keccak256(txBytes)),
 		},
