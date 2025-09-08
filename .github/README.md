@@ -1,6 +1,4 @@
-# Project<!-- Project Title -->
-
-<!-- Find and replace elements that start with '<!--' and remove this line -->
+# Coinbase Mesh API implementation for VeChain
 
 ![Project Logo](project-logo.png)
 
@@ -90,7 +88,7 @@ Keep a log of all notable changes and updates in the project.
 
 ### License
 
-This project is licensed under <!-- update the license name --> [the LICENSE](LICENSE.md).
+This project is licensed under [the LICENSE](LICENSE.md).
 
 ### Credits
 
