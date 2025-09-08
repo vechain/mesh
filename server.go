@@ -22,12 +22,15 @@ type VeChainMeshServer struct {
 }
 
 // NewVeChainMeshServer creates a new server instance
-func NewVeChainMeshServer(port string) *VeChainMeshServer {
+func NewVeChainMeshServer(port string, vechainRPCURL string) *VeChainMeshServer {
 	router := mux.NewRouter()
 
-	// Initialize services
-	networkService := services.NewNetworkService()
-	accountService := services.NewAccountService()
+	// Initialize VeChain client
+	vechainClient := services.NewVeChainClient(vechainRPCURL)
+
+	// Initialize services with VeChain client
+	networkService := services.NewNetworkService(vechainClient)
+	accountService := services.NewAccountService(vechainClient)
 	constructionService := services.NewConstructionService()
 
 	meshServer := &VeChainMeshServer{

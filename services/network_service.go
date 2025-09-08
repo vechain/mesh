@@ -2,18 +2,22 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // NetworkService handles network-related endpoints
-type NetworkService struct{}
+type NetworkService struct {
+	vechainClient *VeChainClient
+}
 
 // NewNetworkService creates a new network service
-func NewNetworkService() *NetworkService {
-	return &NetworkService{}
+func NewNetworkService(vechainClient *VeChainClient) *NetworkService {
+	return &NetworkService{
+		vechainClient: vechainClient,
+	}
 }
 
 // NetworkList returns the list of supported networks
@@ -43,31 +47,44 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement real logic to get VeChain status
+	// Get real VeChain data
+	bestBlock, err := n.vechainClient.GetBestBlock()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get best block: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Get genesis block (block 0)
+	genesisBlock, err := n.vechainClient.GetBlockByNumber(0)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get genesis block: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	status := &types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
-			Index: 12345678,
-			Hash:  "0x1234567890abcdef...",
+			Index: bestBlock.Number,
+			Hash:  bestBlock.ID,
 		},
-		CurrentBlockTimestamp: time.Now().UnixMilli(),
+		CurrentBlockTimestamp: bestBlock.Timestamp * 1000, // Convert to milliseconds
 		GenesisBlockIdentifier: &types.BlockIdentifier{
-			Index: 0,
-			Hash:  "0x0000000000000000...",
+			Index: genesisBlock.Number,
+			Hash:  genesisBlock.ID,
 		},
 		OldestBlockIdentifier: &types.BlockIdentifier{
 			Index: 1,
-			Hash:  "0x1111111111111111...",
+			Hash:  "0x0000000000000000000000000000000000000000000000000000000000000001",
 		},
 		SyncStatus: &types.SyncStatus{
-			CurrentIndex: int64Ptr(12345678),
-			TargetIndex:  int64Ptr(12345678),
+			CurrentIndex: int64Ptr(bestBlock.Number),
+			TargetIndex:  int64Ptr(bestBlock.Number),
 			Synced:       boolPtr(true),
 		},
 		Peers: []*types.Peer{
 			{
-				PeerID: "peer-1",
+				PeerID: "vechain-node",
 				Metadata: map[string]interface{}{
-					"address": "127.0.0.1:8080",
+					"address": "vechain-node",
 				},
 			},
 		},

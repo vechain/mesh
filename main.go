@@ -17,8 +17,14 @@ func main() {
 		port = "8080"
 	}
 
+	// VeChain RPC URL configuration
+	vechainRPCURL := os.Getenv("VECHAIN_RPC_URL")
+	if vechainRPCURL == "" {
+		vechainRPCURL = "https://mainnet.veblocks.net" // Default to mainnet
+	}
+
 	// Create server
-	meshServer := NewVeChainMeshServer(port)
+	meshServer := NewVeChainMeshServer(port, vechainRPCURL)
 
 	// Configure signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
