@@ -8,6 +8,7 @@ replace github.com/ethereum/go-ethereum => github.com/vechain/go-ethereum v1.8.1
 
 require (
 	github.com/coinbase/rosetta-sdk-go/types v1.0.0
+	github.com/ethereum/go-ethereum v1.8.14
 	github.com/gorilla/mux v1.8.1
 	github.com/vechain/thor/v2 v2.3.1
 )
@@ -19,7 +20,6 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
-	github.com/ethereum/go-ethereum v1.8.14 // indirect
 	github.com/go-stack/stack v1.7.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/websocket v1.4.1 // indirect
