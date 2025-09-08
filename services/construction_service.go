@@ -1,120 +1,22 @@
-package main
+package services
 
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// healthCheck endpoint to verify server status
-func (v *VeChainMeshServer) healthCheck(w http.ResponseWriter, r *http.Request) {
-	response := map[string]interface{}{
-		"status":    "healthy",
-		"timestamp": time.Now().Unix(),
-		"service":   "VeChain Mesh API",
-	}
+// ConstructionService handles construction-related endpoints
+type ConstructionService struct{}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+// NewConstructionService creates a new construction service
+func NewConstructionService() *ConstructionService {
+	return &ConstructionService{}
 }
 
-// networkList returns the list of supported networks
-func (v *VeChainMeshServer) networkList(w http.ResponseWriter, r *http.Request) {
-	networks := &types.NetworkListResponse{
-		NetworkIdentifiers: []*types.NetworkIdentifier{
-			{
-				Blockchain: "VeChain",
-				Network:    "mainnet",
-			},
-			{
-				Blockchain: "VeChain",
-				Network:    "testnet",
-			},
-		},
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(networks)
-}
-
-// networkStatus returns the current network status
-func (v *VeChainMeshServer) networkStatus(w http.ResponseWriter, r *http.Request) {
-	var request types.NetworkRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// TODO: Implement real logic to get VeChain status
-	status := &types.NetworkStatusResponse{
-		CurrentBlockIdentifier: &types.BlockIdentifier{
-			Index: 12345678,
-			Hash:  "0x1234567890abcdef...",
-		},
-		CurrentBlockTimestamp: time.Now().UnixMilli(),
-		GenesisBlockIdentifier: &types.BlockIdentifier{
-			Index: 0,
-			Hash:  "0x0000000000000000...",
-		},
-		OldestBlockIdentifier: &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "0x1111111111111111...",
-		},
-		SyncStatus: &types.SyncStatus{
-			CurrentIndex: int64Ptr(12345678),
-			TargetIndex:  int64Ptr(12345678),
-			Synced:       boolPtr(true),
-		},
-		Peers: []*types.Peer{
-			{
-				PeerID: "peer-1",
-				Metadata: map[string]interface{}{
-					"address": "127.0.0.1:8080",
-				},
-			},
-		},
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
-}
-
-// accountBalance returns the balance of an account
-func (v *VeChainMeshServer) accountBalance(w http.ResponseWriter, r *http.Request) {
-	var request types.AccountBalanceRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// TODO: Implement real logic to get VeChain balance
-	balance := &types.AccountBalanceResponse{
-		BlockIdentifier: &types.BlockIdentifier{
-			Index: 12345678,
-			Hash:  "0x1234567890abcdef...",
-		},
-		Balances: []*types.Amount{
-			{
-				Value: "1000000000000000000", // 1 VET in wei
-				Currency: &types.Currency{
-					Symbol:   "VET",
-					Decimals: 18,
-				},
-			},
-		},
-		Metadata: map[string]interface{}{
-			"sequence_number": 1,
-		},
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(balance)
-}
-
-// constructionDerive derives an address from a public key
-func (v *VeChainMeshServer) constructionDerive(w http.ResponseWriter, r *http.Request) {
+// ConstructionDerive derives an address from a public key
+func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionDeriveRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -135,8 +37,8 @@ func (v *VeChainMeshServer) constructionDerive(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionPreprocess preprocesses a transaction
-func (v *VeChainMeshServer) constructionPreprocess(w http.ResponseWriter, r *http.Request) {
+// ConstructionPreprocess preprocesses a transaction
+func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionPreprocessRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -160,8 +62,8 @@ func (v *VeChainMeshServer) constructionPreprocess(w http.ResponseWriter, r *htt
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionMetadata gets metadata for construction
-func (v *VeChainMeshServer) constructionMetadata(w http.ResponseWriter, r *http.Request) {
+// ConstructionMetadata gets metadata for construction
+func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionMetadataRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -190,8 +92,8 @@ func (v *VeChainMeshServer) constructionMetadata(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionPayloads creates payloads for construction
-func (v *VeChainMeshServer) constructionPayloads(w http.ResponseWriter, r *http.Request) {
+// ConstructionPayloads creates payloads for construction
+func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionPayloadsRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -216,8 +118,8 @@ func (v *VeChainMeshServer) constructionPayloads(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionParse parses a transaction
-func (v *VeChainMeshServer) constructionParse(w http.ResponseWriter, r *http.Request) {
+// ConstructionParse parses a transaction
+func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionParseRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -259,8 +161,8 @@ func (v *VeChainMeshServer) constructionParse(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionCombine combines signed transactions
-func (v *VeChainMeshServer) constructionCombine(w http.ResponseWriter, r *http.Request) {
+// ConstructionCombine combines signed transactions
+func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionCombineRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -276,8 +178,8 @@ func (v *VeChainMeshServer) constructionCombine(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionHash gets the hash of a transaction
-func (v *VeChainMeshServer) constructionHash(w http.ResponseWriter, r *http.Request) {
+// ConstructionHash gets the hash of a transaction
+func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionHashRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -295,8 +197,8 @@ func (v *VeChainMeshServer) constructionHash(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(response)
 }
 
-// constructionSubmit submits a transaction to the network
-func (v *VeChainMeshServer) constructionSubmit(w http.ResponseWriter, r *http.Request) {
+// ConstructionSubmit submits a transaction to the network
+func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionSubmitRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
