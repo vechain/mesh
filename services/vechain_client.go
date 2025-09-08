@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 
+	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/thorclient"
 )
@@ -84,53 +85,17 @@ func (c *VeChainClient) GetBestBlock() (*Block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get best block: %w", err)
 	}
-
-	return &Block{
-		Number:       int64(block.Number),
-		ID:           block.ID.String(),
-		Size:         int(block.Size),
-		ParentID:     block.ParentID.String(),
-		Timestamp:    int64(block.Timestamp),
-		GasLimit:     int64(block.GasLimit),
-		Beneficiary:  block.Beneficiary.String(),
-		GasUsed:      int64(block.GasUsed),
-		TotalScore:   int64(block.TotalScore),
-		TxsRoot:      block.TxsRoot.String(),
-		TxsFeatures:  int(block.TxsFeatures),
-		StateRoot:    block.StateRoot.String(),
-		ReceiptsRoot: block.ReceiptsRoot.String(),
-		Signer:       block.Signer.String(),
-		IsTrunk:      block.IsTrunk,
-		Transactions: convertTransactionsFromAPI(block.Transactions),
-	}, nil
+	return c.convertBlock(block), nil
 }
 
 // GetBlockByNumber fetches a block by its number
 func (c *VeChainClient) GetBlockByNumber(blockNumber int64) (*Block, error) {
-	revision := fmt.Sprintf("0x%x", blockNumber)
+	revision := fmt.Sprintf("%x", blockNumber)
 	block, err := c.client.Block(revision)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block by number: %w", err)
 	}
-
-	return &Block{
-		Number:       int64(block.Number),
-		ID:           block.ID.String(),
-		Size:         int(block.Size),
-		ParentID:     block.ParentID.String(),
-		Timestamp:    int64(block.Timestamp),
-		GasLimit:     int64(block.GasLimit),
-		Beneficiary:  block.Beneficiary.String(),
-		GasUsed:      int64(block.GasUsed),
-		TotalScore:   int64(block.TotalScore),
-		TxsRoot:      block.TxsRoot.String(),
-		TxsFeatures:  int(block.TxsFeatures),
-		StateRoot:    block.StateRoot.String(),
-		ReceiptsRoot: block.ReceiptsRoot.String(),
-		Signer:       block.Signer.String(),
-		IsTrunk:      block.IsTrunk,
-		Transactions: convertTransactionsFromAPI(block.Transactions),
-	}, nil
+	return c.convertBlock(block), nil
 }
 
 // GetBlockByHash fetches a block by its hash
@@ -139,25 +104,7 @@ func (c *VeChainClient) GetBlockByHash(blockHash string) (*Block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block by hash: %w", err)
 	}
-
-	return &Block{
-		Number:       int64(block.Number),
-		ID:           block.ID.String(),
-		Size:         int(block.Size),
-		ParentID:     block.ParentID.String(),
-		Timestamp:    int64(block.Timestamp),
-		GasLimit:     int64(block.GasLimit),
-		Beneficiary:  block.Beneficiary.String(),
-		GasUsed:      int64(block.GasUsed),
-		TotalScore:   int64(block.TotalScore),
-		TxsRoot:      block.TxsRoot.String(),
-		TxsFeatures:  int(block.TxsFeatures),
-		StateRoot:    block.StateRoot.String(),
-		ReceiptsRoot: block.ReceiptsRoot.String(),
-		Signer:       block.Signer.String(),
-		IsTrunk:      block.IsTrunk,
-		Transactions: convertTransactionsFromAPI(block.Transactions),
-	}, nil
+	return c.convertBlock(block), nil
 }
 
 // GetAccount fetches account details by address
@@ -198,6 +145,28 @@ func (c *VeChainClient) GetChainID() (int, error) {
 	}
 
 	return int(chainTag), nil
+}
+
+// convertBlock converts thorclient block to our Block type
+func (c *VeChainClient) convertBlock(block *api.JSONCollapsedBlock) *Block {
+	return &Block{
+		Number:       int64(block.Number),
+		ID:           block.ID.String(),
+		Size:         int(block.Size),
+		ParentID:     block.ParentID.String(),
+		Timestamp:    int64(block.Timestamp),
+		GasLimit:     int64(block.GasLimit),
+		Beneficiary:  block.Beneficiary.String(),
+		GasUsed:      int64(block.GasUsed),
+		TotalScore:   int64(block.TotalScore),
+		TxsRoot:      block.TxsRoot.String(),
+		TxsFeatures:  int(block.TxsFeatures),
+		StateRoot:    block.StateRoot.String(),
+		ReceiptsRoot: block.ReceiptsRoot.String(),
+		Signer:       block.Signer.String(),
+		IsTrunk:      block.IsTrunk,
+		Transactions: convertTransactionsFromAPI(block.Transactions),
+	}
 }
 
 // convertTransactionsFromAPI converts API transactions to our Transaction type
