@@ -1,28 +1,18 @@
-# Coinbase Mesh API implementation for VeChain
+# VeChain Mesh API Implementation
 
-![Project Logo](project-logo.png)
+A Coinbase Mesh API implementation for the VeChain blockchain, built in Go.
 
 ## Introduction
 
-A brief description of your project, its purpose, and main features.
+This project implements a server that exposes the Mesh API for interacting with the VeChain blockchain. The Mesh API is an open standard that allows exchanges and other applications to interact with different blockchains in a uniform way.
 
-This is a template repository, that allows you to quickly create new repos with the following templates:
-1. [README.md](README.md)
-2. [CONTRIBUTING.md](CONTRIBUTING.md)
-3. [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-4. [CODEOWNERS](CODEOWNERS)
-5. [LICENSE.md](LICENSE.md)
+## Features
 
-Consider turning on branch protection for `main` as follows:
-1. Require a pull request before merging.
-  1. Require 1 approval.
-  2. Dismiss stale pull request approvals when new commits are pushed.
-  3. Require review from Code Owners.
-  4. Require approval of the most recent reviewable push.
-2. Require status checks to pass before merging.
-3. Require branches to be up to date before merging.
-4. Require conversation resolution before merging.
-5. Require deployments to succeed before merging.
+- ✅ HTTP server with Mesh API endpoints
+- ✅ Support for VeChain networks (mainnet and testnet)
+- ✅ Transaction construction endpoints
+- ✅ Balance query and network status endpoints
+- ✅ Modular architecture with separated concerns
 
 ## Table of Contents
 
@@ -45,51 +35,124 @@ Consider turning on branch protection for `main` as follows:
 
 ### Prerequisites
 
-List the required software, libraries, or tools needed to use or contribute to the project.
+- Go 1.24.5 or higher
+- Git for version control
+- Basic understanding of blockchain concepts
 
 ### Installation
 
-Provide step-by-step instructions for installing the project, including any required dependencies.
-
+1. Clone the repository:
 ```bash
-# Example installation commands
+git clone <repository-url>
+cd mesh
+```
+
+2. Install dependencies:
+```bash
+go mod tidy
+```
+
+3. Build the server:
+```bash
+go build -o mesh-server .
 ```
 
 ### Configuration
 
-Explain how to configure the project, if necessary.
+The server can be configured using environment variables:
+
+- `PORT`: Server port (default: 8080)
+
+Example:
+```bash
+PORT=3000 ./mesh-server
+```
 
 ### Usage
 
-Include code examples or usage instructions to help users get started quickly.
+#### Run the server
+
+```bash
+./mesh-server
+```
+
+#### Available endpoints
+
+- **Health Check**: `GET /health`
+- **Network List**: `POST /network/list`
+- **Network Status**: `POST /network/status`
+- **Account Balance**: `POST /account/balance`
+- **Construction Endpoints**: All Mesh API construction endpoints
+
+#### Example requests
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Network list
+curl -X POST http://localhost:8080/network/list \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+# Account balance
+curl -X POST http://localhost:8080/account/balance \
+  -H "Content-Type: application/json" \
+  -d '{
+    "network_identifier": {"blockchain": "VeChain", "network": "mainnet"},
+    "account_identifier": {"address": "0x1234567890123456789012345678901234567890"}
+  }'
+```
 
 ### Documentation
 
-Link to any additional documentation or tutorials, either within your repository or hosted externally.
+- [Mesh API Specification](https://github.com/coinbase/rosetta-sdk-go) - Official Mesh API documentation
+- [VeChain Documentation](https://docs.vechain.org/) - VeChain blockchain documentation
 
 ### Contributing
 
-Explain how others can contribute to the project. Include information on:
+Please follow the [contributing guidelines](CONTRIBUTING.md)
 
-    How to submit bug reports or feature requests.
-    The process for submitting pull requests.
-    Any specific coding standards or guidelines.
-    The best way to get in touch with the maintainers, if needed.
-    
-You may use [a separate `CONTRIBUTING` file](CONTRIBUTING.md) to keep your `README.md` short.
+#### Development Guidelines
 
-### Roadmap
+- Follow Go best practices and conventions
+- Ensure all tests pass before submitting
+- Update documentation for new features
+- Use meaningful commit messages
+- Keep pull requests focused and atomic
 
-Share the project's development roadmap, if available, including planned features and improvements.
+#### Reporting Issues
+
+- Use the GitHub issue tracker
+- Provide detailed reproduction steps
+- Include system information and logs
+- Check existing issues before creating new ones
 
 ### Changelog
 
-Keep a log of all notable changes and updates in the project.
+#### v0.1.0 (Current)
+- Initial implementation of VeChain Mesh API server
+- Modular architecture with separated concerns
+- All basic Mesh API endpoints implemented
+- Graceful shutdown and structured logging
+- Comprehensive documentation
 
 ### License
 
-This project is licensed under [the LICENSE](LICENSE.md).
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ### Credits
 
-Recognize any significant contributors, sponsors, or organizations that have supported the project.
+#### Core Dependencies
+- [Coinbase Rosetta SDK](https://github.com/coinbase/rosetta-sdk-go) - Base framework for Mesh API implementation
+- [Gorilla Mux](https://github.com/gorilla/mux) - HTTP router and URL matcher
+
+#### Community
+- VeChain developer community for blockchain insights
+- Open source contributors and maintainers
+- Mesh API specification contributors
+
+#### Special Thanks
+- Coinbase for creating the Mesh API standard
+- Go community for excellent tooling and libraries
+- All contributors and users of this project

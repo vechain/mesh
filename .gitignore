@@ -1,0 +1,38 @@
+# Binaries for programs and plugins
+mesh-server
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Logs
+*.log
+logs/
+
+
+# Coverage reports
+coverage.txt
+coverage.html
+
+# Profiling files
+*.prof
+*.pprof
