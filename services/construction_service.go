@@ -78,7 +78,8 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 	var clauses []map[string]any
 
 	for _, op := range request.Operations {
-		if op.Type == "Transfer" {
+		switch op.Type {
+		case "Transfer":
 			requiredPublicKeys = append(requiredPublicKeys, op.Account)
 
 			// Extract clause information
@@ -88,7 +89,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 				"data":  "0x00",
 			}
 			clauses = append(clauses, clause)
-		} else if op.Type == "FeeDelegation" {
+		case "FeeDelegation":
 			// For VIP191 fee delegation, we need the delegator's public key
 			requiredPublicKeys = append(requiredPublicKeys, op.Account)
 		}
@@ -567,9 +568,7 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 
 // Helper function to convert hex string to Bytes32
 func hexToBytes32(hexStr string) thor.Bytes32 {
-	if strings.HasPrefix(hexStr, "0x") {
-		hexStr = hexStr[2:]
-	}
+	hexStr = strings.TrimPrefix(hexStr, "0x")
 
 	// Pad with zeros to make it 32 bytes
 	for len(hexStr) < 64 {
