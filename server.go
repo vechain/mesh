@@ -19,6 +19,8 @@ type VeChainMeshServer struct {
 	networkService      *services.NetworkService
 	accountService      *services.AccountService
 	constructionService *services.ConstructionService
+	blockService        *services.BlockService
+	mempoolService      *services.MempoolService
 }
 
 // NewVeChainMeshServer creates a new server instance
@@ -31,7 +33,9 @@ func NewVeChainMeshServer(port string, vechainRPCURL string) *VeChainMeshServer 
 	// Initialize services with VeChain client
 	networkService := services.NewNetworkService(vechainClient)
 	accountService := services.NewAccountService(vechainClient)
-	constructionService := services.NewConstructionService()
+	constructionService := services.NewConstructionService(vechainClient)
+	blockService := services.NewBlockService(vechainClient)
+	mempoolService := services.NewMempoolService(vechainClient)
 
 	meshServer := &VeChainMeshServer{
 		router: router,
@@ -42,6 +46,8 @@ func NewVeChainMeshServer(port string, vechainRPCURL string) *VeChainMeshServer 
 		networkService:      networkService,
 		accountService:      accountService,
 		constructionService: constructionService,
+		blockService:        blockService,
+		mempoolService:      mempoolService,
 	}
 
 	meshServer.setupRoutes()
@@ -69,6 +75,14 @@ func (v *VeChainMeshServer) setupRoutes() {
 	v.router.HandleFunc("/construction/combine", v.constructionService.ConstructionCombine).Methods("POST")
 	v.router.HandleFunc("/construction/hash", v.constructionService.ConstructionHash).Methods("POST")
 	v.router.HandleFunc("/construction/submit", v.constructionService.ConstructionSubmit).Methods("POST")
+
+	// Block API endpoints
+	v.router.HandleFunc("/block", v.blockService.Block).Methods("POST")
+	v.router.HandleFunc("/block/transaction", v.blockService.BlockTransaction).Methods("POST")
+
+	// Mempool API endpoints
+	v.router.HandleFunc("/mempool", v.mempoolService.Mempool).Methods("POST")
+	v.router.HandleFunc("/mempool/transaction", v.mempoolService.MempoolTransaction).Methods("POST")
 }
 
 // healthCheck endpoint to verify server status
