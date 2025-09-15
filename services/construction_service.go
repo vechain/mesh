@@ -216,10 +216,8 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		}
 	}
 
-	// Build the transaction
 	vechainTx := builder.Build()
 
-	// Encode transaction
 	var buf bytes.Buffer
 	if err := vechainTx.EncodeRLP(&buf); err != nil {
 		http.Error(w, "Failed to encode transaction", http.StatusInternalServerError)
@@ -227,7 +225,6 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	}
 	unsignedTx := buf.Bytes()
 
-	// Create signing payloads
 	var payloads []*types.SigningPayload
 
 	// Get origin address for first payload
@@ -239,7 +236,6 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		}
 		originAddress := crypto.PubkeyToAddress(*originAddr)
 
-		// Create hash for origin signing
 		hash := vechainTx.SigningHash()
 		payload := &types.SigningPayload{
 			AccountIdentifier: &types.AccountIdentifier{
@@ -410,7 +406,6 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 
 	// Apply signatures for VIP191 Fee Delegation
 	if len(request.Signatures) == 2 {
-		// VIP191 Fee Delegation: origin + delegator signatures
 		originSig := request.Signatures[0]
 		delegatorSig := request.Signatures[1]
 
