@@ -4,9 +4,11 @@
   "mode": "online",
   "network": "test",
   "nodeApi": "",
-  "chainTag": 0,
   "apiVersion": "",
   "nodeVersion": "",
   "serviceName": "VeChain Mesh API",
+  "baseGasPrice":10000000000000,
+  "chainTag":0,
+  "initialBaseFee":10000000000000,
   "tokenlist": []
 }
