@@ -12,17 +12,20 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	meshclient "github.com/vechain/mesh/client"
+	meshmodels "github.com/vechain/mesh/models"
+	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
 )
 
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
-	vechainClient *VeChainClient
+	vechainClient *meshclient.VeChainClient
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *VeChainClient) *ConstructionService {
+func NewConstructionService(vechainClient *meshclient.VeChainClient) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
 	}
@@ -146,7 +149,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		SuggestedFee: []*types.Amount{
 			{
 				Value:    fmt.Sprintf("%d", gas*1000000000), // gas * 1 Gwei
-				Currency: VTHOCurrency,
+				Currency: meshmodels.VTHOCurrency,
 			},
 		},
 	}
@@ -197,9 +200,9 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 				return
 			}
 
-			value, ok := new(big.Int).SetString(op.Amount.Value, 10)
-			if !ok {
-				http.Error(w, "Invalid amount", http.StatusBadRequest)
+			value, err := meshutils.StringToBigInt(op.Amount.Value, 10)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid amount: %v", err), http.StatusBadRequest)
 				return
 			}
 
@@ -337,7 +340,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				},
 				Amount: &types.Amount{
 					Value:    clause.Value().String(),
-					Currency: VETCurrency,
+					Currency: meshmodels.VETCurrency,
 				},
 			}
 			operations = append(operations, operation)
@@ -361,7 +364,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Amount: &types.Amount{
 				Value:    estimatedFee.String(),
-				Currency: VTHOCurrency,
+				Currency: meshmodels.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeDelegationOp)

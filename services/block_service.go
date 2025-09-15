@@ -6,15 +6,17 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshclient "github.com/vechain/mesh/client"
+	meshmodels "github.com/vechain/mesh/models"
 )
 
 // BlockService handles block API endpoints
 type BlockService struct {
-	vechainClient *VeChainClient
+	vechainClient *meshclient.VeChainClient
 }
 
 // NewBlockService creates a new block service
-func NewBlockService(vechainClient *VeChainClient) *BlockService {
+func NewBlockService(vechainClient *meshclient.VeChainClient) *BlockService {
 	return &BlockService{
 		vechainClient: vechainClient,
 	}
@@ -29,7 +31,7 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get block by identifier
-	var block *Block
+	var block *meshclient.Block
 	var err error
 
 	if request.BlockIdentifier.Hash != nil && *request.BlockIdentifier.Hash != "" {
@@ -84,7 +86,7 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 			},
 			Amount: &types.Amount{
 				Value:    "0", // This would need to be calculated from actual transaction data
-				Currency: VETCurrency,
+				Currency: meshmodels.VETCurrency,
 			},
 		}
 		operations = append(operations, operation)
@@ -141,7 +143,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get block first
-	var block *Block
+	var block *meshclient.Block
 	var err error
 
 	if request.BlockIdentifier.Hash != "" {
@@ -164,7 +166,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Find the specific transaction
-	var foundTx *Transaction
+	var foundTx *meshclient.Transaction
 	for _, tx := range block.Transactions {
 		if tx.ID == request.TransactionIdentifier.Hash {
 			foundTx = &tx
@@ -192,7 +194,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 		},
 		Amount: &types.Amount{
 			Value:    "0", // This would need to be calculated from actual transaction data
-			Currency: VETCurrency,
+			Currency: meshmodels.VETCurrency,
 		},
 	}
 	operations = append(operations, operation)

@@ -3,28 +3,46 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
+	"io"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshclient "github.com/vechain/mesh/client"
+	meshmodels "github.com/vechain/mesh/models"
+	meshutils "github.com/vechain/mesh/utils"
+	meshvalidation "github.com/vechain/mesh/validation"
 )
 
 // AccountService handles account-related endpoints
 type AccountService struct {
-	vechainClient *VeChainClient
+	vechainClient        *meshclient.VeChainClient
+	validationMiddleware *meshvalidation.ValidationMiddleware
 }
 
 // NewAccountService creates a new account service
-func NewAccountService(vechainClient *VeChainClient) *AccountService {
+func NewAccountService(vechainClient *meshclient.VeChainClient, validationMiddleware *meshvalidation.ValidationMiddleware) *AccountService {
 	return &AccountService{
-		vechainClient: vechainClient,
+		vechainClient:        vechainClient,
+		validationMiddleware: validationMiddleware,
 	}
 }
 
 // AccountBalance returns the balance of an account
 func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) {
+	// Read the request body once
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	// Perform all validations before processing the request
+	if !a.validationMiddleware.ValidateEndpoint(w, r, body, "/account/balance") {
+		return
+	}
+
 	var request types.AccountBalanceRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := json.Unmarshal(body, &request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -44,13 +62,13 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Convert hex balance to decimal
-	vetBalance, err := hexToDecimal(account.Balance)
+	vetBalance, err := meshutils.HexToDecimal(account.Balance)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to convert VET balance: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	vthoBalance, err := hexToDecimal(account.Energy)
+	vthoBalance, err := meshutils.HexToDecimal(account.Energy)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to convert VTHO balance: %v", err), http.StatusInternalServerError)
 		return
@@ -64,11 +82,11 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		Balances: []*types.Amount{
 			{
 				Value:    vetBalance,
-				Currency: VETCurrency,
+				Currency: meshmodels.VETCurrency,
 			},
 			{
 				Value:    vthoBalance,
-				Currency: VTHOCurrency,
+				Currency: meshmodels.VTHOCurrency,
 			},
 		},
 		Metadata: map[string]any{
@@ -78,21 +96,4 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(balance)
-}
-
-// hexToDecimal converts hex string to decimal string
-func hexToDecimal(hexStr string) (string, error) {
-	// Remove 0x prefix if present
-	if len(hexStr) > 2 && hexStr[:2] == "0x" {
-		hexStr = hexStr[2:]
-	}
-
-	// Convert hex to big.Int
-	bigInt := new(big.Int)
-	bigInt, ok := bigInt.SetString(hexStr, 16)
-	if !ok {
-		return "", fmt.Errorf("invalid hex string: %s", hexStr)
-	}
-
-	return bigInt.String(), nil
 }
