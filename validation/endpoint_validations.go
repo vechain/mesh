@@ -21,7 +21,7 @@ var EndpointValidationSets = map[string][]ValidationType{
 	"/construction/submit":     ConstructionValidations,
 
 	// Block API endpoints
-	"/block":             NetworkValidations, // Block endpoints typically need network validation
+	"/block":             NetworkValidations,
 	"/block/transaction": NetworkValidations,
 
 	// Mempool API endpoints
@@ -34,6 +34,5 @@ func GetValidationsForEndpoint(endpoint string) []ValidationType {
 	if validations, exists := EndpointValidationSets[endpoint]; exists {
 		return validations
 	}
-	// Default to network validations for unknown endpoints
 	return NetworkValidations
 }

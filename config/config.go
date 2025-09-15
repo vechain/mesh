@@ -21,7 +21,7 @@ type Config struct {
 	APIVersion        string                   `json:"apiVersion"`
 	NodeVersion       string                   `json:"nodeVersion"`
 	ServiceName       string                   `json:"serviceName"`
-	TokenList         []interface{}            `json:"tokenlist"`
+	TokenList         []any                    `json:"tokenlist"`
 	NetworkIdentifier *types.NetworkIdentifier `json:"-"`
 }
 

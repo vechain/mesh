@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -15,6 +16,41 @@ type ValidationMiddleware struct {
 	networkIdentifier *types.NetworkIdentifier
 	runMode           string
 }
+
+// ValidationType represents the type of validation to perform
+type ValidationType int
+
+const (
+	ValidationNetwork ValidationType = iota
+	ValidationRunMode
+	ValidationModeNetwork
+	ValidationAccount
+)
+
+// Common validation sets for different endpoints
+var (
+	// AccountBalanceValidations includes all validations needed for account/balance
+	AccountBalanceValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+		ValidationAccount,
+	}
+
+	// NetworkValidations includes validations needed for network endpoints
+	NetworkValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+	}
+
+	// ConstructionValidations includes validations needed for construction endpoints
+	ConstructionValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+	}
+)
 
 // NewValidationMiddleware creates a new validation middleware
 func NewValidationMiddleware(networkIdentifier *types.NetworkIdentifier, runMode string) *ValidationMiddleware {
@@ -81,17 +117,9 @@ func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Reque
 
 // CheckModeNetwork validates that the mode and network are compatible
 func (v *ValidationMiddleware) CheckModeNetwork(w http.ResponseWriter, r *http.Request) bool {
-	// This is a combination check of run mode and network
-	// For VeChain, we typically support both mainnet and testnet in online mode
 	validNetworks := []string{"mainnet", "test"}
 
-	isValidNetwork := false
-	for _, validNetwork := range validNetworks {
-		if v.networkIdentifier.Network == validNetwork {
-			isValidNetwork = true
-			break
-		}
-	}
+	isValidNetwork := slices.Contains(validNetworks, v.networkIdentifier.Network)
 
 	if !isValidNetwork {
 		http.Error(w, fmt.Sprintf("Unsupported network: %s", v.networkIdentifier.Network), http.StatusBadRequest)
@@ -136,18 +164,14 @@ func (v *ValidationMiddleware) CheckAccount(w http.ResponseWriter, r *http.Reque
 
 // isValidVeChainAddress validates VeChain address format
 func (v *ValidationMiddleware) isValidVeChainAddress(address string) bool {
-	// VeChain addresses are 42 characters long (including 0x prefix)
-	// and contain only hexadecimal characters
 	if len(address) != 42 {
 		return false
 	}
 
-	// Must start with 0x
 	if !strings.HasPrefix(address, "0x") {
 		return false
 	}
 
-	// Must contain only hexadecimal characters after 0x
 	hexPattern := regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
 	return hexPattern.MatchString(address)
 }
@@ -176,41 +200,6 @@ func (v *ValidationMiddleware) ValidateRequest(w http.ResponseWriter, r *http.Re
 	}
 	return true
 }
-
-// ValidationType represents the type of validation to perform
-type ValidationType int
-
-const (
-	ValidationNetwork ValidationType = iota
-	ValidationRunMode
-	ValidationModeNetwork
-	ValidationAccount
-)
-
-// Common validation sets for different endpoints
-var (
-	// AccountBalanceValidations includes all validations needed for account/balance
-	AccountBalanceValidations = []ValidationType{
-		ValidationNetwork,
-		ValidationRunMode,
-		ValidationModeNetwork,
-		ValidationAccount,
-	}
-
-	// NetworkValidations includes validations needed for network endpoints
-	NetworkValidations = []ValidationType{
-		ValidationNetwork,
-		ValidationRunMode,
-		ValidationModeNetwork,
-	}
-
-	// ConstructionValidations includes validations needed for construction endpoints
-	ConstructionValidations = []ValidationType{
-		ValidationNetwork,
-		ValidationRunMode,
-		ValidationModeNetwork,
-	}
-)
 
 // ValidateEndpoint performs validations for a specific endpoint
 func (v *ValidationMiddleware) ValidateEndpoint(w http.ResponseWriter, r *http.Request, requestData []byte, endpoint string) bool {
