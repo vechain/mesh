@@ -72,8 +72,8 @@ docker-compose ps
 echo ""
 echo "🌐 Access Points:"
 echo "   VeChain Thor API:    http://localhost:8669"
-echo "   VeChain Mesh API:    http://localhost:8000"
-echo "   Health Check:        http://localhost:8000/health"
+echo "   VeChain Mesh API:    http://localhost:8080"
+echo "   Health Check:        http://localhost:8080/health"
 echo ""
 
 echo "📝 Useful Commands:"
@@ -89,7 +89,7 @@ sleep 10
 
 # Check if services are healthy
 echo "🔍 Checking service health..."
-if curl -s http://localhost:8000/health > /dev/null; then
+if curl -s http://localhost:8080/health > /dev/null; then
     echo "✅ VeChain Mesh API is healthy"
 else
     echo "⚠️  VeChain Mesh API is not responding yet"

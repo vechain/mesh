@@ -1,6 +1,6 @@
 {
   "rosetta_version": "1.4.13",
-  "port": 8000,
+  "port": 8080,
   "mode": "online",
   "network": "test",
   "nodeApi": "http://thor:8669",

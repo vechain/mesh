@@ -120,7 +120,7 @@ The VeChain Mesh API can be configured using environment variables and a JSON co
 - `NODEURL`: VeChain node API URL (required for online mode)
 
 **Optional Variables:**
-- `PORT`: Server port (default: `8000`)
+- `PORT`: Server port (default: `8080`)
 
 #### Configuration File
 
@@ -135,7 +135,7 @@ environment:
   - MODE=online              # online | offline
   - NETWORK=test             # main | test | custom
   - NODEURL=http://thor:8669 # Thor node URL (internal Docker network)
-  - PORT=8000                # Mesh API port
+  - PORT=8080                # Mesh API port
 ```
 
 **Thor Node Configuration:**
@@ -155,7 +155,7 @@ services:
 export MODE=online
 export NETWORK=main
 export NODEURL=https://mainnet.veblocks.net
-export PORT=8000
+export PORT=8080
 ```
 
 **Testnet (Online Mode):**
@@ -163,7 +163,7 @@ export PORT=8000
 export MODE=online
 export NETWORK=test
 export NODEURL=https://testnet.veblocks.net
-export PORT=8000
+export PORT=8080
 ```
 
 **Offline Mode:**
@@ -171,7 +171,7 @@ export PORT=8000
 export MODE=offline
 export NETWORK=test
 export NODEURL=
-export PORT=8000
+export PORT=8080
 ```
 
 #### Chain Tags
@@ -193,10 +193,10 @@ When using Docker Compose, the following services are available:
 - **Purpose**: VeChain blockchain node for transaction processing
 
 **VeChain Mesh API:**
-- **Port**: 8000
-- **URL**: `http://localhost:8000`
+- **Port**: 8080
+- **URL**: `http://localhost:8080`
 - **Purpose**: Rosetta API server for blockchain interaction
-- **Health Check**: `http://localhost:8000/health`
+- **Health Check**: `http://localhost:8080/health`
 
 ### Usage
 
@@ -232,15 +232,15 @@ export NODEURL=https://testnet.veblocks.net
 
 ```bash
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # Network list
-curl -X POST http://localhost:8000/network/list \
+curl -X POST http://localhost:8080/network/list \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Account balance
-curl -X POST http://localhost:8000/account/balance \
+curl -X POST http://localhost:8080/account/balance \
   -H "Content-Type: application/json" \
   -d '{
     "network_identifier": {"blockchain": "vechainthor", "network": "test"},
@@ -308,7 +308,7 @@ docker run --rm -v thor-data:/data -v $(pwd):/backup alpine tar xzf /backup/thor
 curl http://localhost:11235/blocks/best
 
 # Check Mesh API health
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # Check service health status
 docker-compose ps
@@ -339,7 +339,7 @@ docker-compose ps
 3. **Port conflicts**
    ```bash
    # Check what's using the ports
-   lsof -i :8000
+   lsof -i :8080
    lsof -i :11235
    lsof -i :11235/udp
    lsof -i :11236
@@ -380,7 +380,7 @@ docker build -f Dockerfile.mesh -t vechain-mesh .
 docker build -f Dockerfile.thor -t vechain-thor .
 
 # Run Mesh API container
-docker run -p 8000:8000 \
+docker run -p 8080:8080 \
   -e MODE=online \
   -e NETWORK=test \
   -e NODEURL=http://host.docker.internal:11235 \

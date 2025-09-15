@@ -30,12 +30,12 @@ services:
       dockerfile: Dockerfile.mesh
     container_name: vechain-mesh
     ports:
-      - "8000:8000"  # Mesh API
+      - "8080:8080"  # Mesh API
     environment:
       - MODE=online
       - NETWORK=test
       - NODEURL=http://thor:8669
-      - PORT=8000
+      - PORT=8080
     depends_on:
       thor:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
     networks:
       - vechain-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 3s
       retries: 3
