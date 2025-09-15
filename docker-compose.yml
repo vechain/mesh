@@ -6,7 +6,7 @@ services:
   thor:
     image: vechain/thor
     container_name: vechain-thor
-    command: --network test --api-addr 0.0.0.0:8669 --p2p-port 11235
+    command: --network ${NETWORK:-test} --api-addr 0.0.0.0:8669 --p2p-port 11235
     ports:
       - "8669:8669"  # HTTP API (TCP)
       - "11235:11235"  # P2P (TCP)
@@ -32,8 +32,8 @@ services:
     ports:
       - "8080:8080"  # Mesh API
     environment:
-      - MODE=online
-      - NETWORK=test
+      - MODE=${MODE:-online}
+      - NETWORK=${NETWORK:-test}
       - NODEURL=http://thor:8669
       - PORT=8080
     depends_on:

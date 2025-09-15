@@ -12,12 +12,14 @@ import (
 // NetworkService handles network-related endpoints
 type NetworkService struct {
 	vechainClient *meshclient.VeChainClient
+	network       string
 }
 
 // NewNetworkService creates a new network service
-func NewNetworkService(vechainClient *meshclient.VeChainClient) *NetworkService {
+func NewNetworkService(vechainClient *meshclient.VeChainClient, network string) *NetworkService {
 	return &NetworkService{
 		vechainClient: vechainClient,
+		network:       network,
 	}
 }
 
@@ -26,12 +28,8 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 	networks := &types.NetworkListResponse{
 		NetworkIdentifiers: []*types.NetworkIdentifier{
 			{
-				Blockchain: "VeChain",
-				Network:    "mainnet",
-			},
-			{
-				Blockchain: "VeChain",
-				Network:    "testnet",
+				Blockchain: "vechainthor",
+				Network:    n.network,
 			},
 		},
 	}

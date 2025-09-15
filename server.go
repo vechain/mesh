@@ -44,7 +44,7 @@ func NewVeChainMeshServer() (*VeChainMeshServer, error) {
 	validationMiddleware := meshvalidation.NewValidationMiddleware(cfg.GetNetworkIdentifier(), cfg.GetRunMode())
 
 	// Initialize services with VeChain client and validation middleware
-	networkService := services.NewNetworkService(vechainClient)
+	networkService := services.NewNetworkService(vechainClient, cfg.GetNetwork())
 	accountService := services.NewAccountService(vechainClient, validationMiddleware)
 	constructionService := services.NewConstructionService(vechainClient)
 	blockService := services.NewBlockService(vechainClient)
