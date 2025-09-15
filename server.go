@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -27,14 +28,17 @@ type VeChainMeshServer struct {
 }
 
 // NewVeChainMeshServer creates a new server instance
-func NewVeChainMeshServer(port string, vechainRPCURL string) *VeChainMeshServer {
+func NewVeChainMeshServer() (*VeChainMeshServer, error) {
 	router := mux.NewRouter()
 
 	// Initialize configuration
-	cfg := meshconfig.NewConfig()
+	cfg, err := meshconfig.NewConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load configuration: %v", err)
+	}
 
 	// Initialize VeChain client
-	vechainClient := meshclient.NewVeChainClient(vechainRPCURL)
+	vechainClient := meshclient.NewVeChainClient(cfg.GetNodeAPI())
 
 	// Initialize validation middleware
 	validationMiddleware := meshvalidation.NewValidationMiddleware(cfg.GetNetworkIdentifier(), cfg.GetRunMode())
@@ -49,7 +53,7 @@ func NewVeChainMeshServer(port string, vechainRPCURL string) *VeChainMeshServer 
 	meshServer := &VeChainMeshServer{
 		router: router,
 		server: &http.Server{
-			Addr:    ":" + port,
+			Addr:    fmt.Sprintf(":%d", cfg.GetPort()),
 			Handler: router,
 		},
 		networkService:      networkService,
@@ -60,7 +64,11 @@ func NewVeChainMeshServer(port string, vechainRPCURL string) *VeChainMeshServer 
 	}
 
 	meshServer.setupRoutes()
-	return meshServer
+
+	// Print configuration
+	cfg.PrintConfig()
+
+	return meshServer, nil
 }
 
 // setupRoutes configures the API routes

@@ -1,0 +1,12 @@
+{
+  "rosetta_version": "1.4.13",
+  "port": 8000,
+  "mode": "online",
+  "network": "test",
+  "nodeApi": "",
+  "chainTag": 0,
+  "apiVersion": "",
+  "nodeVersion": "",
+  "serviceName": "VeChain Rosetta API",
+  "tokenlist": []
+}

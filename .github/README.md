@@ -59,20 +59,72 @@ go build -o mesh-server .
 
 ### Configuration
 
-The server can be configured using environment variables:
+The VeChain Mesh API can be configured using environment variables and a JSON configuration file.
 
-- `PORT`: Server port (default: 8080)
+#### Environment Variables
 
-Example:
+**Required Variables:**
+- `MODE`: Server mode - `online` or `offline` (default: `online`)
+- `NETWORK`: Network type - `main`, `test`, or `custom` (default: `test`)
+- `NODEURL`: VeChain node API URL (required for online mode)
+
+**Optional Variables:**
+- `PORT`: Server port (default: `8000`)
+
+#### Configuration File
+
+The base configuration is loaded from `config/config.json`. Environment variables override the JSON configuration.
+
+#### Example Configurations
+
+**Mainnet (Online Mode):**
 ```bash
-PORT=3000 ./mesh-server
+export MODE=online
+export NETWORK=main
+export NODEURL=https://mainnet.veblocks.net
+export PORT=8000
 ```
+
+**Testnet (Online Mode):**
+```bash
+export MODE=online
+export NETWORK=test
+export NODEURL=https://testnet.veblocks.net
+export PORT=8000
+```
+
+**Offline Mode:**
+```bash
+export MODE=offline
+export NETWORK=test
+export NODEURL=
+export PORT=8000
+```
+
+#### Chain Tags
+
+- Mainnet: `0x4a` (74)
+- Testnet: `0x27` (39)
 
 ### Usage
 
 #### Run the server
 
+**Using default configuration:**
 ```bash
+./mesh-server
+```
+
+**Using environment variables:**
+```bash
+MODE=online NETWORK=test NODEURL=https://testnet.veblocks.net ./mesh-server
+```
+
+**Or set environment variables and run:**
+```bash
+export MODE=online
+export NETWORK=test
+export NODEURL=https://testnet.veblocks.net
 ./mesh-server
 ```
 
@@ -88,18 +140,18 @@ PORT=3000 ./mesh-server
 
 ```bash
 # Health check
-curl http://localhost:8080/health
+curl http://localhost:8000/health
 
 # Network list
-curl -X POST http://localhost:8080/network/list \
+curl -X POST http://localhost:8000/network/list \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Account balance
-curl -X POST http://localhost:8080/account/balance \
+curl -X POST http://localhost:8000/account/balance \
   -H "Content-Type: application/json" \
   -d '{
-    "network_identifier": {"blockchain": "VeChain", "network": "mainnet"},
+    "network_identifier": {"blockchain": "vechainthor", "network": "test"},
     "account_identifier": {"address": "0x1234567890123456789012345678901234567890"}
   }'
 ```
