@@ -83,11 +83,8 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 				Address: tx.Origin,
 			},
 			Amount: &types.Amount{
-				Value: "0", // This would need to be calculated from actual transaction data
-				Currency: &types.Currency{
-					Symbol:   "VET",
-					Decimals: 18,
-				},
+				Value:    "0", // This would need to be calculated from actual transaction data
+				Currency: VETCurrency,
 			},
 		}
 		operations = append(operations, operation)
@@ -194,11 +191,8 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 			Address: foundTx.Origin,
 		},
 		Amount: &types.Amount{
-			Value: "0", // This would need to be calculated from actual transaction data
-			Currency: &types.Currency{
-				Symbol:   "VET",
-				Decimals: 18,
-			},
+			Value:    "0", // This would need to be calculated from actual transaction data
+			Currency: VETCurrency,
 		},
 	}
 	operations = append(operations, operation)

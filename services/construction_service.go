@@ -145,14 +145,8 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		},
 		SuggestedFee: []*types.Amount{
 			{
-				Value: fmt.Sprintf("%d", gas*1000000000), // gas * 1 Gwei
-				Currency: &types.Currency{
-					Symbol:   "VTHO",
-					Decimals: 18,
-					Metadata: map[string]any{
-						"contractAddress": "0x0000000000000000000000000000456E65726779",
-					},
-				},
+				Value:    fmt.Sprintf("%d", gas*1000000000), // gas * 1 Gwei
+				Currency: VTHOCurrency,
 			},
 		},
 	}
@@ -342,11 +336,8 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 					Address: to.String(),
 				},
 				Amount: &types.Amount{
-					Value: clause.Value().String(),
-					Currency: &types.Currency{
-						Symbol:   "VET",
-						Decimals: 18,
-					},
+					Value:    clause.Value().String(),
+					Currency: VETCurrency,
 				},
 			}
 			operations = append(operations, operation)
@@ -369,14 +360,8 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				Address: delegator.String(),
 			},
 			Amount: &types.Amount{
-				Value: estimatedFee.String(),
-				Currency: &types.Currency{
-					Symbol:   "VTHO",
-					Decimals: 18,
-					Metadata: map[string]any{
-						"contractAddress": "0x0000000000000000000000000000456E65726779",
-					},
-				},
+				Value:    estimatedFee.String(),
+				Currency: VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeDelegationOp)

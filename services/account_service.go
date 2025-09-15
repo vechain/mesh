@@ -63,21 +63,12 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		},
 		Balances: []*types.Amount{
 			{
-				Value: vetBalance,
-				Currency: &types.Currency{
-					Symbol:   "VET",
-					Decimals: 18,
-				},
+				Value:    vetBalance,
+				Currency: VETCurrency,
 			},
 			{
-				Value: vthoBalance,
-				Currency: &types.Currency{
-					Symbol:   "VTHO",
-					Decimals: 18,
-					Metadata: map[string]any{
-						"contractAddress": "0x0000000000000000000000000000456E65726779",
-					},
-				},
+				Value:    vthoBalance,
+				Currency: VTHOCurrency,
 			},
 		},
 		Metadata: map[string]any{
