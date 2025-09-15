@@ -154,7 +154,7 @@ services:
 ```bash
 export MODE=online
 export NETWORK=main
-export NODEURL=https://mainnet.veblocks.net
+export NODEURL=https://mainnet.vechain.org
 export PORT=8080
 ```
 
@@ -162,7 +162,7 @@ export PORT=8080
 ```bash
 export MODE=online
 export NETWORK=test
-export NODEURL=https://testnet.veblocks.net
+export NODEURL=https://testnet.vechain.org
 export PORT=8080
 ```
 
@@ -209,14 +209,14 @@ When using Docker Compose, the following services are available:
 
 **Using environment variables:**
 ```bash
-MODE=online NETWORK=test NODEURL=https://testnet.veblocks.net ./mesh-server
+MODE=online NETWORK=test NODEURL=https://testnet.vechain.org ./mesh-server
 ```
 
 **Or set environment variables and run:**
 ```bash
 export MODE=online
 export NETWORK=test
-export NODEURL=https://testnet.veblocks.net
+export NODEURL=https://testnet.vechain.org
 ./mesh-server
 ```
 
