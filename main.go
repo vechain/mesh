@@ -11,20 +11,11 @@ import (
 )
 
 func main() {
-	// Port configuration
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	// VeChain RPC URL configuration
-	vechainRPCURL := os.Getenv("VECHAIN_RPC_URL")
-	if vechainRPCURL == "" {
-		vechainRPCURL = "https://mainnet.veblocks.net" // Default to mainnet
-	}
-
 	// Create server
-	meshServer := NewVeChainMeshServer(port, vechainRPCURL)
+	meshServer, err := NewVeChainMeshServer()
+	if err != nil {
+		log.Fatalf("Failed to create server: %v", err)
+	}
 
 	// Configure signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
@@ -37,7 +28,6 @@ func main() {
 		}
 	}()
 
-	log.Printf("VeChain Mesh API server started at http://localhost:%s", port)
 	log.Println("Available endpoints:")
 	log.Println("  GET  /health")
 	log.Println("  POST /network/list")

@@ -6,17 +6,20 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshclient "github.com/vechain/mesh/client"
 )
 
 // NetworkService handles network-related endpoints
 type NetworkService struct {
-	vechainClient *VeChainClient
+	vechainClient *meshclient.VeChainClient
+	network       string
 }
 
 // NewNetworkService creates a new network service
-func NewNetworkService(vechainClient *VeChainClient) *NetworkService {
+func NewNetworkService(vechainClient *meshclient.VeChainClient, network string) *NetworkService {
 	return &NetworkService{
 		vechainClient: vechainClient,
+		network:       network,
 	}
 }
 
@@ -25,12 +28,8 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 	networks := &types.NetworkListResponse{
 		NetworkIdentifiers: []*types.NetworkIdentifier{
 			{
-				Blockchain: "VeChain",
-				Network:    "mainnet",
-			},
-			{
-				Blockchain: "VeChain",
-				Network:    "testnet",
+				Blockchain: "vechainthor",
+				Network:    n.network,
 			},
 		},
 	}

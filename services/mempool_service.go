@@ -5,15 +5,16 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshclient "github.com/vechain/mesh/client"
 )
 
 // MempoolService handles mempool API endpoints
 type MempoolService struct {
-	vechainClient *VeChainClient
+	vechainClient *meshclient.VeChainClient
 }
 
 // NewMempoolService creates a new mempool service
-func NewMempoolService(vechainClient *VeChainClient) *MempoolService {
+func NewMempoolService(vechainClient *meshclient.VeChainClient) *MempoolService {
 	return &MempoolService{
 		vechainClient: vechainClient,
 	}

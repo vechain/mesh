@@ -1,0 +1,208 @@
+package validation
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"regexp"
+	"slices"
+	"strings"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+)
+
+// ValidationMiddleware handles request validation
+type ValidationMiddleware struct {
+	networkIdentifier *types.NetworkIdentifier
+	runMode           string
+}
+
+// ValidationType represents the type of validation to perform
+type ValidationType int
+
+const (
+	ValidationNetwork ValidationType = iota
+	ValidationRunMode
+	ValidationModeNetwork
+	ValidationAccount
+)
+
+// Common validation sets for different endpoints
+var (
+	// AccountBalanceValidations includes all validations needed for account/balance
+	AccountBalanceValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+		ValidationAccount,
+	}
+
+	// NetworkValidations includes validations needed for network endpoints
+	NetworkValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+	}
+
+	// ConstructionValidations includes validations needed for construction endpoints
+	ConstructionValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+	}
+)
+
+// NewValidationMiddleware creates a new validation middleware
+func NewValidationMiddleware(networkIdentifier *types.NetworkIdentifier, runMode string) *ValidationMiddleware {
+	return &ValidationMiddleware{
+		networkIdentifier: networkIdentifier,
+		runMode:           runMode,
+	}
+}
+
+// CheckNetwork validates the network identifier in the request
+func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Request, requestData []byte) bool {
+	var request struct {
+		NetworkIdentifier *types.NetworkIdentifier `json:"network_identifier"`
+	}
+
+	// Parse the request
+	if err := json.Unmarshal(requestData, &request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate network identifier
+	if request.NetworkIdentifier == nil {
+		http.Error(w, "Network identifier is required", http.StatusBadRequest)
+		return false
+	}
+
+	// Check blockchain
+	if request.NetworkIdentifier.Blockchain != v.networkIdentifier.Blockchain {
+		http.Error(w, fmt.Sprintf("Invalid blockchain: expected %s, got %s",
+			v.networkIdentifier.Blockchain, request.NetworkIdentifier.Blockchain), http.StatusBadRequest)
+		return false
+	}
+
+	// Check network
+	if request.NetworkIdentifier.Network != v.networkIdentifier.Network {
+		http.Error(w, fmt.Sprintf("Invalid network: expected %s, got %s",
+			v.networkIdentifier.Network, request.NetworkIdentifier.Network), http.StatusBadRequest)
+		return false
+	}
+
+	// Check sub network identifier if present
+	if request.NetworkIdentifier.SubNetworkIdentifier != nil {
+		if v.networkIdentifier.SubNetworkIdentifier == nil ||
+			request.NetworkIdentifier.SubNetworkIdentifier.Network != v.networkIdentifier.SubNetworkIdentifier.Network {
+			http.Error(w, "Invalid sub network identifier", http.StatusBadRequest)
+			return false
+		}
+	}
+
+	return true
+}
+
+// CheckRunMode validates the run mode
+func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Request) bool {
+	// In Rosetta, run mode is typically "online" or "offline"
+	// For account/balance, we need online mode
+	if v.runMode != "online" {
+		http.Error(w, fmt.Sprintf("Invalid run mode: account/balance requires online mode, got %s", v.runMode), http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// CheckModeNetwork validates that the mode and network are compatible
+func (v *ValidationMiddleware) CheckModeNetwork(w http.ResponseWriter, r *http.Request) bool {
+	validNetworks := []string{"mainnet", "test"}
+
+	isValidNetwork := slices.Contains(validNetworks, v.networkIdentifier.Network)
+
+	if !isValidNetwork {
+		http.Error(w, fmt.Sprintf("Unsupported network: %s", v.networkIdentifier.Network), http.StatusBadRequest)
+		return false
+	}
+
+	// For online mode, we need to ensure the network is accessible
+	if v.runMode == "online" && !isValidNetwork {
+		http.Error(w, "Network not accessible in online mode", http.StatusBadRequest)
+		return false
+	}
+
+	return true
+}
+
+// CheckAccount validates the account identifier
+func (v *ValidationMiddleware) CheckAccount(w http.ResponseWriter, r *http.Request, requestData []byte) bool {
+	var request struct {
+		AccountIdentifier *types.AccountIdentifier `json:"account_identifier"`
+	}
+
+	// Parse the request
+	if err := json.Unmarshal(requestData, &request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate account identifier
+	if request.AccountIdentifier == nil {
+		http.Error(w, "Account identifier is required", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate address format
+	if !v.isValidVeChainAddress(request.AccountIdentifier.Address) {
+		http.Error(w, fmt.Sprintf("Invalid VeChain address format: %s", request.AccountIdentifier.Address), http.StatusBadRequest)
+		return false
+	}
+
+	return true
+}
+
+// isValidVeChainAddress validates VeChain address format
+func (v *ValidationMiddleware) isValidVeChainAddress(address string) bool {
+	if len(address) != 42 {
+		return false
+	}
+
+	if !strings.HasPrefix(address, "0x") {
+		return false
+	}
+
+	hexPattern := regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
+	return hexPattern.MatchString(address)
+}
+
+// ValidateRequest performs validations based on the provided validation types
+func (v *ValidationMiddleware) ValidateRequest(w http.ResponseWriter, r *http.Request, requestData []byte, validations []ValidationType) bool {
+	for _, validation := range validations {
+		switch validation {
+		case ValidationNetwork:
+			if !v.CheckNetwork(w, r, requestData) {
+				return false
+			}
+		case ValidationRunMode:
+			if !v.CheckRunMode(w, r) {
+				return false
+			}
+		case ValidationModeNetwork:
+			if !v.CheckModeNetwork(w, r) {
+				return false
+			}
+		case ValidationAccount:
+			if !v.CheckAccount(w, r, requestData) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ValidateEndpoint performs validations for a specific endpoint
+func (v *ValidationMiddleware) ValidateEndpoint(w http.ResponseWriter, r *http.Request, requestData []byte, endpoint string) bool {
+	validations := GetValidationsForEndpoint(endpoint)
+	return v.ValidateRequest(w, r, requestData, validations)
+}

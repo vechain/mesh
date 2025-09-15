@@ -12,17 +12,20 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	meshclient "github.com/vechain/mesh/client"
+	meshmodels "github.com/vechain/mesh/models"
+	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
 )
 
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
-	vechainClient *VeChainClient
+	vechainClient *meshclient.VeChainClient
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *VeChainClient) *ConstructionService {
+func NewConstructionService(vechainClient *meshclient.VeChainClient) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
 	}
@@ -145,14 +148,8 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		},
 		SuggestedFee: []*types.Amount{
 			{
-				Value: fmt.Sprintf("%d", gas*1000000000), // gas * 1 Gwei
-				Currency: &types.Currency{
-					Symbol:   "VTHO",
-					Decimals: 18,
-					Metadata: map[string]any{
-						"contractAddress": "0x0000000000000000000000000000456E65726779",
-					},
-				},
+				Value:    fmt.Sprintf("%d", gas*1000000000), // gas * 1 Gwei
+				Currency: meshmodels.VTHOCurrency,
 			},
 		},
 	}
@@ -203,9 +200,9 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 				return
 			}
 
-			value, ok := new(big.Int).SetString(op.Amount.Value, 10)
-			if !ok {
-				http.Error(w, "Invalid amount", http.StatusBadRequest)
+			value, err := meshutils.StringToBigInt(op.Amount.Value, 10)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid amount: %v", err), http.StatusBadRequest)
 				return
 			}
 
@@ -219,10 +216,8 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		}
 	}
 
-	// Build the transaction
 	vechainTx := builder.Build()
 
-	// Encode transaction
 	var buf bytes.Buffer
 	if err := vechainTx.EncodeRLP(&buf); err != nil {
 		http.Error(w, "Failed to encode transaction", http.StatusInternalServerError)
@@ -230,7 +225,6 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	}
 	unsignedTx := buf.Bytes()
 
-	// Create signing payloads
 	var payloads []*types.SigningPayload
 
 	// Get origin address for first payload
@@ -242,7 +236,6 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		}
 		originAddress := crypto.PubkeyToAddress(*originAddr)
 
-		// Create hash for origin signing
 		hash := vechainTx.SigningHash()
 		payload := &types.SigningPayload{
 			AccountIdentifier: &types.AccountIdentifier{
@@ -342,11 +335,8 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 					Address: to.String(),
 				},
 				Amount: &types.Amount{
-					Value: clause.Value().String(),
-					Currency: &types.Currency{
-						Symbol:   "VET",
-						Decimals: 18,
-					},
+					Value:    clause.Value().String(),
+					Currency: meshmodels.VETCurrency,
 				},
 			}
 			operations = append(operations, operation)
@@ -369,14 +359,8 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				Address: delegator.String(),
 			},
 			Amount: &types.Amount{
-				Value: estimatedFee.String(),
-				Currency: &types.Currency{
-					Symbol:   "VTHO",
-					Decimals: 18,
-					Metadata: map[string]any{
-						"contractAddress": "0x0000000000000000000000000000456E65726779",
-					},
-				},
+				Value:    estimatedFee.String(),
+				Currency: meshmodels.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeDelegationOp)
@@ -422,7 +406,6 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 
 	// Apply signatures for VIP191 Fee Delegation
 	if len(request.Signatures) == 2 {
-		// VIP191 Fee Delegation: origin + delegator signatures
 		originSig := request.Signatures[0]
 		delegatorSig := request.Signatures[1]
 
