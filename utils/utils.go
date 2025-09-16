@@ -5,7 +5,47 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"time"
 )
+
+// WriteJSONResponse writes a JSON response with proper error handling
+func WriteJSONResponse(w http.ResponseWriter, response any) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// GenerateNonce generates a random nonce
+func GenerateNonce() string {
+	return fmt.Sprintf("0x%016x", uint64(time.Now().UnixNano()))
+}
+
+// CreateBlockRef creates blockRef from block ID
+func CreateBlockRef(blockID string) string {
+	return blockID[len(blockID)-16:] // Remove 0x and take last 8 bytes
+}
+
+// GetStringFromOptions gets a string value from options map
+func GetStringFromOptions(options map[string]any, key string, defaultValue string) string {
+	if value, ok := options[key].(string); ok {
+		return value
+	}
+	return defaultValue
+}
+
+// HasOperationType checks if operations contain a specific type
+func HasOperationType(operations []any, operationType string) bool {
+	for _, op := range operations {
+		if opMap, ok := op.(map[string]any); ok {
+			if opType, ok := opMap["type"].(string); ok && opType == operationType {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // HexToDecimal converts hex string to decimal string
 func HexToDecimal(hexStr string) (string, error) {
@@ -22,26 +62,7 @@ func HexToDecimal(hexStr string) (string, error) {
 	return bigInt.String(), nil
 }
 
-// StringToBigInt converts a string to big.Int
-func StringToBigInt(value string, base int) (*big.Int, error) {
-	bigInt := new(big.Int)
-	bigInt, ok := bigInt.SetString(value, base)
-	if !ok {
-		return nil, fmt.Errorf("invalid string for big.Int conversion: %s (base %d)", value, base)
-	}
-	return bigInt, nil
-}
-
 // StringPtr creates a string pointer
 func StringPtr(s string) *string {
 	return &s
-}
-
-// WriteJSONResponse writes a JSON response with proper error handling
-func WriteJSONResponse(w http.ResponseWriter, response any) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
 }

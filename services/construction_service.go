@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -22,12 +23,14 @@ import (
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
 	vechainClient *meshclient.VeChainClient
+	baseGasPrice  *big.Int
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *meshclient.VeChainClient) *ConstructionService {
+func NewConstructionService(vechainClient *meshclient.VeChainClient, baseGasPrice *big.Int) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
+		baseGasPrice:  baseGasPrice,
 	}
 }
 
@@ -115,38 +118,35 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Get current block for blockRef
-	bestBlock, err := c.vechainClient.GetBestBlock()
+	// Get basic transaction info
+	bestBlock, chainTag, err := c.getBasicTransactionInfo()
 	if err != nil {
-		http.Error(w, "Failed to get best block", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Get chain tag
-	chainTag, err := c.vechainClient.GetChainID()
+	// Determine transaction type
+	transactionType := meshutils.GetStringFromOptions(request.Options, "transactionType", "dynamic")
+
+	// Calculate gas and create blockRef
+	gas := c.calculateGas(request.Options)
+	blockRef := meshutils.CreateBlockRef(bestBlock.ID)
+	nonce := meshutils.GenerateNonce()
+
+	// Build metadata based on transaction type
+	metadata, gasPrice, err := c.buildMetadata(transactionType, blockRef, int64(chainTag), gas, nonce)
 	if err != nil {
-		http.Error(w, "Failed to get chain tag", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Calculate gas based on operations
-	gas := int64(21000) // Base gas for simple transfer
-	if clauses, ok := request.Options["clauses"].([]any); ok {
-		gas = int64(len(clauses)) * 21000 // 21000 gas per clause
-	}
-
-	// Create blockRef (last 8 bytes of block ID)
-	blockRef := bestBlock.ID[len(bestBlock.ID)-16:] // Remove 0x and take last 8 bytes
-
+	// Calculate fee and build response
+	fee := new(big.Int).Mul(big.NewInt(gas), gasPrice)
 	response := &types.ConstructionMetadataResponse{
-		Metadata: map[string]any{
-			"blockRef": blockRef,
-			"chainTag": chainTag,
-			"gas":      gas,
-		},
+		Metadata: metadata,
 		SuggestedFee: []*types.Amount{
 			{
-				Value:    fmt.Sprintf("%d", gas*1000000000), // gas * 1 Gwei
+				Value:    "-" + fee.String(),
 				Currency: meshmodels.VTHOCurrency,
 			},
 		},
@@ -163,109 +163,25 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Extract metadata
-	metadata := request.Metadata
-	blockRef := metadata["blockRef"].(string)
-	chainTag := int(metadata["chainTag"].(float64))
-	gas := int64(metadata["gas"].(float64))
-
-	// Create VeChain transaction builder
-	builder := tx.NewBuilder(tx.TypeLegacy)
-
-	// Set chain tag
-	builder.ChainTag(byte(chainTag))
-
-	// Set block ref
-	blockRefBytes := hexToBytes32(blockRef)
-	builder.BlockRef(tx.BlockRef(blockRefBytes[:8]))
-
-	// Set expiration (3 hours)
-	builder.Expiration(720)
-
-	// Set gas
-	builder.Gas(uint64(gas))
-
-	// Set gas price coefficient
-	builder.GasPriceCoef(0)
-
-	// Add clauses from operations
-	for _, op := range request.Operations {
-		if op.Type == "Transfer" {
-			toAddr, err := thor.ParseAddress(op.Account.Address)
-			if err != nil {
-				http.Error(w, "Invalid address", http.StatusBadRequest)
-				return
-			}
-
-			value, err := meshutils.StringToBigInt(op.Amount.Value, 10)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Invalid amount: %v", err), http.StatusBadRequest)
-				return
-			}
-
-			clause := tx.NewClause(&toAddr)
-			clause = clause.WithValue(value)
-			builder.Clause(clause)
-		} else if op.Type == "FeeDelegation" {
-			// VIP191 Fee Delegation - this is handled in the signing process
-			// The delegator will pay for the transaction fees
-			continue
-		}
-	}
-
-	vechainTx := builder.Build()
-
-	var buf bytes.Buffer
-	if err := vechainTx.EncodeRLP(&buf); err != nil {
-		http.Error(w, "Failed to encode transaction", http.StatusInternalServerError)
+	// Build transaction
+	vechainTx, err := c.buildTransaction(request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	unsignedTx := buf.Bytes()
 
-	var payloads []*types.SigningPayload
-
-	// Get origin address for first payload
-	if len(request.PublicKeys) > 0 {
-		originAddr, err := crypto.UnmarshalPubkey(request.PublicKeys[0].Bytes)
-		if err != nil {
-			http.Error(w, "Invalid origin public key", http.StatusBadRequest)
-			return
-		}
-		originAddress := crypto.PubkeyToAddress(*originAddr)
-
-		hash := vechainTx.SigningHash()
-		payload := &types.SigningPayload{
-			AccountIdentifier: &types.AccountIdentifier{
-				Address: originAddress.Hex(),
-			},
-			Bytes:         hash[:],
-			SignatureType: types.EcdsaRecovery,
-		}
-		payloads = append(payloads, payload)
+	// Create signing payloads
+	payloads, err := c.createSigningPayloads(vechainTx, request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	// Add delegator payload if VIP191
-	if len(request.PublicKeys) > 1 {
-		delegatorAddr, err := crypto.UnmarshalPubkey(request.PublicKeys[1].Bytes)
-		if err != nil {
-			http.Error(w, "Invalid delegator public key", http.StatusBadRequest)
-			return
-		}
-		delegatorAddress := crypto.PubkeyToAddress(*delegatorAddr)
-
-		// Create hash for delegator signing
-		originAddr, _ := crypto.UnmarshalPubkey(request.PublicKeys[0].Bytes)
-		originAddress := crypto.PubkeyToAddress(*originAddr)
-		thorOriginAddr, _ := thor.ParseAddress(originAddress.Hex())
-		hash := vechainTx.DelegatorSigningHash(thorOriginAddr)
-		payload := &types.SigningPayload{
-			AccountIdentifier: &types.AccountIdentifier{
-				Address: delegatorAddress.Hex(),
-			},
-			Bytes:         hash[:],
-			SignatureType: types.EcdsaRecovery,
-		}
-		payloads = append(payloads, payload)
+	// Encode transaction
+	unsignedTx, err := c.encodeTransaction(vechainTx)
+	if err != nil {
+		http.Error(w, "Failed to encode transaction", http.StatusInternalServerError)
+		return
 	}
 
 	response := &types.ConstructionPayloadsResponse{
@@ -318,13 +234,31 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 
 	// Parse clauses as operations
 	clauses := vechainTx.Clauses()
-	for i, clause := range clauses {
+	operationIndex := 0
+	for _, clause := range clauses {
 		to := clause.To()
 		if to != nil {
-			// Transfer operation
-			operation := &types.Operation{
+			// Sender operation (negative amount)
+			senderOp := &types.Operation{
 				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(i),
+					Index: int64(operationIndex),
+				},
+				Type: "Transfer",
+				Account: &types.AccountIdentifier{
+					Address: origin.String(),
+				},
+				Amount: &types.Amount{
+					Value:    "-" + clause.Value().String(),
+					Currency: meshmodels.VETCurrency,
+				},
+			}
+			operations = append(operations, senderOp)
+			operationIndex++
+
+			// Receiver operation (positive amount)
+			receiverOp := &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(operationIndex),
 				},
 				Type: "Transfer",
 				Account: &types.AccountIdentifier{
@@ -335,43 +269,78 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 					Currency: meshmodels.VETCurrency,
 				},
 			}
-			operations = append(operations, operation)
+			operations = append(operations, receiverOp)
+			operationIndex++
 		}
 	}
 
-	// Add FeeDelegation operation if VIP191 is used
-	delegator, err = vechainTx.Delegator()
-	if err == nil && delegator != nil {
-		// Calculate estimated fee (simplified)
-		estimatedFee := new(big.Int).SetUint64(vechainTx.Gas())
-		estimatedFee.Mul(estimatedFee, big.NewInt(1000000000)) // 1 Gwei
+	// Calculate gas price based on transaction type
+	var gasPrice *big.Int
+	if vechainTx.Type() == tx.TypeLegacy {
+		gasPrice = big.NewInt(1000000000) // 1 Gwei for legacy
+	} else {
+		// For dynamic fee, use maxFeePerGas
+		gasPrice = vechainTx.MaxFeePerGas()
+	}
 
+	// Calculate fee amount
+	feeAmount := new(big.Int).Mul(big.NewInt(int64(vechainTx.Gas())), gasPrice)
+
+	// Add fee operation
+	if delegator != nil {
+		// Fee delegation operation
 		feeDelegationOp := &types.Operation{
 			OperationIdentifier: &types.OperationIdentifier{
-				Index: int64(len(operations)),
+				Index: int64(operationIndex),
 			},
 			Type: "FeeDelegation",
 			Account: &types.AccountIdentifier{
 				Address: delegator.String(),
 			},
 			Amount: &types.Amount{
-				Value:    estimatedFee.String(),
+				Value:    "-" + feeAmount.String(),
 				Currency: meshmodels.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeDelegationOp)
+	} else {
+		// Regular fee operation
+		feeOp := &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(operationIndex),
+			},
+			Type: "Fee",
+			Account: &types.AccountIdentifier{
+				Address: origin.String(),
+			},
+			Amount: &types.Amount{
+				Value:    "-" + feeAmount.String(),
+				Currency: meshmodels.VTHOCurrency,
+			},
+		}
+		operations = append(operations, feeOp)
+	}
+
+	// Build metadata based on transaction type
+	metadata := map[string]any{
+		"chainTag":   vechainTx.ChainTag(),
+		"blockRef":   fmt.Sprintf("0x%x", vechainTx.BlockRef()),
+		"expiration": vechainTx.Expiration(),
+		"gas":        vechainTx.Gas(),
+		"nonce":      fmt.Sprintf("0x%x", vechainTx.Nonce()),
+	}
+
+	if vechainTx.Type() == tx.TypeLegacy {
+		metadata["gasPriceCoef"] = vechainTx.GasPriceCoef()
+	} else {
+		metadata["maxFeePerGas"] = vechainTx.MaxFeePerGas().String()
+		metadata["maxPriorityFeePerGas"] = vechainTx.MaxPriorityFeePerGas().String()
 	}
 
 	response := &types.ConstructionParseResponse{
 		Operations:               operations,
 		AccountIdentifierSigners: signers,
-		Metadata: map[string]any{
-			"chainTag":     vechainTx.ChainTag(),
-			"blockRef":     fmt.Sprintf("0x%x", vechainTx.BlockRef()),
-			"expiration":   vechainTx.Expiration(),
-			"gas":          vechainTx.Gas(),
-			"gasPriceCoef": vechainTx.GasPriceCoef(),
-		},
+		Metadata:                 metadata,
 	}
 
 	meshutils.WriteJSONResponse(w, response)
@@ -399,8 +368,10 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Apply signatures for VIP191 Fee Delegation
+	// Apply signatures based on transaction type and delegation
+	var signedTx *tx.Transaction
 	if len(request.Signatures) == 2 {
+		// VIP191 Fee Delegation with two signatures
 		originSig := request.Signatures[0]
 		delegatorSig := request.Signatures[1]
 
@@ -413,7 +384,6 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		}
 
 		// Verify delegator signature
-		// Get origin address from the first signature
 		originAddr := crypto.PubkeyToAddress(*originPubKey)
 		thorOriginAddr, _ := thor.ParseAddress(originAddr.Hex())
 		delegatorHash := vechainTx.DelegatorSigningHash(thorOriginAddr)
@@ -437,9 +407,9 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 			return
 		}
 
-		// Apply VIP191 signatures to transaction
-		// Note: This would require proper implementation of signature application
-		// For now, we'll use the transaction as-is
+		// Combine signatures for VIP191
+		combinedSig := append(originSig.Bytes, delegatorSig.Bytes...)
+		signedTx = vechainTx.WithSignature(combinedSig)
 
 	} else if len(request.Signatures) == 1 {
 		// Regular transaction: only origin signature
@@ -460,6 +430,10 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 			http.Error(w, "Signature address mismatch", http.StatusBadRequest)
 			return
 		}
+
+		// Set signature
+		signedTx = vechainTx.WithSignature(sig.Bytes)
+
 	} else {
 		http.Error(w, "Invalid number of signatures", http.StatusBadRequest)
 		return
@@ -467,14 +441,14 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 
 	// Encode signed transaction
 	var buf bytes.Buffer
-	if err := vechainTx.EncodeRLP(&buf); err != nil {
+	if err := signedTx.EncodeRLP(&buf); err != nil {
 		http.Error(w, "Failed to encode signed transaction", http.StatusInternalServerError)
 		return
 	}
-	signedTx := buf.Bytes()
+	signedTxBytes := buf.Bytes()
 
 	response := &types.ConstructionCombineResponse{
-		SignedTransaction: hex.EncodeToString(signedTx),
+		SignedTransaction: hex.EncodeToString(signedTxBytes),
 	}
 
 	meshutils.WriteJSONResponse(w, response)
@@ -530,28 +504,307 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 	}
 
 	// Submit transaction to VeChain network
-	// Note: This would require implementing the actual submission logic
-	// For now, we'll return a mock response
+	txID, err := c.vechainClient.SubmitTransaction(txBytes)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to submit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	response := map[string]any{
 		"transaction_identifier": &types.TransactionIdentifier{
-			Hash: "0x" + hex.EncodeToString(crypto.Keccak256(txBytes)),
+			Hash: txID,
 		},
 	}
 
 	meshutils.WriteJSONResponse(w, response)
 }
 
-// Helper function to convert hex string to Bytes32
-func hexToBytes32(hexStr string) thor.Bytes32 {
-	hexStr = strings.TrimPrefix(hexStr, "0x")
-
-	// Pad with zeros to make it 32 bytes
-	for len(hexStr) < 64 {
-		hexStr = "0" + hexStr
+// getBasicTransactionInfo gets basic transaction information from the network
+func (c *ConstructionService) getBasicTransactionInfo() (*meshclient.Block, int, error) {
+	bestBlock, err := c.vechainClient.GetBestBlock()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get best block: %w", err)
 	}
 
-	bytes, _ := hex.DecodeString(hexStr)
-	var result thor.Bytes32
-	copy(result[:], bytes)
-	return result
+	chainTag, err := c.vechainClient.GetChainID()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get chain tag: %w", err)
+	}
+
+	return bestBlock, chainTag, nil
+}
+
+// calculateGas calculates gas based on operations
+func (c *ConstructionService) calculateGas(options map[string]any) int64 {
+	gas := int64(20000) // Base gas
+
+	if clauses, ok := options["clauses"].([]any); ok {
+		for _, clause := range clauses {
+			if clauseMap, ok := clause.(map[string]any); ok {
+				if to, ok := clauseMap["to"].(string); ok {
+					// VTHO contract requires more gas
+					if strings.EqualFold(to, meshmodels.VTHOCurrency.Metadata["contractAddress"].(string)) {
+						gas += 50000
+					} else {
+						gas += 10000
+					}
+				}
+			}
+		}
+	}
+
+	// Add 20% buffer
+	return int64(float64(gas) * 1.2)
+}
+
+// buildMetadata builds metadata based on transaction type
+func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
+	if transactionType == "legacy" {
+		return c.buildLegacyMetadata(blockRef, chainTag, gas, nonce)
+	}
+	return c.buildDynamicMetadata(blockRef, chainTag, gas, nonce)
+}
+
+// buildLegacyMetadata builds metadata for legacy transactions
+func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
+	// Generate random gasPriceCoef (0-255)
+	randomBytes := make([]byte, 1)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return nil, nil, fmt.Errorf("failed to generate random gas price coefficient: %w", err)
+	}
+	gasPriceCoef := randomBytes[0]
+
+	metadata := map[string]any{
+		"transactionType": "legacy",
+		"blockRef":        blockRef,
+		"chainTag":        chainTag,
+		"gas":             gas,
+		"nonce":           nonce,
+		"gasPriceCoef":    gasPriceCoef,
+	}
+
+	return metadata, c.baseGasPrice, nil
+}
+
+// buildDynamicMetadata builds metadata for dynamic fee transactions
+func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
+	// Get dynamic gas price from network
+	dynamicGasPrice, err := c.vechainClient.GetDynamicGasPrice()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get dynamic gas price: %w", err)
+	}
+
+	if dynamicGasPrice.BaseFee.Cmp(big.NewInt(0)) == 0 {
+		// Case where we are building a dynamic fee transaction but the base fee is 0
+		// This happens when the node is catching up with the chain block-wise
+		metadata := map[string]any{
+			"transactionType":      "dynamic",
+			"blockRef":             blockRef,
+			"chainTag":             chainTag,
+			"gas":                  gas,
+			"nonce":                nonce,
+			"maxFeePerGas":         c.baseGasPrice.String(),
+			"maxPriorityFeePerGas": "0",
+		}
+		return metadata, c.baseGasPrice, nil
+	}
+
+	// Normal case: use actual base fee and reward
+	gasPrice := new(big.Int).Add(dynamicGasPrice.BaseFee, dynamicGasPrice.Reward)
+	metadata := map[string]any{
+		"transactionType":      "dynamic",
+		"blockRef":             blockRef,
+		"chainTag":             chainTag,
+		"gas":                  gas,
+		"nonce":                nonce,
+		"maxFeePerGas":         gasPrice.String(),
+		"maxPriorityFeePerGas": dynamicGasPrice.Reward.String(),
+	}
+
+	return metadata, gasPrice, nil
+}
+
+// buildTransaction builds a VeChain transaction from the request
+func (c *ConstructionService) buildTransaction(request types.ConstructionPayloadsRequest) (*tx.Transaction, error) {
+	// Extract metadata
+	metadata := request.Metadata
+	blockRef := metadata["blockRef"].(string)
+	chainTag := int(metadata["chainTag"].(float64))
+	gas := int64(metadata["gas"].(float64))
+	transactionType := metadata["transactionType"].(string)
+	nonce := metadata["nonce"].(string)
+
+	// Parse nonce to uint64
+	nonceStr := strings.TrimPrefix(nonce, "0x")
+	nonceValue := new(big.Int)
+	nonceValue, ok := nonceValue.SetString(nonceStr, 16)
+	if !ok {
+		return nil, fmt.Errorf("invalid nonce: %s", nonceStr)
+	}
+
+	// Create transaction builder
+	builder, err := c.createTransactionBuilder(transactionType, metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set common fields
+	builder.ChainTag(byte(chainTag))
+	blockRefBytes, err := thor.ParseBytes32(blockRef)
+	if err != nil {
+		return nil, fmt.Errorf("invalid blockRef: %w", err)
+	}
+	builder.BlockRef(tx.BlockRef(blockRefBytes[:8]))
+	builder.Expiration(720) // 3 hours
+	builder.Gas(uint64(gas))
+	builder.Nonce(nonceValue.Uint64())
+
+	// Add clauses from operations
+	if err := c.addClausesToBuilder(builder, request.Operations); err != nil {
+		return nil, err
+	}
+
+	return builder.Build(), nil
+}
+
+// createTransactionBuilder creates a transaction builder based on type
+func (c *ConstructionService) createTransactionBuilder(transactionType string, metadata map[string]any) (*tx.Builder, error) {
+	if transactionType == "legacy" {
+		builder := tx.NewBuilder(tx.TypeLegacy)
+		gasPriceCoef := int(metadata["gasPriceCoef"].(float64))
+		builder.GasPriceCoef(uint8(gasPriceCoef))
+		return builder, nil
+	}
+
+	// Dynamic fee transaction
+	builder := tx.NewBuilder(tx.TypeDynamicFee)
+	maxFeePerGas := metadata["maxFeePerGas"].(string)
+	maxPriorityFeePerGas := metadata["maxPriorityFeePerGas"].(string)
+
+	maxFee := new(big.Int)
+	maxFee, ok := maxFee.SetString(maxFeePerGas, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid maxFeePerGas: %s", maxFeePerGas)
+	}
+	maxPriority := new(big.Int)
+	maxPriority, ok = maxPriority.SetString(maxPriorityFeePerGas, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", maxPriorityFeePerGas)
+	}
+
+	builder.MaxFeePerGas(maxFee)
+	builder.MaxPriorityFeePerGas(maxPriority)
+	return builder, nil
+}
+
+// addClausesToBuilder adds clauses to the transaction builder
+func (c *ConstructionService) addClausesToBuilder(builder *tx.Builder, operations []*types.Operation) error {
+	for _, op := range operations {
+		if op.Type == "Transfer" {
+			toAddr, err := thor.ParseAddress(op.Account.Address)
+			if err != nil {
+				return fmt.Errorf("invalid address: %w", err)
+			}
+
+			value := new(big.Int)
+			value, ok := value.SetString(op.Amount.Value, 10)
+			if !ok {
+				return fmt.Errorf("invalid amount: %s", op.Amount.Value)
+			}
+
+			clause := tx.NewClause(&toAddr)
+			clause = clause.WithValue(value)
+			builder.Clause(clause)
+		}
+		// FeeDelegation operations are handled in the signing process
+	}
+	return nil
+}
+
+// createSigningPayloads creates signing payloads for the transaction
+func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, request types.ConstructionPayloadsRequest) ([]*types.SigningPayload, error) {
+	var payloads []*types.SigningPayload
+
+	// Check for fee delegation
+	hasFeeDelegation := c.hasFeeDelegation(request.Operations)
+
+	// Get origin address for first payload
+	if len(request.PublicKeys) > 0 {
+		originPayload, err := c.createOriginPayload(vechainTx, request.PublicKeys[0])
+		if err != nil {
+			return nil, err
+		}
+		payloads = append(payloads, originPayload)
+	}
+
+	// Add delegator payload if VIP191
+	if hasFeeDelegation && len(request.PublicKeys) > 1 {
+		delegatorPayload, err := c.createDelegatorPayload(vechainTx, request.PublicKeys)
+		if err != nil {
+			return nil, err
+		}
+		payloads = append(payloads, delegatorPayload)
+	}
+
+	return payloads, nil
+}
+
+// hasFeeDelegation checks if there are fee delegation operations
+func (c *ConstructionService) hasFeeDelegation(operations []*types.Operation) bool {
+	for _, op := range operations {
+		if op.Type == "FeeDelegation" {
+			return true
+		}
+	}
+	return false
+}
+
+// createOriginPayload creates the origin signing payload
+func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, publicKey *types.PublicKey) (*types.SigningPayload, error) {
+	originAddr, err := crypto.UnmarshalPubkey(publicKey.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid origin public key: %w", err)
+	}
+	originAddress := crypto.PubkeyToAddress(*originAddr)
+
+	hash := vechainTx.SigningHash()
+	return &types.SigningPayload{
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: originAddress.Hex(),
+		},
+		Bytes:         hash[:],
+		SignatureType: types.EcdsaRecovery,
+	}, nil
+}
+
+// createDelegatorPayload creates the delegator signing payload
+func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, publicKeys []*types.PublicKey) (*types.SigningPayload, error) {
+	delegatorAddr, err := crypto.UnmarshalPubkey(publicKeys[1].Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid delegator public key: %w", err)
+	}
+	delegatorAddress := crypto.PubkeyToAddress(*delegatorAddr)
+
+	// Create hash for delegator signing
+	originAddr, _ := crypto.UnmarshalPubkey(publicKeys[0].Bytes)
+	originAddress := crypto.PubkeyToAddress(*originAddr)
+	thorOriginAddr, _ := thor.ParseAddress(originAddress.Hex())
+	hash := vechainTx.DelegatorSigningHash(thorOriginAddr)
+
+	return &types.SigningPayload{
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: delegatorAddress.Hex(),
+		},
+		Bytes:         hash[:],
+		SignatureType: types.EcdsaRecovery,
+	}, nil
+}
+
+// encodeTransaction encodes a transaction to RLP bytes
+func (c *ConstructionService) encodeTransaction(vechainTx *tx.Transaction) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := vechainTx.EncodeRLP(&buf); err != nil {
+		return nil, fmt.Errorf("failed to encode transaction: %w", err)
+	}
+	return buf.Bytes(), nil
 }

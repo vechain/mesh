@@ -1,11 +1,15 @@
 package client
 
 import (
+	"bytes"
 	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/thorclient"
+	"github.com/vechain/thor/v2/tx"
 )
 
 // VeChainClient handles communication with VeChain RPC
@@ -190,6 +194,60 @@ func (c *VeChainClient) GetTransactionReceipt(txHash string) (*TransactionReceip
 	return &TransactionReceipt{
 		BlockID: "unknown", // This would be populated from the actual receipt
 		// Other fields would be populated from the actual receipt data
+	}, nil
+}
+
+// SubmitTransaction submits a raw transaction to the VeChain network
+func (c *VeChainClient) SubmitTransaction(rawTx []byte) (string, error) {
+	// Decode the raw transaction bytes into a VeChain transaction
+	var vechainTx tx.Transaction
+	stream := rlp.NewStream(bytes.NewReader(rawTx), 0)
+	if err := vechainTx.DecodeRLP(stream); err != nil {
+		return "", fmt.Errorf("failed to decode transaction: %w", err)
+	}
+
+	// Submit transaction using the VeChain client
+	result, err := c.client.SendTransaction(&vechainTx)
+	if err != nil {
+		return "", fmt.Errorf("failed to submit transaction: %w", err)
+	}
+
+	return result.ID.String(), nil
+}
+
+// DynamicGasPrice represents the dynamic gas price information
+type DynamicGasPrice struct {
+	BaseFee *big.Int
+	Reward  *big.Int
+}
+
+// GetDynamicGasPrice gets the current dynamic gas price from the network
+func (c *VeChainClient) GetDynamicGasPrice() (*DynamicGasPrice, error) {
+	feesHistory, err := c.client.FeesHistory(1, "best", []float64{50})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fees history: %w", err)
+	}
+
+	// Extract base fee and reward from fees history
+	var baseFee *big.Int
+	if len(feesHistory.BaseFeePerGas) > 0 {
+		baseFee = feesHistory.BaseFeePerGas[0].ToInt()
+	} else {
+		// Fallback to 0 if no base fee data available
+		baseFee = big.NewInt(0)
+	}
+
+	var reward *big.Int
+	if len(feesHistory.Reward) > 0 && len(feesHistory.Reward[0]) > 0 {
+		reward = feesHistory.Reward[0][0].ToInt()
+	} else {
+		// Fallback to 0 if no reward data available
+		reward = big.NewInt(0)
+	}
+
+	return &DynamicGasPrice{
+		BaseFee: baseFee,
+		Reward:  reward,
 	}, nil
 }
 

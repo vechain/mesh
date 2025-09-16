@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -22,6 +23,7 @@ type Config struct {
 	NodeVersion       string                   `json:"nodeVersion"`
 	ServiceName       string                   `json:"serviceName"`
 	TokenList         []any                    `json:"tokenlist"`
+	BaseGasPrice      string                   `json:"baseGasPrice"`
 	NetworkIdentifier *types.NetworkIdentifier `json:"-"`
 }
 
@@ -161,4 +163,18 @@ func (c *Config) PrintConfig() {
 		c.Network,
 		c.ChainTag,
 	)
+}
+
+// GetBaseGasPrice returns the base gas price as a big.Int
+func (c *Config) GetBaseGasPrice() *big.Int {
+	if c.BaseGasPrice == "" {
+		return nil
+	}
+
+	baseGasPrice, ok := new(big.Int).SetString(c.BaseGasPrice, 10)
+	if !ok {
+		return nil
+	}
+
+	return baseGasPrice
 }
