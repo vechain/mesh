@@ -85,9 +85,5 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(balance); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	meshutils.WriteJSONResponse(w, balance)
 }

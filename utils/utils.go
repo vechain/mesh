@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
 )
 
 // HexToDecimal converts hex string to decimal string
@@ -33,4 +35,13 @@ func StringToBigInt(value string, base int) (*big.Int, error) {
 // StringPtr creates a string pointer
 func StringPtr(s string) *string {
 	return &s
+}
+
+// WriteJSONResponse writes a JSON response with proper error handling
+func WriteJSONResponse(w http.ResponseWriter, response any) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }

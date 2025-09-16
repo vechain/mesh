@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +14,7 @@ import (
 	meshclient "github.com/vechain/mesh/client"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/services"
+	meshutils "github.com/vechain/mesh/utils"
 	meshvalidation "github.com/vechain/mesh/validation"
 )
 
@@ -131,11 +131,7 @@ func (v *VeChainMeshServer) healthCheck(w http.ResponseWriter, r *http.Request) 
 		"service":   "VeChain Mesh API",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // Start starts the server
