@@ -64,8 +64,7 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionPreprocess preprocesses a transaction
@@ -105,8 +104,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 		RequiredPublicKeys: requiredPublicKeys,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionMetadata gets metadata for construction
@@ -154,8 +152,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionPayloads creates payloads for construction
@@ -276,8 +273,7 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		Payloads:            payloads,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionParse parses a transaction
@@ -378,8 +374,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionCombine combines signed transactions
@@ -482,8 +477,7 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		SignedTransaction: hex.EncodeToString(signedTx),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionHash gets the hash of a transaction
@@ -517,8 +511,7 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // ConstructionSubmit submits a transaction to the network
@@ -545,8 +538,7 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // Helper function to convert hex string to Bytes32

@@ -7,6 +7,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshclient "github.com/vechain/mesh/client"
+	meshutils "github.com/vechain/mesh/utils"
 )
 
 // NetworkService handles network-related endpoints
@@ -34,8 +35,7 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(networks)
+	meshutils.WriteJSONResponse(w, networks)
 }
 
 // NetworkStatus returns the current network status
@@ -89,8 +89,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	meshutils.WriteJSONResponse(w, status)
 }
 
 // Helper functions to create pointers

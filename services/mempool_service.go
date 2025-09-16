@@ -6,6 +6,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshclient "github.com/vechain/mesh/client"
+	meshutils "github.com/vechain/mesh/utils"
 )
 
 // MempoolService handles mempool API endpoints
@@ -28,8 +29,7 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 		TransactionIdentifiers: []*types.TransactionIdentifier{},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	meshutils.WriteJSONResponse(w, response)
 }
 
 // MempoolTransaction gets a specific transaction from the mempool
