@@ -217,7 +217,6 @@ func (b *BlockService) parseTransactionOperations(tx meshclient.Transaction) []*
 			},
 		}
 		operations = append(operations, energyOp)
-		operationIndex++
 	}
 
 	return operations
@@ -395,5 +394,8 @@ func (b *BlockService) buildRosettaTransaction(tx meshclient.Transaction, operat
 // writeJSONResponse writes a JSON response
 func (b *BlockService) writeJSONResponse(w http.ResponseWriter, response any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
