@@ -7,12 +7,10 @@ import (
 
 // HexToDecimal converts hex string to decimal string
 func HexToDecimal(hexStr string) (string, error) {
-	// Remove 0x prefix if present
 	if len(hexStr) > 2 && hexStr[:2] == "0x" {
 		hexStr = hexStr[2:]
 	}
 
-	// Convert hex to big.Int
 	bigInt := new(big.Int)
 	bigInt, ok := bigInt.SetString(hexStr, 16)
 	if !ok {
@@ -30,4 +28,9 @@ func StringToBigInt(value string, base int) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid string for big.Int conversion: %s (base %d)", value, base)
 	}
 	return bigInt, nil
+}
+
+// StringPtr creates a string pointer
+func StringPtr(s string) *string {
+	return &s
 }
