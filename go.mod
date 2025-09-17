@@ -13,8 +13,8 @@ require (
 	github.com/coinbase/rosetta-sdk-go/types v1.0.0
 	github.com/ethereum/go-ethereum v1.8.14
 	github.com/gorilla/mux v1.8.1
-	github.com/vechain/thor/v2 v2.3.1
 	github.com/vechain/networkhub v0.0.5-0.20250903134714-68afb10dd848
+	github.com/vechain/thor/v2 v2.3.1
 )
 
 require (
@@ -42,8 +42,6 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/qianbin/directcache v0.9.7 // indirect
 	github.com/qianbin/drlp v0.0.0-20240102101024-e0e02518b5f9 // indirect
-	github.com/rogpeppe/go-internal v1.11.0 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/vechain/go-ecvrf v0.0.0-20220525125849-96fa0442e765 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
