@@ -43,8 +43,8 @@ func main() {
 			if err := thorEnv.StopNetwork(); err != nil {
 				log.Printf("Error stopping Thor node: %v", err)
 			} else {
-					log.Println("Thor node stopped successfully")
-				}
+				log.Println("Thor node stopped successfully")
+			}
 		}()
 
 		log.Println("Thor node started successfully")

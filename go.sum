@@ -126,6 +126,8 @@ github.com/vechain/go-ethereum v1.8.15-0.20250708104014-34fea45fc2b7 h1:G+L5+ucS
 github.com/vechain/go-ethereum v1.8.15-0.20250708104014-34fea45fc2b7/go.mod h1:yPUCNmntAh1PritrMfSi7noK+9vVPStZX3wgh3ieaY0=
 github.com/vechain/goleveldb v1.0.1-0.20220809091043-51eb019c8655 h1:CbHcWpCi7wOYfpoErRABh3Slyq9vO0Ay/EHN5GuJSXQ=
 github.com/vechain/goleveldb v1.0.1-0.20220809091043-51eb019c8655/go.mod h1:RRCYJbIwD5jmqPI9XoAFR0OcDxqUctll6zUj/+B4S48=
+github.com/vechain/networkhub v0.0.5-0.20250918090224-6338f15182f0 h1:KgI29IuWl+kz/T7cGk8bHpyUM/oH3YPKAw7KMYOUHko=
+github.com/vechain/networkhub v0.0.5-0.20250918090224-6338f15182f0/go.mod h1:eKVUaHh3O3bFDGESAwyQQMy+mkrb4jHE7W1z/YRFySI=
 github.com/vechain/thor/v2 v2.3.1 h1:5/rRwlPFK7iUOAmKzgU3m61zOJ4PUahHJ5yGCzO4Veg=
 github.com/vechain/thor/v2 v2.3.1/go.mod h1:yug1BCTTR34y3qO3SkP7CVmXF0Ozvm+MjW5880bNtz4=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
