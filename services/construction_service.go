@@ -221,7 +221,7 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	}
 
 	response := &types.ConstructionPayloadsResponse{
-		UnsignedTransaction: hex.EncodeToString(unsignedTx),
+		UnsignedTransaction: fmt.Sprintf("0x%s", hex.EncodeToString(unsignedTx)),
 		Payloads:            payloads,
 	}
 
