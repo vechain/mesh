@@ -3,7 +3,7 @@
   "port": 8080,
   "mode": "online",
   "network": "test",
-  "nodeApi": "",
+  "nodeApi": "http://localhost:8669",
   "apiVersion": "",
   "nodeVersion": "",
   "serviceName": "VeChain Mesh API",

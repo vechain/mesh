@@ -32,13 +32,9 @@ type VeChainMeshServer struct {
 }
 
 // NewVeChainMeshServer creates a new server instance
-func NewVeChainMeshServer() (*VeChainMeshServer, error) {
+func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	router := mux.NewRouter()
 
-	cfg, err := meshconfig.NewConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load configuration: %v", err)
-	}
 	vechainClient := meshclient.NewVeChainClient(cfg.GetNodeAPI())
 
 	validationMiddleware := meshvalidation.NewValidationMiddleware(cfg.GetNetworkIdentifier(), cfg.GetRunMode())

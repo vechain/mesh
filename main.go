@@ -8,11 +8,50 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	meshconfig "github.com/vechain/mesh/config"
+	"github.com/vechain/networkhub/environments/local"
 )
 
 func main() {
+	// Load configuration
+	cfg, err := meshconfig.NewConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	if cfg.Mode == "online" {
+		// Start Thor node
+		log.Println("Starting VeChain Thor node...")
+		thorEnv := local.NewEnv()
+
+		// Configure Thor node based on config.json
+		thorConfig := local.PublicNetworkConfig{
+			NodeID:      "thor-node-1",
+			NetworkType: cfg.GetNetwork(), // "test" or "main" from config.json
+			APIAddr:     "0.0.0.0:8669",   // API address as specified
+			P2PPort:     11235,            // P2P port as specified
+		}
+
+		if err := thorEnv.AttachToPublicNetworkAndStart(thorConfig); err != nil {
+			log.Fatalf("Failed to start Thor node: %v", err)
+		}
+
+		defer func() {
+			// Stop Thor node
+			log.Println("Stopping Thor node...")
+			if err := thorEnv.StopNetwork(); err != nil {
+				log.Printf("Error stopping Thor node: %v", err)
+			} else {
+				log.Println("Thor node stopped successfully")
+			}
+		}()
+
+		log.Println("Thor node started successfully")
+	}
+
 	// Create server
-	meshServer, err := NewVeChainMeshServer()
+	meshServer, err := NewVeChainMeshServer(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
