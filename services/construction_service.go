@@ -738,7 +738,7 @@ func (c *ConstructionService) createTransactionBuilder(transactionType string, m
 // addClausesToBuilder adds clauses to the transaction builder
 func (c *ConstructionService) addClausesToBuilder(builder *tx.Builder, operations []*types.Operation) error {
 	for _, op := range operations {
-		if op.Type == "Transfer" {
+		if op.Type == meshutils.OperationTypeTransfer {
 			// Only process Transfer operations with positive values (recipients)
 			value := new(big.Int)
 			value, ok := value.SetString(op.Amount.Value, 10)
@@ -796,7 +796,7 @@ func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, r
 // hasFeeDelegation checks if there are fee delegation operations
 func (c *ConstructionService) hasFeeDelegation(operations []*types.Operation) bool {
 	for _, op := range operations {
-		if op.Type == "FeeDelegation" {
+		if op.Type == meshutils.OperationTypeFeeDelegation {
 			return true
 		}
 	}

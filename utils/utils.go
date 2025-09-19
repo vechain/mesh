@@ -13,6 +13,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// Operation types for VeChain
+const (
+	OperationTypeTransfer      = "Transfer"
+	OperationTypeFee           = "Fee"
+	OperationTypeFeeDelegation = "FeeDelegation"
+)
+
 // WriteJSONResponse writes a JSON response with proper error handling
 func WriteJSONResponse(w http.ResponseWriter, response any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -99,13 +106,13 @@ func GetTxOrigins(operations []*types.Operation) []string {
 		}
 
 		// Consider Fee operations
-		if op.Type == "Fee" {
+		if op.Type == OperationTypeFee {
 			origins = append(origins, address)
 			continue
 		}
 
 		// Consider Transfer operations with negative value (sending)
-		if op.Type == "Transfer" && op.Amount != nil && op.Amount.Value != "" {
+		if op.Type == OperationTypeTransfer && op.Amount != nil && op.Amount.Value != "" {
 			// Parse amount value
 			amount := new(big.Int)
 			if _, ok := amount.SetString(op.Amount.Value, 10); ok && amount.Sign() < 0 {
