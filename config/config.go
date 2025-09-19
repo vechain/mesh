@@ -24,6 +24,7 @@ type Config struct {
 	ServiceName       string                   `json:"serviceName"`
 	TokenList         []any                    `json:"tokenlist"`
 	BaseGasPrice      string                   `json:"baseGasPrice"`
+	InitialBaseFee    string                   `json:"initialBaseFee"`
 	NetworkIdentifier *types.NetworkIdentifier `json:"-"`
 }
 
@@ -177,4 +178,18 @@ func (c *Config) GetBaseGasPrice() *big.Int {
 	}
 
 	return baseGasPrice
+}
+
+// GetInitialBaseFee returns the initial base fee as a big.Int
+func (c *Config) GetInitialBaseFee() *big.Int {
+	if c.InitialBaseFee == "" {
+		return nil
+	}
+
+	initialBaseFee, ok := new(big.Int).SetString(c.InitialBaseFee, 10)
+	if !ok {
+		return nil
+	}
+
+	return initialBaseFee
 }

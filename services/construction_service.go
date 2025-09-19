@@ -49,7 +49,7 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 	}
 
 	// Convert public key bytes to ECDSA public key
-	pubKey, err := crypto.UnmarshalPubkey(request.PublicKey.Bytes)
+	pubKey, err := crypto.DecompressPubkey(request.PublicKey.Bytes)
 	if err != nil {
 		http.Error(w, "Invalid public key format", http.StatusBadRequest)
 		return
@@ -130,7 +130,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 
 	// Calculate gas and create blockRef
 	gas := c.calculateGas(request.Options)
-	blockRef := meshutils.CreateBlockRef(bestBlock.ID)
+	blockRef := bestBlock.ID[:18]
 	nonce, err := meshutils.GenerateNonce()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -184,7 +184,7 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	// Encode transaction
 	unsignedTx, err := c.encodeTransaction(vechainTx)
 	if err != nil {
-		http.Error(w, "Failed to encode transaction", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -654,11 +654,13 @@ func (c *ConstructionService) buildTransaction(request types.ConstructionPayload
 
 	// Set common fields
 	builder.ChainTag(byte(chainTag))
-	blockRefBytes, err := thor.ParseBytes32(blockRef)
+
+	blockRefBytes, err := hex.DecodeString(blockRef[2:])
 	if err != nil {
 		return nil, fmt.Errorf("invalid blockRef: %w", err)
 	}
-	builder.BlockRef(tx.BlockRef(blockRefBytes[:8]))
+
+	builder.BlockRef(tx.BlockRef(blockRefBytes))
 	builder.Expiration(720) // 3 hours
 	builder.Gas(uint64(gas))
 	builder.Nonce(nonceValue.Uint64())
@@ -765,11 +767,11 @@ func (c *ConstructionService) hasFeeDelegation(operations []*types.Operation) bo
 
 // createOriginPayload creates the origin signing payload
 func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, publicKey *types.PublicKey) (*types.SigningPayload, error) {
-	originAddr, err := crypto.UnmarshalPubkey(publicKey.Bytes)
+	originPubKey, err := crypto.DecompressPubkey(publicKey.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin public key: %w", err)
 	}
-	originAddress := crypto.PubkeyToAddress(*originAddr)
+	originAddress := crypto.PubkeyToAddress(*originPubKey)
 
 	hash := vechainTx.SigningHash()
 	return &types.SigningPayload{
@@ -783,14 +785,14 @@ func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, pub
 
 // createDelegatorPayload creates the delegator signing payload
 func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, publicKeys []*types.PublicKey) (*types.SigningPayload, error) {
-	delegatorAddr, err := crypto.UnmarshalPubkey(publicKeys[1].Bytes)
+	delegatorAddr, err := crypto.DecompressPubkey(publicKeys[1].Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("invalid delegator public key: %w", err)
 	}
 	delegatorAddress := crypto.PubkeyToAddress(*delegatorAddr)
 
 	// Create hash for delegator signing
-	originAddr, _ := crypto.UnmarshalPubkey(publicKeys[0].Bytes)
+	originAddr, _ := crypto.DecompressPubkey(publicKeys[0].Bytes)
 	originAddress := crypto.PubkeyToAddress(*originAddr)
 	thorOriginAddr, _ := thor.ParseAddress(originAddress.Hex())
 	hash := vechainTx.DelegatorSigningHash(thorOriginAddr)

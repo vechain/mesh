@@ -27,11 +27,6 @@ func GenerateNonce() (string, error) {
 	return fmt.Sprintf("0x%016x", bytes), nil
 }
 
-// CreateBlockRef creates blockRef from block ID
-func CreateBlockRef(blockID string) string {
-	return blockID[len(blockID)-16:] // Remove 0x and take last 8 bytes
-}
-
 // GetStringFromOptions gets a string value from options map
 func GetStringFromOptions(options map[string]any, key string, defaultValue string) string {
 	if value, ok := options[key].(string); ok {

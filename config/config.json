@@ -7,8 +7,8 @@
   "apiVersion": "",
   "nodeVersion": "",
   "serviceName": "VeChain Mesh API",
-  "baseGasPrice":10000000000000,
+  "baseGasPrice":"10000000000000",
   "chainTag":0,
-  "initialBaseFee":10000000000000,
+  "initialBaseFee":"10000000000000",
   "tokenlist": []
 }
