@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshutils "github.com/vechain/mesh/utils"
 )
 
 // ValidationMiddleware handles request validation
@@ -25,6 +26,7 @@ const (
 	ValidationRunMode
 	ValidationModeNetwork
 	ValidationAccount
+	ValidationConstructionPayloads
 )
 
 // Common validation sets for different endpoints
@@ -49,6 +51,14 @@ var (
 		ValidationNetwork,
 		ValidationRunMode,
 		ValidationModeNetwork,
+	}
+
+	// ConstructionPayloadsValidations includes specific validations for construction/payloads
+	ConstructionPayloadsValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationRunMode,
+		ValidationModeNetwork,
+		ValidationConstructionPayloads,
 	}
 )
 
@@ -176,6 +186,67 @@ func (v *ValidationMiddleware) isValidVeChainAddress(address string) bool {
 	return hexPattern.MatchString(address)
 }
 
+// CheckConstructionPayloads validates construction payloads specific requirements
+func (v *ValidationMiddleware) CheckConstructionPayloads(w http.ResponseWriter, r *http.Request, requestData []byte) bool {
+	var request struct {
+		Operations []*types.Operation `json:"operations"`
+		PublicKeys []*types.PublicKey `json:"public_keys"`
+		Metadata   map[string]any     `json:"metadata"`
+	}
+
+	// Parse the request
+	if err := json.Unmarshal(requestData, &request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate operations
+	if len(request.Operations) == 0 {
+		http.Error(w, "Operations are required", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate public keys
+	if len(request.PublicKeys) == 0 {
+		http.Error(w, "Public keys are required", http.StatusBadRequest)
+		return false
+	}
+	if len(request.PublicKeys) > 2 {
+		http.Error(w, "Too many public keys provided", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate metadata
+	if request.Metadata == nil {
+		http.Error(w, "Metadata is required", http.StatusBadRequest)
+		return false
+	}
+
+	// Check fee delegation requirements
+	txDelegator := ""
+	if delegator, ok := request.Metadata["fee_delegator_account"].(string); ok {
+		txDelegator = strings.ToLower(delegator)
+	}
+
+	if txDelegator != "" && len(request.PublicKeys) != 2 {
+		http.Error(w, "Fee delegation requires exactly 2 public keys", http.StatusBadRequest)
+		return false
+	}
+
+	// Validate origins (should be exactly 1)
+	origins := meshutils.GetTxOrigins(request.Operations)
+	if len(origins) == 0 {
+		http.Error(w, "No origin found in operations", http.StatusBadRequest)
+		return false
+	}
+	if len(origins) > 1 {
+		http.Error(w, "Multiple origins found in operations", http.StatusBadRequest)
+		return false
+	}
+
+	return true
+}
+
 // ValidateRequest performs validations based on the provided validation types
 func (v *ValidationMiddleware) ValidateRequest(w http.ResponseWriter, r *http.Request, requestData []byte, validations []ValidationType) bool {
 	for _, validation := range validations {
@@ -194,6 +265,10 @@ func (v *ValidationMiddleware) ValidateRequest(w http.ResponseWriter, r *http.Re
 			}
 		case ValidationAccount:
 			if !v.CheckAccount(w, r, requestData) {
+				return false
+			}
+		case ValidationConstructionPayloads:
+			if !v.CheckConstructionPayloads(w, r, requestData) {
 				return false
 			}
 		}

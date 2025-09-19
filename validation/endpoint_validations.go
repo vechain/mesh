@@ -14,7 +14,7 @@ var EndpointValidationSets = map[string][]ValidationType{
 	"/construction/derive":     ConstructionValidations,
 	"/construction/preprocess": ConstructionValidations,
 	"/construction/metadata":   ConstructionValidations,
-	"/construction/payloads":   ConstructionValidations,
+	"/construction/payloads":   ConstructionPayloadsValidations,
 	"/construction/parse":      ConstructionValidations,
 	"/construction/combine":    ConstructionValidations,
 	"/construction/hash":       ConstructionValidations,

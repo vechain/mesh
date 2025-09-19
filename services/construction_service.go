@@ -167,6 +167,38 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Get transaction origin from operations
+	origins := meshutils.GetTxOrigins(request.Operations)
+	txOrigin := origins[0]
+
+	// Check fee delegation
+	txDelegator := c.getFeeDelegatorAccount(request.Metadata)
+	hasFeeDelegation := txDelegator != ""
+
+	// Validate origin address matches first public key
+	originAddress, err := meshutils.ComputeAddress(request.PublicKeys[0])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if originAddress != txOrigin {
+		http.Error(w, fmt.Sprintf("Origin address mismatch: expected %s, got %s", txOrigin, originAddress), http.StatusBadRequest)
+		return
+	}
+
+	// Validate delegator address if present
+	if hasFeeDelegation {
+		delegatorAddress, err := meshutils.ComputeAddress(request.PublicKeys[1])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if delegatorAddress != txDelegator {
+			http.Error(w, fmt.Sprintf("Delegator address mismatch: expected %s, got %s", txDelegator, delegatorAddress), http.StatusBadRequest)
+			return
+		}
+	}
+
 	// Build transaction
 	vechainTx, err := c.buildTransaction(request)
 	if err != nil {
@@ -707,15 +739,21 @@ func (c *ConstructionService) createTransactionBuilder(transactionType string, m
 func (c *ConstructionService) addClausesToBuilder(builder *tx.Builder, operations []*types.Operation) error {
 	for _, op := range operations {
 		if op.Type == "Transfer" {
-			toAddr, err := thor.ParseAddress(op.Account.Address)
-			if err != nil {
-				return fmt.Errorf("invalid address: %w", err)
-			}
-
+			// Only process Transfer operations with positive values (recipients)
 			value := new(big.Int)
 			value, ok := value.SetString(op.Amount.Value, 10)
 			if !ok {
 				return fmt.Errorf("invalid amount: %s", op.Amount.Value)
+			}
+
+			// Skip negative values (these represent the sender/origin, not a clause)
+			if value.Sign() < 0 {
+				continue
+			}
+
+			toAddr, err := thor.ParseAddress(op.Account.Address)
+			if err != nil {
+				return fmt.Errorf("invalid address: %w", err)
 			}
 
 			clause := tx.NewClause(&toAddr)
@@ -813,4 +851,12 @@ func (c *ConstructionService) encodeTransaction(vechainTx *tx.Transaction) ([]by
 		return nil, fmt.Errorf("failed to encode transaction: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// getFeeDelegatorAccount extracts fee delegator account from metadata
+func (c *ConstructionService) getFeeDelegatorAccount(metadata map[string]any) string {
+	if delegator, ok := metadata["fee_delegator_account"].(string); ok {
+		return strings.ToLower(delegator)
+	}
+	return ""
 }

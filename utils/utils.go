@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // WriteJSONResponse writes a JSON response with proper error handling
@@ -65,4 +69,56 @@ func HexToDecimal(hexStr string) (string, error) {
 // StringPtr creates a string pointer
 func StringPtr(s string) *string {
 	return &s
+}
+
+// ComputeAddress computes address from public key
+func ComputeAddress(publicKey *types.PublicKey) (string, error) {
+	pubKey, err := crypto.DecompressPubkey(publicKey.Bytes)
+	if err != nil {
+		return "", err
+	}
+	address := crypto.PubkeyToAddress(*pubKey)
+	return strings.ToLower(address.Hex()), nil
+}
+
+// GetTxOrigins extracts origin addresses from operations
+func GetTxOrigins(operations []*types.Operation) []string {
+	var origins []string
+
+	for _, op := range operations {
+		if op.Account == nil || op.Account.Address == "" {
+			continue
+		}
+
+		address := strings.ToLower(op.Account.Address)
+
+		// Check if address already exists
+		exists := false
+		for _, existing := range origins {
+			if existing == address {
+				exists = true
+				break
+			}
+		}
+		if exists {
+			continue
+		}
+
+		// Consider Fee operations
+		if op.Type == "Fee" {
+			origins = append(origins, address)
+			continue
+		}
+
+		// Consider Transfer operations with negative value (sending)
+		if op.Type == "Transfer" && op.Amount != nil && op.Amount.Value != "" {
+			// Parse amount value
+			amount := new(big.Int)
+			if _, ok := amount.SetString(op.Amount.Value, 10); ok && amount.Sign() < 0 {
+				origins = append(origins, address)
+			}
+		}
+	}
+
+	return origins
 }
