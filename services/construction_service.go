@@ -131,7 +131,11 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	// Calculate gas and create blockRef
 	gas := c.calculateGas(request.Options)
 	blockRef := meshutils.CreateBlockRef(bestBlock.ID)
-	nonce := meshutils.GenerateNonce()
+	nonce, err := meshutils.GenerateNonce()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Build metadata based on transaction type
 	metadata, gasPrice, err := c.buildMetadata(transactionType, blockRef, int64(chainTag), gas, nonce)

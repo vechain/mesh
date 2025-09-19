@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
-	"time"
 )
 
 // WriteJSONResponse writes a JSON response with proper error handling
@@ -18,8 +18,13 @@ func WriteJSONResponse(w http.ResponseWriter, response any) {
 }
 
 // GenerateNonce generates a random nonce
-func GenerateNonce() string {
-	return fmt.Sprintf("0x%016x", uint64(time.Now().UnixNano()))
+func GenerateNonce() (string, error) {
+	bytes := make([]byte, 8)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("0x%016x", bytes), nil
 }
 
 // CreateBlockRef creates blockRef from block ID
