@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -93,14 +94,7 @@ func GetTxOrigins(operations []*types.Operation) []string {
 		address := strings.ToLower(op.Account.Address)
 
 		// Check if address already exists
-		exists := false
-		for _, existing := range origins {
-			if existing == address {
-				exists = true
-				break
-			}
-		}
-		if exists {
+		if slices.Contains(origins, address) {
 			continue
 		}
 
