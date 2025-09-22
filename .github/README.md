@@ -1,6 +1,16 @@
 # VeChain Mesh API Implementation
 
-> **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability. Expect changes and improvements in upcoming releases.
+> **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
+>
+> **📋 TODO List:**
+> - Implement mempool endpoints 
+> - Refactor request/response endpoints to match rosetta-sdk-go/types
+> - Add GitHub Actions (build, lint, test)
+> - Add e2e tests like in vechain/rosetta
+> - Add unit tests for coverage
+> - Use mesh-cli to validate endpoints
+>
+> Expect more changes and improvements in upcoming releases.
 
 A Coinbase Mesh API implementation for the VeChain blockchain, built in Go.
 
