@@ -1,11 +1,15 @@
 package thor
 
 import (
+	"bytes"
 	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/thorclient"
+	"github.com/vechain/thor/v2/tx"
 )
 
 // VeChainClient handles communication with VeChain RPC
@@ -169,60 +173,58 @@ func (c *VeChainClient) convertBlock(block *api.JSONCollapsedBlock) *Block {
 	}
 }
 
-// GetTransaction gets a transaction by its hash
-// Note: This is a simplified implementation that returns basic transaction info
-// In a real implementation, you would need to fetch the full transaction details
-func (c *VeChainClient) GetTransaction(txHash string) (*Transaction, error) {
-	// For now, we'll return a basic transaction structure
-	// In a real implementation, you would fetch the full transaction from the blockchain
-	return &Transaction{
-		ID: txHash,
-		// Other fields would be populated from the actual transaction data
-	}, nil
+// SubmitTransaction submits a raw transaction to the VeChain network
+func (c *VeChainClient) SubmitTransaction(rawTx []byte) (string, error) {
+	// Decode the raw transaction bytes into a VeChain transaction
+	var vechainTx tx.Transaction
+	stream := rlp.NewStream(bytes.NewReader(rawTx), 0)
+	if err := vechainTx.DecodeRLP(stream); err != nil {
+		return "", fmt.Errorf("failed to decode transaction: %w", err)
+	}
+
+	// Submit transaction using the VeChain client
+	result, err := c.client.SendTransaction(&vechainTx)
+	if err != nil {
+		return "", fmt.Errorf("failed to submit transaction: %w", err)
+	}
+
+	return result.ID.String(), nil
 }
 
-// GetTransactionReceipt gets a transaction receipt by transaction hash
-// Note: This is a simplified implementation that returns basic receipt info
-// In a real implementation, you would need to fetch the full receipt details
-func (c *VeChainClient) GetTransactionReceipt(txHash string) (*TransactionReceipt, error) {
-	// For now, we'll return a basic receipt structure
-	// In a real implementation, you would fetch the full receipt from the blockchain
-	return &TransactionReceipt{
-		BlockID: "unknown", // This would be populated from the actual receipt
-		// Other fields would be populated from the actual receipt data
-	}, nil
+// DynamicGasPrice represents the dynamic gas price information
+type DynamicGasPrice struct {
+	BaseFee *big.Int
+	Reward  *big.Int
 }
 
-// TransactionReceipt represents a VeChain transaction receipt
-type TransactionReceipt struct {
-	BlockID        string `json:"blockID"`
-	BlockNumber    int64  `json:"blockNumber"`
-	BlockTimestamp int64  `json:"blockTimestamp"`
-	GasUsed        int64  `json:"gasUsed"`
-	GasPayer       string `json:"gasPayer"`
-	Paid           string `json:"paid"`
-	Reward         string `json:"reward"`
-	Reverted       bool   `json:"reverted"`
-	Meta           struct {
-		BlockID        string `json:"blockID"`
-		BlockNumber    int64  `json:"blockNumber"`
-		BlockTimestamp int64  `json:"blockTimestamp"`
-		TxID           string `json:"txID"`
-		TxOrigin       string `json:"txOrigin"`
-	} `json:"meta"`
-	Outputs []struct {
-		ContractAddress string `json:"contractAddress"`
-		Events          []struct {
-			Address string   `json:"address"`
-			Topics  []string `json:"topics"`
-			Data    string   `json:"data"`
-		} `json:"events"`
-		Transfers []struct {
-			Sender    string `json:"sender"`
-			Recipient string `json:"recipient"`
-			Amount    string `json:"amount"`
-		} `json:"transfers"`
-	} `json:"outputs"`
+// GetDynamicGasPrice gets the current dynamic gas price from the network
+func (c *VeChainClient) GetDynamicGasPrice() (*DynamicGasPrice, error) {
+	feesHistory, err := c.client.FeesHistory(1, "best", []float64{50})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fees history: %w", err)
+	}
+
+	// Extract base fee and reward from fees history
+	var baseFee *big.Int
+	if len(feesHistory.BaseFeePerGas) > 0 {
+		baseFee = feesHistory.BaseFeePerGas[0].ToInt()
+	} else {
+		// Fallback to 0 if no base fee data available
+		baseFee = big.NewInt(0)
+	}
+
+	var reward *big.Int
+	if len(feesHistory.Reward) > 0 && len(feesHistory.Reward[0]) > 0 {
+		reward = feesHistory.Reward[0][0].ToInt()
+	} else {
+		// Fallback to 0 if no reward data available
+		reward = big.NewInt(0)
+	}
+
+	return &DynamicGasPrice{
+		BaseFee: baseFee,
+		Reward:  reward,
+	}, nil
 }
 
 // convertTransactionsFromAPI converts API transactions to our Transaction type

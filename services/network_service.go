@@ -6,18 +6,18 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	thorclient "github.com/vechain/mesh/thor"
+	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
 
 // NetworkService handles network-related endpoints
 type NetworkService struct {
-	vechainClient *thorclient.VeChainClient
+	vechainClient *meshthor.VeChainClient
 	network       string
 }
 
 // NewNetworkService creates a new network service
-func NewNetworkService(vechainClient *thorclient.VeChainClient, network string) *NetworkService {
+func NewNetworkService(vechainClient *meshthor.VeChainClient, network string) *NetworkService {
 	return &NetworkService{
 		vechainClient: vechainClient,
 		network:       network,

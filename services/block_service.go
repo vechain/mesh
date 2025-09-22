@@ -6,18 +6,18 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	thorclient "github.com/vechain/mesh/thor"
+	meshthor "github.com/vechain/mesh/thor"
 	meshmodels "github.com/vechain/mesh/models"
 	meshutils "github.com/vechain/mesh/utils"
 )
 
 // BlockService handles block API endpoints
 type BlockService struct {
-	vechainClient *thorclient.VeChainClient
+	vechainClient *meshthor.VeChainClient
 }
 
 // NewBlockService creates a new block service
-func NewBlockService(vechainClient *thorclient.VeChainClient) *BlockService {
+func NewBlockService(vechainClient *meshthor.VeChainClient) *BlockService {
 	return &BlockService{
 		vechainClient: vechainClient,
 	}
@@ -83,7 +83,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 
 // parseTransactionOperations parses a transaction and returns its operations
 // This analyzes the transaction data to extract meaningful operations
-func (b *BlockService) parseTransactionOperations(tx thorclient.Transaction) []*types.Operation {
+func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*types.Operation {
 	var operations []*types.Operation
 
 	// Check if this is a meaningful transaction
@@ -272,7 +272,7 @@ func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.Blo
 }
 
 // getBlockByIdentifier gets a block by its identifier (hash or index)
-func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*thorclient.Block, error) {
+func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*meshthor.Block, error) {
 	if blockIdentifier.Hash != "" {
 		// Get block by hash
 		return b.vechainClient.GetBlockByHash(blockIdentifier.Hash)
@@ -284,7 +284,7 @@ func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifie
 }
 
 // getBlockByPartialIdentifier gets a block by its partial identifier (hash or index)
-func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*thorclient.Block, error) {
+func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*meshthor.Block, error) {
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
 		// Get block by hash
 		return b.vechainClient.GetBlockByHash(*blockIdentifier.Hash)
@@ -296,7 +296,7 @@ func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.Partial
 }
 
 // getParentBlock gets the parent block of the given block
-func (b *BlockService) getParentBlock(block *thorclient.Block) (*thorclient.Block, error) {
+func (b *BlockService) getParentBlock(block *meshthor.Block) (*meshthor.Block, error) {
 	if block.Number == 0 {
 		// For genesis block, parent is itself
 		return block, nil
@@ -305,7 +305,7 @@ func (b *BlockService) getParentBlock(block *thorclient.Block) (*thorclient.Bloc
 }
 
 // findTransactionInBlock finds a specific transaction in a block
-func (b *BlockService) findTransactionInBlock(block *thorclient.Block, txHash string) (*thorclient.Transaction, error) {
+func (b *BlockService) findTransactionInBlock(block *meshthor.Block, txHash string) (*meshthor.Transaction, error) {
 	for _, tx := range block.Transactions {
 		if tx.ID == txHash {
 			return &tx, nil
@@ -315,7 +315,7 @@ func (b *BlockService) findTransactionInBlock(block *thorclient.Block, txHash st
 }
 
 // buildBlockResponse builds the response for a block request
-func (b *BlockService) buildBlockResponse(block, parent *thorclient.Block) map[string]any {
+func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) map[string]any {
 	blockIdentifier := &types.BlockIdentifier{
 		Index: block.Number,
 		Hash:  block.ID,
@@ -335,7 +335,7 @@ func (b *BlockService) buildBlockResponse(block, parent *thorclient.Block) map[s
 
 		if len(operations) > 0 {
 			// Transaction has operations, include it in transactions
-			transaction := b.buildRosettaTransaction(tx, operations)
+			transaction := b.buildMeshTransaction(tx, operations)
 			transactions = append(transactions, transaction)
 		} else {
 			// Transaction has no operations, add to other_transactions
@@ -364,17 +364,17 @@ func (b *BlockService) buildBlockResponse(block, parent *thorclient.Block) map[s
 }
 
 // buildBlockTransactionResponse builds the response for a block transaction request
-func (b *BlockService) buildBlockTransactionResponse(tx *thorclient.Transaction) map[string]any {
+func (b *BlockService) buildBlockTransactionResponse(tx *meshthor.Transaction) map[string]any {
 	operations := b.parseTransactionOperations(*tx)
-	rosettaTx := b.buildRosettaTransaction(*tx, operations)
+	meshTx := b.buildMeshTransaction(*tx, operations)
 
 	return map[string]any{
-		"transaction": rosettaTx,
+		"transaction": meshTx,
 	}
 }
 
-// buildRosettaTransaction builds a Rosetta transaction from a VeChain transaction
-func (b *BlockService) buildRosettaTransaction(tx thorclient.Transaction, operations []*types.Operation) *types.Transaction {
+// buildMeshTransaction builds a Mesh transaction from a VeChain transaction
+func (b *BlockService) buildMeshTransaction(tx meshthor.Transaction, operations []*types.Operation) *types.Transaction {
 	return &types.Transaction{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: tx.ID,

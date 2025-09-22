@@ -1,5 +1,5 @@
 {
-  "rosetta_version": "1.4.13",
+  "mesh_version": "1.4.13",
   "port": 8080,
   "mode": "online",
   "network": "test",
@@ -7,8 +7,9 @@
   "apiVersion": "",
   "nodeVersion": "",
   "serviceName": "VeChain Mesh API",
-  "baseGasPrice":10000000000000,
+  "expiration": 180,
+  "baseGasPrice":"10000000000000",
   "chainTag":0,
-  "initialBaseFee":10000000000000,
+  "initialBaseFee":"10000000000000",
   "tokenlist": []
 }

@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 
 // Config holds the service configuration
 type Config struct {
-	RosettaVersion    string                   `json:"rosetta_version"`
+	MeshVersion       string                   `json:"mesh_version"`
 	Port              int                      `json:"port"`
 	Mode              string                   `json:"mode"`
 	Network           string                   `json:"network"`
@@ -22,6 +23,9 @@ type Config struct {
 	NodeVersion       string                   `json:"nodeVersion"`
 	ServiceName       string                   `json:"serviceName"`
 	TokenList         []any                    `json:"tokenlist"`
+	BaseGasPrice      string                   `json:"baseGasPrice"`
+	InitialBaseFee    string                   `json:"initialBaseFee"`
+	Expiration        uint32                   `json:"expiration"`
 	NetworkIdentifier *types.NetworkIdentifier `json:"-"`
 }
 
@@ -125,14 +129,9 @@ func (c *Config) GetChainTag() int {
 	return c.ChainTag
 }
 
-// GetServiceName returns the service name
-func (c *Config) GetServiceName() string {
-	return c.ServiceName
-}
-
-// GetRosettaVersion returns the Rosetta version
-func (c *Config) GetRosettaVersion() string {
-	return c.RosettaVersion
+// GetMeshVersion returns the Mesh version
+func (c *Config) GetMeshVersion() string {
+	return c.MeshVersion
 }
 
 // IsOnlineMode returns true if running in online mode
@@ -145,7 +144,7 @@ func (c *Config) PrintConfig() {
 	fmt.Printf(`
 ******************** %s ********************
 |   Api               |   localhost:%d
-|   Rosetta Version   |   %s
+|   Mesh Version      |   %s
 |   Mode              |   %s
 |   Node URL          |   %s
 |   Node Version      |   %s
@@ -155,11 +154,30 @@ func (c *Config) PrintConfig() {
 `,
 		c.ServiceName,
 		c.Port,
-		c.RosettaVersion,
+		c.MeshVersion,
 		c.Mode,
 		c.NodeAPI,
 		c.NodeVersion,
 		c.Network,
 		c.ChainTag,
 	)
+}
+
+// GetBaseGasPrice returns the base gas price as a big.Int
+func (c *Config) GetBaseGasPrice() *big.Int {
+	if c.BaseGasPrice == "" {
+		return nil
+	}
+
+	baseGasPrice, ok := new(big.Int).SetString(c.BaseGasPrice, 10)
+	if !ok {
+		return nil
+	}
+
+	return baseGasPrice
+}
+
+// GetExpiration returns the transaction expiration in blocks
+func (c *Config) GetExpiration() uint32 {
+	return c.Expiration
 }
