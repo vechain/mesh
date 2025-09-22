@@ -12,25 +12,25 @@ import (
 	"time"
 )
 
-// ThorConfig represents the configuration for a Thor node
-type ThorConfig struct {
+// Config represents the configuration for a Thor node
+type Config struct {
 	NodeID      string
 	NetworkType string
 	APIAddr     string
 	P2PPort     int
 }
 
-// ThorService manages Thor node processes
-type ThorServer struct {
-	config   ThorConfig
+// Server manages Thor node processes
+type Server struct {
+	config   Config
 	process  *exec.Cmd
 	ctx      context.Context
 	cancel   context.CancelFunc
 	thorPath string
 }
 
-// NewThorService creates a new Thor service instance
-func NewThorServer(config ThorConfig) *ThorServer {
+// NewServer creates a new Thor server instance
+func NewServer(config Config) *Server {
 	// Get the directory where the executable is located
 	execPath, err := os.Executable()
 	if err != nil {
@@ -47,7 +47,7 @@ func NewThorServer(config ThorConfig) *ThorServer {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &ThorServer{
+	return &Server{
 		config:   config,
 		ctx:      ctx,
 		cancel:   cancel,
@@ -56,7 +56,7 @@ func NewThorServer(config ThorConfig) *ThorServer {
 }
 
 // AttachToPublicNetworkAndStart starts a Thor node and connects to the public network
-func (ts *ThorServer) AttachToPublicNetworkAndStart() error {
+func (ts *Server) AttachToPublicNetworkAndStart() error {
 	log.Printf("Starting Thor node with config: %+v", ts.config)
 
 	// Build command arguments
@@ -95,8 +95,8 @@ func (ts *ThorServer) AttachToPublicNetworkAndStart() error {
 	return nil
 }
 
-// StopNetwork stops the Thor node
-func (ts *ThorServer) StopNetwork() error {
+// Stop stops the Thor node
+func (ts *Server) Stop() error {
 	if ts.process == nil {
 		log.Println("No Thor process to stop")
 		return nil
@@ -142,31 +142,4 @@ func (ts *ThorServer) StopNetwork() error {
 
 		return nil
 	}
-}
-
-// IsRunning checks if the Thor node is currently running
-func (ts *ThorServer) IsRunning() bool {
-	if ts.process == nil {
-		return false
-	}
-
-	if ts.process.ProcessState != nil {
-		return !ts.process.ProcessState.Exited()
-	}
-
-	// Check if the process is still alive by sending a signal 0
-	if ts.process.Process != nil {
-		err := ts.process.Process.Signal(syscall.Signal(0))
-		return err == nil
-	}
-
-	return false
-}
-
-// GetProcessID returns the process ID of the Thor node
-func (ts *ThorServer) GetProcessID() int {
-	if ts.process != nil && ts.process.Process != nil {
-		return ts.process.Process.Pid
-	}
-	return -1
 }

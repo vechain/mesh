@@ -25,23 +25,23 @@ func main() {
 		log.Println("Starting VeChain Thor node...")
 
 		// Configure Thor node based on config.json
-		thorConfig := thor.ThorConfig{
+		thorConfig := thor.Config{
 			NodeID:      "thor-node-1",
 			NetworkType: cfg.GetNetwork(), // "test" or "main" from config.json
 			APIAddr:     "0.0.0.0:8669",   // API address as specified
 			P2PPort:     11235,            // P2P port as specified
 		}
 
-		thorService := thor.NewThorServer(thorConfig)
+		thorServer := thor.NewServer(thorConfig)
 
-		if err := thorService.AttachToPublicNetworkAndStart(); err != nil {
+		if err := thorServer.AttachToPublicNetworkAndStart(); err != nil {
 			log.Fatalf("Failed to start Thor node: %v", err)
 		}
 
 		defer func() {
 			// Stop Thor node
 			log.Println("Stopping Thor node...")
-			if err := thorService.StopNetwork(); err != nil {
+			if err := thorServer.Stop(); err != nil {
 				log.Printf("Error stopping Thor node: %v", err)
 			} else {
 				log.Println("Thor node stopped successfully")
