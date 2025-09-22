@@ -16,6 +16,8 @@ services:
       - NETWORK=${NETWORK:-test}
       - PORT=8080
     restart: unless-stopped
+    volumes:
+      - ./thor_data:/tmp/thor_data
     networks:
       - vechain-network
     healthcheck:
