@@ -504,7 +504,6 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Decode transaction
 	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.SignedTransaction)
 	if err != nil {
 		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
@@ -513,13 +512,19 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 
 	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
 	if err != nil {
-		http.Error(w, "Failed to decode transaction", http.StatusBadRequest)
+		http.Error(w, "Failed to decode Mesh transaction", http.StatusBadRequest)
+		return
+	}
+
+	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to build Thor transaction: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	response := map[string]any{
 		"transaction_identifier": &types.TransactionIdentifier{
-			Hash: meshTx.Transaction.ID().String(),
+			Hash: thorTx.ID().String(),
 		},
 	}
 
