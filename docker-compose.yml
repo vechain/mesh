@@ -16,8 +16,6 @@ services:
       - NETWORK=${NETWORK:-test}
       - PORT=8080
     restart: unless-stopped
-    volumes:
-      - thor-cache:/tmp/thor_master_reusable
     networks:
       - vechain-network
     healthcheck:
@@ -26,9 +24,6 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-
-volumes:
-  thor-cache:
 
 networks:
   vechain-network:
