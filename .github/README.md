@@ -29,16 +29,19 @@ git clone <repository-url>
 cd mesh
 
 # Start with default configuration (testnet)
-docker-compose up --build -d
+make docker-up-build
 
 # Start in solo mode (local development)
-docker-compose -f docker-compose-solo.yml up --build -d
+make docker-solo-up
 
 # View logs
-docker-compose logs -f
+make docker-logs
 
 # Stop services
-docker-compose down
+make docker-down
+
+# For solo mode logs
+make docker-solo-logs
 ```
 
 ### Manual Setup
@@ -128,6 +131,30 @@ curl -X POST http://localhost:8080/account/balance \
 - **Health Check**: `http://localhost:8080/health`
 
 ## Development
+
+### Using Makefile (Recommended)
+
+```bash
+# Show available commands
+make help
+
+# Build and start in testnet mode
+make docker-up-build
+
+# Start in solo mode for local development
+make docker-solo-up
+
+# View logs
+make docker-logs
+
+# Stop services
+make docker-down
+
+# Clean up Docker resources
+make docker-clean
+```
+
+### Manual Development
 
 ```bash
 # Install dependencies
