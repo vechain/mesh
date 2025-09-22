@@ -257,17 +257,43 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	// Decode transaction
-	txBytes, err := hex.DecodeString(request.Transaction)
+	txHex := request.Transaction
+	if len(txHex) > 2 && txHex[:2] == "0x" {
+		txHex = txHex[2:]
+	}
+
+	txBytes, err := hex.DecodeString(txHex)
 	if err != nil {
 		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
 		return
 	}
 
-	var vechainTx tx.Transaction
-	stream := rlp.NewStream(bytes.NewReader(txBytes), 0)
-	if err := vechainTx.DecodeRLP(stream); err != nil {
-		http.Error(w, "Failed to decode transaction", http.StatusBadRequest)
-		return
+	var vechainTx *tx.Transaction
+	var rosettaTx *meshutils.RosettaTransaction
+
+	if request.Signed {
+		// For signed transactions, try to decode as Rosetta transaction first
+		rosettaTx, err = c.encoder.DecodeSignedTransaction(txBytes)
+		if err != nil {
+			// Fallback to native Thor decoding
+			var nativeTx tx.Transaction
+			stream := rlp.NewStream(bytes.NewReader(txBytes), 0)
+			if err := nativeTx.DecodeRLP(stream); err != nil {
+				http.Error(w, "Failed to decode transaction", http.StatusBadRequest)
+				return
+			}
+			vechainTx = &nativeTx
+		} else {
+			vechainTx = rosettaTx.Transaction
+		}
+	} else {
+		// For unsigned transactions, decode as Rosetta transaction
+		rosettaTx, err = c.encoder.DecodeUnsignedTransaction(txBytes)
+		if err != nil {
+			http.Error(w, "Failed to decode unsigned transaction", http.StatusBadRequest)
+			return
+		}
+		vechainTx = rosettaTx.Transaction
 	}
 
 	// Parse operations
@@ -275,16 +301,33 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	var signers []*types.AccountIdentifier
 
 	// Add origin signer
-	origin, _ := vechainTx.Origin()
+	var originAddr thor.Address
+	var delegatorAddr *thor.Address
+
+	if rosettaTx != nil {
+		// Use Rosetta transaction fields
+		originAddr = thor.BytesToAddress(rosettaTx.Origin)
+		if len(rosettaTx.Delegator) > 0 {
+			delegator := thor.BytesToAddress(rosettaTx.Delegator)
+			delegatorAddr = &delegator
+		}
+	} else {
+		// Use native Thor methods
+		originAddr, _ = vechainTx.Origin()
+		delegator, err := vechainTx.Delegator()
+		if err == nil && delegator != nil {
+			delegatorAddr = delegator
+		}
+	}
+
 	signers = append(signers, &types.AccountIdentifier{
-		Address: origin.String(),
+		Address: originAddr.String(),
 	})
 
 	// Add delegator signer if present
-	delegator, err := vechainTx.Delegator()
-	if err == nil && delegator != nil {
+	if delegatorAddr != nil {
 		signers = append(signers, &types.AccountIdentifier{
-			Address: delegator.String(),
+			Address: delegatorAddr.String(),
 		})
 	}
 
@@ -301,7 +344,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				},
 				Type: "Transfer",
 				Account: &types.AccountIdentifier{
-					Address: origin.String(),
+					Address: originAddr.String(),
 				},
 				Amount: &types.Amount{
 					Value:    "-" + clause.Value().String(),
@@ -343,7 +386,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	feeAmount := new(big.Int).Mul(big.NewInt(int64(vechainTx.Gas())), gasPrice)
 
 	// Add fee operation
-	if delegator != nil {
+	if delegatorAddr != nil {
 		// Fee delegation operation
 		feeDelegationOp := &types.Operation{
 			OperationIdentifier: &types.OperationIdentifier{
@@ -351,7 +394,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Type: "FeeDelegation",
 			Account: &types.AccountIdentifier{
-				Address: delegator.String(),
+				Address: delegatorAddr.String(),
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),
@@ -367,7 +410,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Type: "Fee",
 			Account: &types.AccountIdentifier{
-				Address: origin.String(),
+				Address: originAddr.String(),
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),
@@ -410,8 +453,12 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Decode unsigned transaction using Rosetta schema
-	txBytes, err := hex.DecodeString(request.UnsignedTransaction)
+	unsignedTxHex := request.UnsignedTransaction
+	if len(unsignedTxHex) > 2 && unsignedTxHex[:2] == "0x" {
+		unsignedTxHex = unsignedTxHex[2:]
+	}
+
+	txBytes, err := hex.DecodeString(unsignedTxHex)
 	if err != nil {
 		http.Error(w, "Invalid unsigned transaction", http.StatusBadRequest)
 		return
@@ -452,7 +499,7 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 	}
 
 	response := &types.ConstructionCombineResponse{
-		SignedTransaction: hex.EncodeToString(signedTxBytes),
+		SignedTransaction: fmt.Sprintf("0x%s", hex.EncodeToString(signedTxBytes)),
 	}
 
 	meshutils.WriteJSONResponse(w, response)
@@ -467,7 +514,12 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 	}
 
 	// Decode transaction
-	txBytes, err := hex.DecodeString(request.SignedTransaction)
+	txHex := request.SignedTransaction
+	if len(txHex) > 2 && txHex[:2] == "0x" {
+		txHex = txHex[2:]
+	}
+
+	txBytes, err := hex.DecodeString(txHex)
 	if err != nil {
 		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
 		return
