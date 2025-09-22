@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -16,9 +17,27 @@ import (
 
 // Operation types for VeChain
 const (
+	OperationTypeNone          = "None"
 	OperationTypeTransfer      = "Transfer"
 	OperationTypeFee           = "Fee"
 	OperationTypeFeeDelegation = "FeeDelegation"
+)
+
+var (
+	// VETCurrency represents the native VeChain token
+	VETCurrency = &types.Currency{
+		Symbol:   "VET",
+		Decimals: 18,
+	}
+
+	// VTHOCurrency represents the VeChain Thor Energy token
+	VTHOCurrency = &types.Currency{
+		Symbol:   "VTHO",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x0000000000000000000000000000456E65726779",
+		},
+	}
 )
 
 // WriteJSONResponse writes a JSON response with proper error handling
@@ -26,6 +45,25 @@ func WriteJSONResponse(w http.ResponseWriter, response any) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// WriteErrorResponse writes an error response in Mesh format
+func WriteErrorResponse(w http.ResponseWriter, err *types.Error, statusCode int) {
+	if err == nil {
+		err = GetError(500) // Default to internal server error
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	errorResponse := map[string]any{
+		"error": err,
+	}
+
+	if encodeErr := json.NewEncoder(w).Encode(errorResponse); encodeErr != nil {
+		http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
 		return
 	}
 }
@@ -72,6 +110,39 @@ func HexToDecimal(hexStr string) (string, error) {
 // StringPtr creates a string pointer
 func StringPtr(s string) *string {
 	return &s
+}
+
+// Helper functions to create pointers
+func Int64Ptr(i int64) *int64 {
+	return &i
+}
+
+// BoolPtr creates a bool pointer
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
+// GetTargetIndex calculates the target index based on local index and peers
+func GetTargetIndex(localIndex int64, peers []Peer) int64 {
+	result := localIndex
+	for _, peer := range peers {
+		// Extract block number from bestBlockID (first 8 bytes = 16 hex characters)
+		if len(peer.BestBlockID) >= 16 {
+			blockNumHex := peer.BestBlockID[:16]
+			if blockNum, err := strconv.ParseInt(blockNumHex, 16, 64); err == nil {
+				if result < blockNum {
+					result = blockNum
+				}
+			}
+		}
+	}
+	return result
+}
+
+// Peer represents a connected peer
+type Peer struct {
+	PeerID      string
+	BestBlockID string
 }
 
 // ComputeAddress computes address from public key

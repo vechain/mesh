@@ -46,6 +46,11 @@ var (
 		ValidationModeNetwork,
 	}
 
+	// NetworkListValidations includes validations needed for network/list (no network identifier required)
+	NetworkListValidations = []ValidationType{
+		ValidationRunMode,
+	}
+
 	// ConstructionValidations includes validations needed for construction endpoints
 	ConstructionValidations = []ValidationType{
 		ValidationNetwork,

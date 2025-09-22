@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
@@ -27,24 +26,23 @@ func NewBlockService(vechainClient *meshthor.VeChainClient) *BlockService {
 func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 	request, err := b.parseBlockRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
 		return
 	}
 
 	block, err := b.getBlockByPartialIdentifier(*request.BlockIdentifier)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if block == nil {
-		http.Error(w, "Block not found", http.StatusNotFound)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 
 	parent, err := b.getParentBlock(block)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -56,24 +54,23 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) {
 	request, err := b.parseBlockTransactionRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
 		return
 	}
 
 	block, err := b.getBlockByIdentifier(*request.BlockIdentifier)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if block == nil {
-		http.Error(w, "Block not found", http.StatusNotFound)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 
 	foundTx, err := b.findTransactionInBlock(block, request.TransactionIdentifier.Hash)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrTransactionNotFound, map[string]any{
+			"transaction_identifier_hash": request.TransactionIdentifier.Hash,
+		}), http.StatusBadRequest)
 		return
 	}
 
@@ -137,7 +134,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 				},
 				Amount: &types.Amount{
 					Value:    "-" + clause.Value, // Negative for sender
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 				Metadata: map[string]any{
 					"clauseIndex": clauseIndex,
@@ -159,7 +156,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 					},
 					Amount: &types.Amount{
 						Value:    clause.Value, // Positive for receiver
-						Currency: meshmodels.VETCurrency,
+						Currency: meshutils.VETCurrency,
 					},
 					Metadata: map[string]any{
 						"clauseIndex": clauseIndex,
@@ -183,7 +180,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 				},
 				Amount: &types.Amount{
 					Value:    "0", // Contract calls don't transfer value in the operation itself
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 				Metadata: map[string]any{
 					"to":          clause.To,
@@ -210,7 +207,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 			},
 			Amount: &types.Amount{
 				Value:    "-" + fmt.Sprintf("%d", tx.Gas), // Negative for energy consumption
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 			Metadata: map[string]any{
 				"gasUsed": tx.Gas,
@@ -301,7 +298,7 @@ func (b *BlockService) getParentBlock(block *meshthor.Block) (*meshthor.Block, e
 		// For genesis block, parent is itself
 		return block, nil
 	}
-	return b.vechainClient.GetBlockByNumber(block.Number - 1)
+	return b.vechainClient.GetBlockByHash(block.ParentID)
 }
 
 // findTransactionInBlock finds a specific transaction in a block

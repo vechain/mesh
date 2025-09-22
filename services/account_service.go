@@ -2,12 +2,10 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
@@ -28,40 +26,48 @@ func NewAccountService(vechainClient *meshthor.VeChainClient) *AccountService {
 func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body for account balance", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	var request types.AccountBalanceRequest
 	if err := json.Unmarshal(body, &request); err != nil {
-		http.Error(w, "Invalid request body for account balance", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Get current block for block identifier
 	bestBlock, err := a.vechainClient.GetBestBlock()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get best block for account balance: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetBestBlock, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	// Get account information
 	account, err := a.vechainClient.GetAccount(request.AccountIdentifier.Address)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get account for account balance: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetAccount, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	// Convert hex balance to decimal
 	vetBalance, err := meshutils.HexToDecimal(account.Balance)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to convert VET balance for account balance: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToConvertVETBalance, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	vthoBalance, err := meshutils.HexToDecimal(account.Energy)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to convert VTHO balance for account balance: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToConvertVTHOBalance, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -73,11 +79,11 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		Balances: []*types.Amount{
 			{
 				Value:    vetBalance,
-				Currency: meshmodels.VETCurrency,
+				Currency: meshutils.VETCurrency,
 			},
 			{
 				Value:    vthoBalance,
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		},
 		Metadata: map[string]any{

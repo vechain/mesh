@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/mesh/config"
-	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
@@ -41,20 +40,22 @@ func NewConstructionService(vechainClient *meshthor.VeChainClient, config *confi
 func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionDeriveRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Extract public key from request
 	if len(request.PublicKey.Bytes) == 0 {
-		http.Error(w, "Public key is required", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrPublicKeyRequired), http.StatusBadRequest)
 		return
 	}
 
 	// Convert public key bytes to ECDSA public key
 	pubKey, err := crypto.DecompressPubkey(request.PublicKey.Bytes)
 	if err != nil {
-		http.Error(w, "Invalid public key format", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidPublicKeyFormat, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 
@@ -77,7 +78,7 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionPreprocessRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
@@ -117,14 +118,16 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionMetadataRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Get basic transaction info
 	bestBlock, chainTag, err := c.getBasicTransactionInfo()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrGettingBlockchainMetadata, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -136,14 +139,18 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	blockRef := bestBlock.ID[:18]
 	nonce, err := meshutils.GenerateNonce()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrGettingBlockchainMetadata, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	// Build metadata based on transaction type
 	metadata, gasPrice, err := c.buildMetadata(transactionType, blockRef, int64(chainTag), gas, nonce)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrGettingBlockchainMetadata, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -154,7 +161,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		SuggestedFee: []*types.Amount{
 			{
 				Value:    "-" + fee.String(),
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		},
 	}
@@ -166,7 +173,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionPayloadsRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
@@ -181,11 +188,16 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	// Validate origin address matches first public key
 	originAddress, err := meshutils.ComputeAddress(request.PublicKeys[0])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidPublicKeyFormat, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 	if originAddress != txOrigin {
-		http.Error(w, fmt.Sprintf("Origin address mismatch: expected %s, got %s", txOrigin, originAddress), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrOriginAddressMismatch, map[string]any{
+			"expected": txOrigin,
+			"got":      originAddress,
+		}), http.StatusBadRequest)
 		return
 	}
 
@@ -193,11 +205,16 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	if hasFeeDelegation {
 		delegatorAddress, err := meshutils.ComputeAddress(request.PublicKeys[1])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidPublicKeyFormat, map[string]any{
+				"error": err.Error(),
+			}), http.StatusBadRequest)
 			return
 		}
 		if delegatorAddress != txDelegator {
-			http.Error(w, fmt.Sprintf("Delegator address mismatch: expected %s, got %s", txDelegator, delegatorAddress), http.StatusBadRequest)
+			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrDelegatorAddressMismatch, map[string]any{
+				"expected": txDelegator,
+				"got":      delegatorAddress,
+			}), http.StatusBadRequest)
 			return
 		}
 	}
@@ -205,21 +222,27 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	// Build transaction
 	vechainTx, err := c.buildTransaction(request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidRequestParameters, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 
 	// Create signing payloads
 	payloads, err := c.createSigningPayloads(vechainTx, request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidRequestParameters, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 
 	// Get origin and delegator addresses
 	originAddr, err := meshutils.ComputeAddress(request.PublicKeys[0])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidPublicKeyFormat, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
 		return
 	}
 	originBytes, _ := hex.DecodeString(originAddr[2:]) // Remove 0x prefix
@@ -228,7 +251,9 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	if hasFeeDelegation {
 		delegatorAddr, err := meshutils.ComputeAddress(request.PublicKeys[1])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidPublicKeyFormat, map[string]any{
+				"error": err.Error(),
+			}), http.StatusBadRequest)
 			return
 		}
 		delegatorBytes, _ = hex.DecodeString(delegatorAddr[2:]) // Remove 0x prefix
@@ -237,7 +262,9 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	// Encode transaction using Mesh schema
 	unsignedTx, err := c.encoder.EncodeUnsignedTransaction(vechainTx, originBytes, delegatorBytes)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToEncodeTransaction, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -253,14 +280,14 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionParseRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Decode transaction
 	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.Transaction)
 	if err != nil {
-		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidTransactionHex), http.StatusBadRequest)
 		return
 	}
 
@@ -275,7 +302,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			var nativeTx tx.Transaction
 			stream := rlp.NewStream(bytes.NewReader(txBytes), 0)
 			if err := nativeTx.DecodeRLP(stream); err != nil {
-				http.Error(w, "Failed to decode transaction", http.StatusBadRequest)
+				meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeTransaction), http.StatusBadRequest)
 				return
 			}
 			vechainTx = &nativeTx
@@ -286,7 +313,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 		// For unsigned transactions, decode as Mesh transaction
 		meshTx, err = c.encoder.DecodeUnsignedTransaction(txBytes)
 		if err != nil {
-			http.Error(w, "Failed to decode unsigned transaction", http.StatusBadRequest)
+			meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeUnsignedTransaction), http.StatusBadRequest)
 			return
 		}
 		vechainTx = meshTx.Transaction
@@ -344,7 +371,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				},
 				Amount: &types.Amount{
 					Value:    "-" + clause.Value().String(),
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 			}
 			operations = append(operations, senderOp)
@@ -361,7 +388,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				},
 				Amount: &types.Amount{
 					Value:    clause.Value().String(),
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 			}
 			operations = append(operations, receiverOp)
@@ -394,7 +421,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeDelegationOp)
@@ -410,7 +437,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeOp)
@@ -445,20 +472,20 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionCombineRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.UnsignedTransaction)
 	if err != nil {
-		http.Error(w, "Invalid unsigned transaction", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidUnsignedTransactionParameter), http.StatusBadRequest)
 		return
 	}
 
 	// Decode unsigned transaction using unified method
 	meshTx, err := c.encoder.DecodeUnsignedTransaction(txBytes)
 	if err != nil {
-		http.Error(w, "Failed to decode unsigned transaction", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeUnsignedTransaction), http.StatusBadRequest)
 		return
 	}
 
@@ -478,14 +505,14 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		meshTx.Signature = sig.Bytes
 
 	} else {
-		http.Error(w, "Invalid number of signatures", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidNumberOfSignatures), http.StatusBadRequest)
 		return
 	}
 
 	// Encode signed Mesh transaction
 	signedTxBytes, err := c.encoder.EncodeSignedTransaction(meshTx)
 	if err != nil {
-		http.Error(w, "Failed to encode signed transaction", http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToEncodeSignedTransaction), http.StatusInternalServerError)
 		return
 	}
 
@@ -500,25 +527,27 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionHashRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.SignedTransaction)
 	if err != nil {
-		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidTransactionHex), http.StatusBadRequest)
 		return
 	}
 
 	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
 	if err != nil {
-		http.Error(w, "Failed to decode Mesh transaction", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeMeshTransaction), http.StatusBadRequest)
 		return
 	}
 
 	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to build Thor transaction: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToBuildThorTransaction, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -535,42 +564,48 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionSubmitRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Decode transaction using our utility method
 	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.SignedTransaction)
 	if err != nil {
-		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidTransactionHex), http.StatusBadRequest)
 		return
 	}
 
 	// Decode Mesh transaction to get the native Thor transaction
 	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
 	if err != nil {
-		http.Error(w, "Failed to decode Mesh transaction", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeMeshTransaction), http.StatusBadRequest)
 		return
 	}
 
 	// Build a new Thor transaction with proper signature and reserved fields
 	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to build Thor transaction: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToBuildThorTransaction, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	// Encode the Thor transaction to bytes
 	var txBuffer bytes.Buffer
 	if err := thorTx.EncodeRLP(&txBuffer); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to encode transaction: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToEncodeTransaction, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
 	// Submit the native Thor transaction to VeChain network
 	txID, err := c.vechainClient.SubmitTransaction(txBuffer.Bytes())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to submit transaction: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToSubmitTransaction, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
 		return
 	}
 
@@ -643,7 +678,7 @@ func (c *ConstructionService) calculateGas(options map[string]any) int64 {
 			if clauseMap, ok := clause.(map[string]any); ok {
 				if to, ok := clauseMap["to"].(string); ok {
 					// VTHO contract requires more gas
-					if strings.EqualFold(to, meshmodels.VTHOCurrency.Metadata["contractAddress"].(string)) {
+					if strings.EqualFold(to, meshutils.VTHOCurrency.Metadata["contractAddress"].(string)) {
 						gas += 50000
 					} else {
 						gas += 10000

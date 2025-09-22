@@ -59,7 +59,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	}
 
 	// Initialize services
-	networkService := services.NewNetworkService(vechainClient, cfg.GetNetwork())
+	networkService := services.NewNetworkService(vechainClient, cfg)
 	accountService := services.NewAccountService(vechainClient)
 
 	constructionService := services.NewConstructionService(vechainClient, cfg)
@@ -96,6 +96,7 @@ func (v *VeChainMeshServer) setupRoutes() {
 
 	// Network API endpoints
 	apiRouter.HandleFunc("/network/list", v.networkService.NetworkList).Methods("POST")
+	apiRouter.HandleFunc("/network/options", v.networkService.NetworkOptions).Methods("POST")
 	apiRouter.HandleFunc("/network/status", v.networkService.NetworkStatus).Methods("POST")
 
 	// Account API endpoints
