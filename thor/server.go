@@ -89,7 +89,7 @@ func (ts *ThorServer) AttachToPublicNetworkAndStart() error {
 
 	// Check if the process is still running
 	if ts.process.ProcessState != nil && ts.process.ProcessState.Exited() {
-		return fmt.Errorf("Thor process exited unexpectedly")
+		return fmt.Errorf("thor process exited unexpectedly")
 	}
 
 	return nil
