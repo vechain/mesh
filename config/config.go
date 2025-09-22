@@ -13,7 +13,7 @@ import (
 
 // Config holds the service configuration
 type Config struct {
-	MeshVersion       string                   `json:"mesh_version"`
+	MeshVersion       string                   `json:"meshVersion"`
 	Port              int                      `json:"port"`
 	Mode              string                   `json:"mode"`
 	Network           string                   `json:"network"`

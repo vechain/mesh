@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
@@ -137,7 +136,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 				},
 				Amount: &types.Amount{
 					Value:    "-" + clause.Value, // Negative for sender
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 				Metadata: map[string]any{
 					"clauseIndex": clauseIndex,
@@ -159,7 +158,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 					},
 					Amount: &types.Amount{
 						Value:    clause.Value, // Positive for receiver
-						Currency: meshmodels.VETCurrency,
+						Currency: meshutils.VETCurrency,
 					},
 					Metadata: map[string]any{
 						"clauseIndex": clauseIndex,
@@ -183,7 +182,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 				},
 				Amount: &types.Amount{
 					Value:    "0", // Contract calls don't transfer value in the operation itself
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 				Metadata: map[string]any{
 					"to":          clause.To,
@@ -210,7 +209,7 @@ func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*ty
 			},
 			Amount: &types.Amount{
 				Value:    "-" + fmt.Sprintf("%d", tx.Gas), // Negative for energy consumption
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 			Metadata: map[string]any{
 				"gasUsed": tx.Gas,

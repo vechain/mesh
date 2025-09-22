@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/mesh/config"
-	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
@@ -154,7 +153,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 		SuggestedFee: []*types.Amount{
 			{
 				Value:    "-" + fee.String(),
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		},
 	}
@@ -344,7 +343,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				},
 				Amount: &types.Amount{
 					Value:    "-" + clause.Value().String(),
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 			}
 			operations = append(operations, senderOp)
@@ -361,7 +360,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 				},
 				Amount: &types.Amount{
 					Value:    clause.Value().String(),
-					Currency: meshmodels.VETCurrency,
+					Currency: meshutils.VETCurrency,
 				},
 			}
 			operations = append(operations, receiverOp)
@@ -394,7 +393,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeDelegationOp)
@@ -410,7 +409,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		}
 		operations = append(operations, feeOp)
@@ -643,7 +642,7 @@ func (c *ConstructionService) calculateGas(options map[string]any) int64 {
 			if clauseMap, ok := clause.(map[string]any); ok {
 				if to, ok := clauseMap["to"].(string); ok {
 					// VTHO contract requires more gas
-					if strings.EqualFold(to, meshmodels.VTHOCurrency.Metadata["contractAddress"].(string)) {
+					if strings.EqualFold(to, meshutils.VTHOCurrency.Metadata["contractAddress"].(string)) {
 						gas += 50000
 					} else {
 						gas += 10000

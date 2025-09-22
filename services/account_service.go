@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
@@ -73,11 +72,11 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		Balances: []*types.Amount{
 			{
 				Value:    vetBalance,
-				Currency: meshmodels.VETCurrency,
+				Currency: meshutils.VETCurrency,
 			},
 			{
 				Value:    vthoBalance,
-				Currency: meshmodels.VTHOCurrency,
+				Currency: meshutils.VTHOCurrency,
 			},
 		},
 		Metadata: map[string]any{

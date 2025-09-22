@@ -16,9 +16,27 @@ import (
 
 // Operation types for VeChain
 const (
+	OperationTypeNone          = "None"
 	OperationTypeTransfer      = "Transfer"
 	OperationTypeFee           = "Fee"
 	OperationTypeFeeDelegation = "FeeDelegation"
+)
+
+var (
+	// VETCurrency represents the native VeChain token
+	VETCurrency = &types.Currency{
+		Symbol:   "VET",
+		Decimals: 18,
+	}
+	
+	// VTHOCurrency represents the VeChain Thor Energy token
+	VTHOCurrency = &types.Currency{
+		Symbol:   "VTHO",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x0000000000000000000000000000456E65726779",
+		},
+	}
 )
 
 // WriteJSONResponse writes a JSON response with proper error handling
@@ -124,4 +142,13 @@ func DecodeHexStringWithPrefix(hexStr string) ([]byte, error) {
 	cleanHex := RemoveHexPrefix(hexStr)
 
 	return hex.DecodeString(cleanHex)
+}
+
+// Helper functions to create pointers
+func Int64Ptr(i int64) *int64 {
+	return &i
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
 }

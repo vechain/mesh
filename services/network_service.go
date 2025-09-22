@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
@@ -13,14 +14,14 @@ import (
 // NetworkService handles network-related endpoints
 type NetworkService struct {
 	vechainClient *meshthor.VeChainClient
-	network       string
+	config        *meshconfig.Config
 }
 
 // NewNetworkService creates a new network service
-func NewNetworkService(vechainClient *meshthor.VeChainClient, network string) *NetworkService {
+func NewNetworkService(vechainClient *meshthor.VeChainClient, config *meshconfig.Config) *NetworkService {
 	return &NetworkService{
 		vechainClient: vechainClient,
-		network:       network,
+		config:        config,
 	}
 }
 
@@ -30,7 +31,7 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 		NetworkIdentifiers: []*types.NetworkIdentifier{
 			{
 				Blockchain: "vechainthor",
-				Network:    n.network,
+				Network:    n.config.GetNetwork(),
 			},
 		},
 	}
@@ -75,9 +76,9 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 			Hash:  "0x0000000000000000000000000000000000000000000000000000000000000001",
 		},
 		SyncStatus: &types.SyncStatus{
-			CurrentIndex: int64Ptr(bestBlock.Number),
-			TargetIndex:  int64Ptr(bestBlock.Number),
-			Synced:       boolPtr(true),
+			CurrentIndex: meshutils.Int64Ptr(bestBlock.Number),
+			TargetIndex:  meshutils.Int64Ptr(bestBlock.Number),
+			Synced:       meshutils.BoolPtr(true),
 		},
 		Peers: []*types.Peer{
 			{
@@ -92,11 +93,69 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	meshutils.WriteJSONResponse(w, status)
 }
 
-// Helper functions to create pointers
-func int64Ptr(i int64) *int64 {
-	return &i
-}
+// NetworkOptions returns network options and capabilities
+func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) {
+	var request types.NetworkRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 
-func boolPtr(b bool) *bool {
-	return &b
+	// Define operation statuses
+	operationStatuses := []*types.OperationStatus{
+		{
+			Status:     "None",
+			Successful: true,
+		},
+		{
+			Status:     "Succeeded",
+			Successful: true,
+		},
+		{
+			Status:     "Reverted",
+			Successful: false,
+		},
+	}
+
+	// Define operation types
+	operationTypes := []string{
+		meshutils.OperationTypeNone,
+		meshutils.OperationTypeTransfer,
+		meshutils.OperationTypeFee,
+		meshutils.OperationTypeFeeDelegation,
+	}
+
+	// Define balance exemptions for VTHO (dynamic exemption)
+	balanceExemptions := []*types.BalanceExemption{
+		{
+			Currency:      meshutils.VTHOCurrency,
+			ExemptionType: types.BalanceDynamic,
+		},
+	}
+
+	// TODO: There should be an Error field below
+
+	// Create allow object
+	allow := &types.Allow{
+		OperationStatuses:       operationStatuses,
+		OperationTypes:          operationTypes,
+		HistoricalBalanceLookup: true,
+		CallMethods:             []string{},
+		BalanceExemptions:       balanceExemptions,
+		MempoolCoins:            false,
+	}
+
+	// Create version object
+	version := &types.Version{
+		RosettaVersion: n.config.GetMeshVersion(),
+		NodeVersion:    n.config.NodeVersion,
+	}
+
+	// Create response
+	response := &types.NetworkOptionsResponse{
+		Version: version,
+		Allow:   allow,
+	}
+
+	meshutils.WriteJSONResponse(w, response)
 }
