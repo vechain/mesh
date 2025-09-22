@@ -27,14 +27,31 @@ func main() {
 		// Configure Thor node based on config.json
 		thorConfig := thor.Config{
 			NodeID:      "thor-node-1",
-			NetworkType: cfg.GetNetwork(), // "test" or "main" from config.json
-			APIAddr:     "0.0.0.0:8669",   // API address as specified
-			P2PPort:     11235,            // P2P port as specified
+			NetworkType: cfg.GetNetwork(), // "test", "main", or "solo" from config.json
+			APIAddr:     "0.0.0.0:8669",
+			P2PPort:     11235,
+		}
+
+		if cfg.GetNetwork() == "solo" {
+			thorConfig.OnDemand = true
+			thorConfig.Persist = true
+			thorConfig.APICORS = "*"
 		}
 
 		thorServer := thor.NewServer(thorConfig)
 
-		if err := thorServer.AttachToPublicNetworkAndStart(); err != nil {
+		var err error
+		if cfg.GetNetwork() == "solo" {
+			// Start in solo mode
+			log.Println("Starting Thor node in solo mode...")
+			err = thorServer.StartSoloNode()
+		} else {
+			// Start connected to public network (test/main)
+			log.Printf("Starting Thor node connected to %s network...", thorConfig.NetworkType)
+			err = thorServer.AttachToPublicNetworkAndStart()
+		}
+
+		if err != nil {
 			log.Fatalf("Failed to start Thor node: %v", err)
 		}
 

@@ -15,9 +15,13 @@ import (
 // Config represents the configuration for a Thor node
 type Config struct {
 	NodeID      string
-	NetworkType string
+	NetworkType string // "test", "main", or "solo"
 	APIAddr     string
 	P2PPort     int
+	// Solo mode specific options
+	OnDemand bool   // Create blocks on demand when there are pending transactions
+	Persist  bool   // Persist blockchain data to disk instead of memory
+	APICORS  string // CORS settings for API
 }
 
 // Server manages Thor node processes
@@ -95,6 +99,60 @@ func (ts *Server) AttachToPublicNetworkAndStart() error {
 	return nil
 }
 
+// StartSoloNode starts a Thor node in solo mode
+func (ts *Server) StartSoloNode() error {
+	log.Printf("Starting Thor node in solo mode with config: %+v", ts.config)
+
+	// Build command arguments for solo mode
+	args := []string{
+		"solo", // Solo mode command
+		"--api-addr", ts.config.APIAddr,
+		"--data-dir", "/tmp/thor_solo_data",
+	}
+
+	// Add optional solo mode arguments
+	if ts.config.OnDemand {
+		args = append(args, "--on-demand")
+	}
+
+	if ts.config.Persist {
+		args = append(args, "--persist")
+	}
+
+	if ts.config.APICORS != "" {
+		args = append(args, "--api-cors", ts.config.APICORS)
+	} else {
+		args = append(args, "--api-cors", "*") // Default to allow all CORS
+	}
+
+	// Create the command
+	ts.process = exec.CommandContext(ts.ctx, ts.thorPath, args...)
+
+	// Set up process attributes
+	ts.process.Stdout = os.Stdout
+	ts.process.Stderr = os.Stderr
+	ts.process.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+
+	// Start the process
+	if err := ts.process.Start(); err != nil {
+		return fmt.Errorf("failed to start Thor solo process: %v", err)
+	}
+
+	log.Printf("Thor solo node started with PID: %d", ts.process.Process.Pid)
+
+	// Wait a bit to ensure the node is starting up
+	time.Sleep(2 * time.Second)
+
+	// Check if the process is still running
+	if ts.process.ProcessState != nil && ts.process.ProcessState.Exited() {
+		return fmt.Errorf("thor solo process exited unexpectedly")
+	}
+
+	return nil
+}
+
 // Stop stops the Thor node
 func (ts *Server) Stop() error {
 	if ts.process == nil {
@@ -142,4 +200,36 @@ func (ts *Server) Stop() error {
 
 		return nil
 	}
+}
+
+// IsRunning checks if the Thor node is currently running
+func (ts *Server) IsRunning() bool {
+	if ts.process == nil {
+		return false
+	}
+
+	if ts.process.ProcessState != nil {
+		return !ts.process.ProcessState.Exited()
+	}
+
+	// Check if the process is still alive by sending a signal 0
+	if ts.process.Process != nil {
+		err := ts.process.Process.Signal(syscall.Signal(0))
+		return err == nil
+	}
+
+	return false
+}
+
+// GetProcessID returns the process ID of the Thor node
+func (ts *Server) GetProcessID() int {
+	if ts.process != nil && ts.process.Process != nil {
+		return ts.process.Process.Pid
+	}
+	return -1
+}
+
+// IsSoloMode returns true if the node is configured for solo mode
+func (ts *Server) IsSoloMode() bool {
+	return ts.config.NetworkType == "solo"
 }

@@ -1,0 +1,14 @@
+{
+  "rosetta_version": "1.4.13",
+  "port": 8080,
+  "mode": "online",
+  "network": "solo",
+  "nodeApi": "http://localhost:8669",
+  "apiVersion": "",
+  "nodeVersion": "",
+  "serviceName": "VeChain Mesh API - Solo Mode",
+  "baseGasPrice": 10000000000000,
+  "chainTag": 0,
+  "initialBaseFee": 10000000000000,
+  "tokenlist": []
+}
