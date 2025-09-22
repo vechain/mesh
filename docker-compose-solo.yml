@@ -1,36 +1,33 @@
-
 version: '3.8'
 
 services:
-  mesh:
+  mesh-solo:
     build:
       context: .
-    container_name: vechain-mesh
+    container_name: vechain-mesh-solo
     ports:
       - "8080:8080"  # Mesh API
-      - "8669:8669"  # HTTP API (TCP)
-      - "11235:11235"  # P2P (TCP)
-      - "11235:11235/udp"  # P2P (UDP)
+      - "8669:8669"  # Thor API (solo mode)
     environment:
-      - MODE=${MODE:-online}
-      - NETWORK=${NETWORK:-test}
+      - MODE=online
+      - NETWORK=solo
       - PORT=8080
     restart: unless-stopped
     volumes:
-      - thor-data:/tmp/thor_data
+      - thor-solo-data:/tmp/thor_data
     networks:
-      - vechain-network
+      - vechain-solo-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 3s
       retries: 3
-      start_period: 5s
+      start_period: 10s
 
 volumes:
-  thor-data:
+  thor-solo-data:
     driver: local
 
 networks:
-  vechain-network:
+  vechain-solo-network:
     driver: bridge
