@@ -713,7 +713,6 @@ func (c *ConstructionService) buildTransaction(request types.ConstructionPayload
 	}
 
 	builder.BlockRef(tx.BlockRef(blockRefBytes))
-	builder.Expiration(720) // 3 hours
 	builder.Gas(uint64(gas))
 	builder.Nonce(nonceValue.Uint64())
 

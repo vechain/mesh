@@ -82,9 +82,9 @@ func (e *RosettaTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *t
 	rosettaTx := []any{
 		vechainTx.ChainTag(),
 		blockRef[:],
-		vechainTx.Gas(),
+		vechainTx.Expiration(),
 		e.convertClausesToRosetta(vechainTx.Clauses()),
-		vechainTx.Gas(), // Duplicate gas field in Rosetta schema
+		vechainTx.Gas(),
 		e.convertNonceToBytes(vechainTx.Nonce()),
 		origin,
 		delegator,
@@ -101,9 +101,9 @@ func (e *RosettaTransactionEncoder) encodeUnsignedDynamicTransaction(vechainTx *
 	rosettaTx := []any{
 		vechainTx.ChainTag(),
 		blockRef[:],
-		vechainTx.Gas(),
+		vechainTx.Expiration(),
 		e.convertClausesToRosetta(vechainTx.Clauses()),
-		vechainTx.Gas(), // Duplicate gas field in Rosetta schema
+		vechainTx.Gas(),
 		e.convertNonceToBytes(vechainTx.Nonce()),
 		origin,
 		delegator,
@@ -130,18 +130,16 @@ func (e *RosettaTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte)
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
-	_ = fields[2].([]byte) // gas1 - not used
+	expirationBytes := fields[2].([]byte)
+	expiration := e.convertBytesToUint32(expirationBytes)
 	clauses := fields[3].([]any)
-	gas2Bytes := fields[4].([]byte)
-	gas2 := e.convertBytesToUint64(gas2Bytes)
+	gasBytes := fields[4].([]byte)
+	gas := e.convertBytesToUint64(gasBytes)
 	nonce := fields[5].([]byte)
 	origin := fields[6].([]byte)
 	delegator := fields[7].([]byte)
 	gasPriceCoefBytes := fields[8].([]byte)
 	gasPriceCoef := gasPriceCoefBytes[0]
-
-	// Use gas2 (the second gas field) as it's the actual gas value
-	gas := gas2
 
 	// Build Thor transaction using native builder
 	builder := tx.NewBuilder(tx.TypeLegacy)
@@ -152,7 +150,7 @@ func (e *RosettaTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte)
 	copy(blockRefArray[:], blockRef)
 	builder.BlockRef(tx.BlockRef(blockRefArray))
 
-	builder.Expiration(720) // Default expiration
+	builder.Expiration(expiration)
 	builder.Gas(gas)
 	builder.Nonce(e.convertBytesToNonce(nonce))
 	builder.GasPriceCoef(gasPriceCoef)
@@ -197,10 +195,11 @@ func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
-	_ = fields[2].([]byte) // gas1 - not used
+	expirationBytes := fields[2].([]byte)
+	expiration := e.convertBytesToUint32(expirationBytes)
 	clauses := fields[3].([]any)
-	gas2Bytes := fields[4].([]byte)
-	gas2 := e.convertBytesToUint64(gas2Bytes)
+	gasBytes := fields[4].([]byte)
+	gas := e.convertBytesToUint64(gasBytes)
 	nonce := fields[5].([]byte)
 	origin := fields[6].([]byte)
 	delegator := fields[7].([]byte)
@@ -208,9 +207,6 @@ func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte
 	maxFeePerGas := new(big.Int).SetBytes(maxFeePerGasBytes)
 	maxPriorityFeePerGasBytes := fields[9].([]byte)
 	maxPriorityFeePerGas := new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
-
-	// Use gas2 (the second gas field) as it's the actual gas value
-	gas := gas2
 
 	// Build Thor transaction using native builder
 	builder := tx.NewBuilder(tx.TypeDynamicFee)
@@ -221,7 +217,7 @@ func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte
 	copy(blockRefArray[:], blockRef)
 	builder.BlockRef(tx.BlockRef(blockRefArray))
 
-	builder.Expiration(720) // Default expiration
+	builder.Expiration(expiration)
 	builder.Gas(gas)
 	builder.Nonce(e.convertBytesToNonce(nonce))
 	builder.MaxFeePerGas(maxFeePerGas)
@@ -258,9 +254,9 @@ func (e *RosettaTransactionEncoder) encodeSignedLegacyTransaction(rosettaTx *Ros
 	rosettaTxRLP := []any{
 		rosettaTx.ChainTag(),
 		blockRef[:],
-		rosettaTx.Gas(),
+		rosettaTx.Expiration(),
 		e.convertClausesToRosetta(rosettaTx.Clauses()),
-		rosettaTx.Gas(), // Duplicate gas field in Rosetta schema
+		rosettaTx.Gas(),
 		e.convertNonceToBytes(rosettaTx.Nonce()),
 		rosettaTx.Origin,
 		rosettaTx.Delegator,
@@ -278,9 +274,9 @@ func (e *RosettaTransactionEncoder) encodeSignedDynamicTransaction(rosettaTx *Ro
 	rosettaTxRLP := []any{
 		rosettaTx.ChainTag(),
 		blockRef[:],
-		rosettaTx.Gas(),
+		rosettaTx.Expiration(),
 		e.convertClausesToRosetta(rosettaTx.Clauses()),
-		rosettaTx.Gas(), // Duplicate gas field in Rosetta schema
+		rosettaTx.Gas(),
 		e.convertNonceToBytes(rosettaTx.Nonce()),
 		rosettaTx.Origin,
 		rosettaTx.Delegator,
@@ -308,19 +304,17 @@ func (e *RosettaTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
-	_ = fields[2].([]byte) // gas1 - not used
+	expirationBytes := fields[2].([]byte)
+	expiration := e.convertBytesToUint32(expirationBytes)
 	clauses := fields[3].([]any)
-	gas2Bytes := fields[4].([]byte)
-	gas2 := e.convertBytesToUint64(gas2Bytes)
+	gasBytes := fields[4].([]byte)
+	gas := e.convertBytesToUint64(gasBytes)
 	nonce := fields[5].([]byte)
 	origin := fields[6].([]byte)
 	delegator := fields[7].([]byte)
 	gasPriceCoefBytes := fields[8].([]byte)
 	gasPriceCoef := gasPriceCoefBytes[0]
 	signature := fields[9].([]byte)
-
-	// Use gas2 (the second gas field) as it's the actual gas value
-	gas := gas2
 
 	// Build Thor transaction using native builder
 	builder := tx.NewBuilder(tx.TypeLegacy)
@@ -331,7 +325,7 @@ func (e *RosettaTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (
 	copy(blockRefArray[:], blockRef)
 	builder.BlockRef(tx.BlockRef(blockRefArray))
 
-	builder.Expiration(720) // Default expiration
+	builder.Expiration(expiration)
 	builder.Gas(gas)
 	builder.Nonce(e.convertBytesToNonce(nonce))
 	builder.GasPriceCoef(gasPriceCoef)
@@ -377,21 +371,24 @@ func (e *RosettaTransactionEncoder) decodeSignedDynamicTransaction(data []byte) 
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
-	_ = fields[2].([]byte) // gas1 - not used
+	expirationBytes := fields[2].([]byte)
+	expiration := e.convertBytesToUint32(expirationBytes)
 	clauses := fields[3].([]any)
-	gas2Bytes := fields[4].([]byte)
-	gas2 := e.convertBytesToUint64(gas2Bytes)
+	gasBytes := fields[4].([]byte)
+	gas := e.convertBytesToUint64(gasBytes)
 	nonce := fields[5].([]byte)
 	origin := fields[6].([]byte)
 	delegator := fields[7].([]byte)
 	maxFeePerGasBytes := fields[8].([]byte)
 	maxFeePerGas := new(big.Int).SetBytes(maxFeePerGasBytes)
 	maxPriorityFeePerGasBytes := fields[9].([]byte)
-	maxPriorityFeePerGas := new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
+	var maxPriorityFeePerGas *big.Int
+	if len(maxPriorityFeePerGasBytes) > 0 {
+		maxPriorityFeePerGas = new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
+	} else {
+		maxPriorityFeePerGas = big.NewInt(0)
+	}
 	signature := fields[10].([]byte)
-
-	// Use gas2 (the second gas field) as it's the actual gas value
-	gas := gas2
 
 	// Build Thor transaction using native builder
 	builder := tx.NewBuilder(tx.TypeDynamicFee)
@@ -402,7 +399,7 @@ func (e *RosettaTransactionEncoder) decodeSignedDynamicTransaction(data []byte) 
 	copy(blockRefArray[:], blockRef)
 	builder.BlockRef(tx.BlockRef(blockRefArray))
 
-	builder.Expiration(720) // Default expiration
+	builder.Expiration(expiration)
 	builder.Gas(gas)
 	builder.Nonce(e.convertBytesToNonce(nonce))
 	builder.MaxFeePerGas(maxFeePerGas)
@@ -467,6 +464,14 @@ func (e *RosettaTransactionEncoder) convertBytesToUint64(bytes []byte) uint64 {
 	var result uint64
 	for i := range bytes {
 		result = (result << 8) | uint64(bytes[i])
+	}
+	return result
+}
+
+func (e *RosettaTransactionEncoder) convertBytesToUint32(bytes []byte) uint32 {
+	var result uint32
+	for i := range bytes {
+		result = (result << 8) | uint32(bytes[i])
 	}
 	return result
 }
