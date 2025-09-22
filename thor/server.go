@@ -201,35 +201,3 @@ func (ts *Server) Stop() error {
 		return nil
 	}
 }
-
-// IsRunning checks if the Thor node is currently running
-func (ts *Server) IsRunning() bool {
-	if ts.process == nil {
-		return false
-	}
-
-	if ts.process.ProcessState != nil {
-		return !ts.process.ProcessState.Exited()
-	}
-
-	// Check if the process is still alive by sending a signal 0
-	if ts.process.Process != nil {
-		err := ts.process.Process.Signal(syscall.Signal(0))
-		return err == nil
-	}
-
-	return false
-}
-
-// GetProcessID returns the process ID of the Thor node
-func (ts *Server) GetProcessID() int {
-	if ts.process != nil && ts.process.Process != nil {
-		return ts.process.Process.Pid
-	}
-	return -1
-}
-
-// IsSoloMode returns true if the node is configured for solo mode
-func (ts *Server) IsSoloMode() bool {
-	return ts.config.NetworkType == "solo"
-}

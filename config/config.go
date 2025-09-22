@@ -129,11 +129,6 @@ func (c *Config) GetChainTag() int {
 	return c.ChainTag
 }
 
-// GetServiceName returns the service name
-func (c *Config) GetServiceName() string {
-	return c.ServiceName
-}
-
 // GetMeshVersion returns the Mesh version
 func (c *Config) GetMeshVersion() string {
 	return c.MeshVersion
@@ -180,20 +175,6 @@ func (c *Config) GetBaseGasPrice() *big.Int {
 	}
 
 	return baseGasPrice
-}
-
-// GetInitialBaseFee returns the initial base fee as a big.Int
-func (c *Config) GetInitialBaseFee() *big.Int {
-	if c.InitialBaseFee == "" {
-		return nil
-	}
-
-	initialBaseFee, ok := new(big.Int).SetString(c.InitialBaseFee, 10)
-	if !ok {
-		return nil
-	}
-
-	return initialBaseFee
 }
 
 // GetExpiration returns the transaction expiration in blocks
