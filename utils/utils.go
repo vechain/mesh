@@ -48,18 +48,6 @@ func GetStringFromOptions(options map[string]any, key string, defaultValue strin
 	return defaultValue
 }
 
-// HasOperationType checks if operations contain a specific type
-func HasOperationType(operations []any, operationType string) bool {
-	for _, op := range operations {
-		if opMap, ok := op.(map[string]any); ok {
-			if opType, ok := opMap["type"].(string); ok && opType == operationType {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // RemoveHexPrefix removes the "0x" prefix from a hex string if present
 func RemoveHexPrefix(hexStr string) string {
 	if len(hexStr) > 2 && hexStr[:2] == "0x" {
