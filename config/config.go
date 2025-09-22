@@ -25,6 +25,7 @@ type Config struct {
 	TokenList         []any                    `json:"tokenlist"`
 	BaseGasPrice      string                   `json:"baseGasPrice"`
 	InitialBaseFee    string                   `json:"initialBaseFee"`
+	Expiration        uint32                   `json:"expiration"`
 	NetworkIdentifier *types.NetworkIdentifier `json:"-"`
 }
 
@@ -193,4 +194,9 @@ func (c *Config) GetInitialBaseFee() *big.Int {
 	}
 
 	return initialBaseFee
+}
+
+// GetExpiration returns the transaction expiration in blocks
+func (c *Config) GetExpiration() uint32 {
+	return c.Expiration
 }

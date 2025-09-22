@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -64,12 +63,11 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	accountService := services.NewAccountService(vechainClient)
 
 	// Create baseGasPrice from config (default to 1 Gwei if not set)
-	baseGasPrice := cfg.GetBaseGasPrice()
-	if baseGasPrice == nil {
-		baseGasPrice = big.NewInt(1000000000) // 1 Gwei default
+	if cfg.GetBaseGasPrice() == nil {
+		cfg.BaseGasPrice = "10000000000000" // 1 Gwei default
 	}
 
-	constructionService := services.NewConstructionService(vechainClient, baseGasPrice)
+	constructionService := services.NewConstructionService(vechainClient, cfg)
 	blockService := services.NewBlockService(vechainClient)
 	mempoolService := services.NewMempoolService(vechainClient)
 

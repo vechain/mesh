@@ -13,6 +13,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/vechain/mesh/config"
 	meshmodels "github.com/vechain/mesh/models"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
@@ -23,16 +24,16 @@ import (
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
 	vechainClient *meshthor.VeChainClient
-	baseGasPrice  *big.Int
 	encoder       *meshutils.MeshTransactionEncoder
+	config        *config.Config
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *meshthor.VeChainClient, baseGasPrice *big.Int) *ConstructionService {
+func NewConstructionService(vechainClient *meshthor.VeChainClient, config *config.Config) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
-		baseGasPrice:  baseGasPrice,
 		encoder:       meshutils.NewMeshTransactionEncoder(),
+		config:        config,
 	}
 }
 
@@ -677,7 +678,7 @@ func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas
 		"gasPriceCoef":    gasPriceCoef,
 	}
 
-	return metadata, c.baseGasPrice, nil
+	return metadata, c.config.GetBaseGasPrice(), nil
 }
 
 // buildDynamicMetadata builds metadata for dynamic fee transactions
@@ -697,10 +698,10 @@ func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, ga
 			"chainTag":             chainTag,
 			"gas":                  gas,
 			"nonce":                nonce,
-			"maxFeePerGas":         c.baseGasPrice.String(),
-			"maxPriorityFeePerGas": "0",
+			"maxFeePerGas":         c.config.GetBaseGasPrice().String(),
+			"maxPriorityFeePerGas": 0,
 		}
-		return metadata, c.baseGasPrice, nil
+		return metadata, c.config.GetBaseGasPrice(), nil
 	}
 
 	// Normal case: use actual base fee and reward
@@ -751,6 +752,11 @@ func (c *ConstructionService) buildTransaction(request types.ConstructionPayload
 	}
 
 	builder.BlockRef(tx.BlockRef(blockRefBytes))
+
+	// Set expiration from configuration
+	expiration := c.config.GetExpiration()
+	builder.Expiration(expiration)
+
 	builder.Gas(uint64(gas))
 	builder.Nonce(nonceValue.Uint64())
 
