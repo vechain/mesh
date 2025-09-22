@@ -24,7 +24,7 @@ import (
 type ConstructionService struct {
 	vechainClient *thorclient.VeChainClient
 	baseGasPrice  *big.Int
-	encoder       *meshutils.RosettaTransactionEncoder
+	encoder       *meshutils.MeshTransactionEncoder
 }
 
 // NewConstructionService creates a new construction service
@@ -32,7 +32,7 @@ func NewConstructionService(vechainClient *thorclient.VeChainClient, baseGasPric
 	return &ConstructionService{
 		vechainClient: vechainClient,
 		baseGasPrice:  baseGasPrice,
-		encoder:       meshutils.NewRosettaTransactionEncoder(),
+		encoder:       meshutils.NewMeshTransactionEncoder(),
 	}
 }
 
@@ -269,7 +269,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	var vechainTx *tx.Transaction
-	var rosettaTx *meshutils.RosettaTransaction
+	var rosettaTx *meshutils.MeshTransaction
 
 	if request.Signed {
 		// For signed transactions, try to decode as Rosetta transaction first

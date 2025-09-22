@@ -9,25 +9,25 @@ import (
 	"github.com/vechain/thor/v2/tx"
 )
 
-// RosettaTransaction represents a transaction with Rosetta-specific fields
-type RosettaTransaction struct {
+// MeshTransaction represents a transaction with Mesh-specific fields
+type MeshTransaction struct {
 	*tx.Transaction
 	Origin    []byte
 	Delegator []byte
 	Signature []byte
 }
 
-// RosettaTransactionEncoder handles encoding and decoding of Rosetta transactions
-type RosettaTransactionEncoder struct{}
+// MeshTransactionEncoder handles encoding and decoding of Mesh transactions
+type MeshTransactionEncoder struct{}
 
-// NewRosettaTransactionEncoder creates a new Rosetta transaction encoder
-func NewRosettaTransactionEncoder() *RosettaTransactionEncoder {
-	return &RosettaTransactionEncoder{}
+// NewMeshTransactionEncoder creates a new Mesh transaction encoder
+func NewMeshTransactionEncoder() *MeshTransactionEncoder {
+	return &MeshTransactionEncoder{}
 }
 
-// EncodeUnsignedTransaction encodes an unsigned transaction using Rosetta RLP schema
-func (e *RosettaTransactionEncoder) EncodeUnsignedTransaction(vechainTx *tx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Rosetta RLP structure based on transaction type
+// EncodeUnsignedTransaction encodes an unsigned transaction using Mesh RLP schema
+func (e *MeshTransactionEncoder) EncodeUnsignedTransaction(vechainTx *tx.Transaction, origin, delegator []byte) ([]byte, error) {
+	// Create Mesh RLP structure based on transaction type
 	if vechainTx.Type() == tx.TypeLegacy {
 		return e.encodeUnsignedLegacyTransaction(vechainTx, origin, delegator)
 	} else {
@@ -35,55 +35,55 @@ func (e *RosettaTransactionEncoder) EncodeUnsignedTransaction(vechainTx *tx.Tran
 	}
 }
 
-// DecodeUnsignedTransaction decodes an unsigned transaction from Rosetta RLP format
-func (e *RosettaTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*RosettaTransaction, error) {
+// DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
 	// Try to decode as legacy transaction first (9 fields)
-	if rosettaTx, err := e.decodeUnsignedLegacyTransaction(data); err == nil {
-		return rosettaTx, nil
+	if meshTx, err := e.decodeUnsignedLegacyTransaction(data); err == nil {
+		return meshTx, nil
 	}
 
 	// Try to decode as dynamic fee transaction (10 fields)
-	if rosettaTx, err := e.decodeUnsignedDynamicTransaction(data); err == nil {
-		return rosettaTx, nil
+	if meshTx, err := e.decodeUnsignedDynamicTransaction(data); err == nil {
+		return meshTx, nil
 	}
 
 	return nil, fmt.Errorf("failed to decode as either legacy or dynamic fee transaction")
 }
 
-// DecodeSignedTransaction decodes a signed transaction from Rosetta RLP format
-func (e *RosettaTransactionEncoder) DecodeSignedTransaction(data []byte) (*RosettaTransaction, error) {
+// DecodeSignedTransaction decodes a signed transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTransaction, error) {
 	// Try to decode as signed legacy transaction first (10 fields)
-	if rosettaTx, err := e.decodeSignedLegacyTransaction(data); err == nil {
-		return rosettaTx, nil
+	if meshTx, err := e.decodeSignedLegacyTransaction(data); err == nil {
+		return meshTx, nil
 	}
 
 	// Try to decode as signed dynamic fee transaction (11 fields)
-	if rosettaTx, err := e.decodeSignedDynamicTransaction(data); err == nil {
-		return rosettaTx, nil
+	if meshTx, err := e.decodeSignedDynamicTransaction(data); err == nil {
+		return meshTx, nil
 	}
 
 	return nil, fmt.Errorf("failed to decode as either signed legacy or signed dynamic fee transaction")
 }
 
-// EncodeSignedTransaction encodes a signed Rosetta transaction
-func (e *RosettaTransactionEncoder) EncodeSignedTransaction(rosettaTx *RosettaTransaction) ([]byte, error) {
-	// Create Rosetta RLP structure based on transaction type
-	if rosettaTx.Transaction.Type() == tx.TypeLegacy {
-		return e.encodeSignedLegacyTransaction(rosettaTx)
+// EncodeSignedTransaction encodes a signed Mesh transaction
+func (e *MeshTransactionEncoder) EncodeSignedTransaction(meshTx *MeshTransaction) ([]byte, error) {
+	// Create Mesh RLP structure based on transaction type
+	if meshTx.Transaction.Type() == tx.TypeLegacy {
+		return e.encodeSignedLegacyTransaction(meshTx)
 	} else {
-		return e.encodeSignedDynamicTransaction(rosettaTx)
+		return e.encodeSignedDynamicTransaction(meshTx)
 	}
 }
 
-// encodeUnsignedLegacyTransaction encodes a legacy transaction using Rosetta RLP schema
-func (e *RosettaTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *tx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Rosetta legacy transaction RLP structure (9 fields)
+// encodeUnsignedLegacyTransaction encodes a legacy transaction using Mesh RLP schema
+func (e *MeshTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *tx.Transaction, origin, delegator []byte) ([]byte, error) {
+	// Create Mesh legacy transaction RLP structure (9 fields)
 	blockRef := vechainTx.BlockRef()
-	rosettaTx := []any{
+	meshTx := []any{
 		vechainTx.ChainTag(),
 		blockRef[:],
 		vechainTx.Expiration(),
-		e.convertClausesToRosetta(vechainTx.Clauses()),
+		e.convertClausesToMesh(vechainTx.Clauses()),
 		vechainTx.Gas(),
 		e.convertNonceToBytes(vechainTx.Nonce()),
 		origin,
@@ -91,18 +91,18 @@ func (e *RosettaTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *t
 		vechainTx.GasPriceCoef(),
 	}
 
-	return rlp.EncodeToBytes(rosettaTx)
+	return rlp.EncodeToBytes(meshTx)
 }
 
-// encodeUnsignedDynamicTransaction encodes a dynamic fee transaction using Rosetta RLP schema
-func (e *RosettaTransactionEncoder) encodeUnsignedDynamicTransaction(vechainTx *tx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Rosetta dynamic fee transaction RLP structure (10 fields)
+// encodeUnsignedDynamicTransaction encodes a dynamic fee transaction using Mesh RLP schema
+func (e *MeshTransactionEncoder) encodeUnsignedDynamicTransaction(vechainTx *tx.Transaction, origin, delegator []byte) ([]byte, error) {
+	// Create Mesh dynamic fee transaction RLP structure (10 fields)
 	blockRef := vechainTx.BlockRef()
-	rosettaTx := []any{
+	meshTx := []any{
 		vechainTx.ChainTag(),
 		blockRef[:],
 		vechainTx.Expiration(),
-		e.convertClausesToRosetta(vechainTx.Clauses()),
+		e.convertClausesToMesh(vechainTx.Clauses()),
 		vechainTx.Gas(),
 		e.convertNonceToBytes(vechainTx.Nonce()),
 		origin,
@@ -111,11 +111,11 @@ func (e *RosettaTransactionEncoder) encodeUnsignedDynamicTransaction(vechainTx *
 		vechainTx.MaxPriorityFeePerGas(),
 	}
 
-	return rlp.EncodeToBytes(rosettaTx)
+	return rlp.EncodeToBytes(meshTx)
 }
 
-// decodeUnsignedLegacyTransaction decodes a legacy transaction from Rosetta RLP format
-func (e *RosettaTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte) (*RosettaTransaction, error) {
+// decodeUnsignedLegacyTransaction decodes a legacy transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte) (*MeshTransaction, error) {
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (e *RosettaTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte)
 		return nil, fmt.Errorf("invalid legacy transaction: expected 9 fields, got %d", len(fields))
 	}
 
-	// Extract fields according to Rosetta schema
+	// Extract fields according to Mesh schema
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
@@ -172,15 +172,15 @@ func (e *RosettaTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte)
 
 	vechainTx := builder.Build()
 
-	return &RosettaTransaction{
+	return &MeshTransaction{
 		Transaction: vechainTx,
 		Origin:      origin,
 		Delegator:   delegator,
 	}, nil
 }
 
-// decodeUnsignedDynamicTransaction decodes a dynamic fee transaction from Rosetta RLP format
-func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte) (*RosettaTransaction, error) {
+// decodeUnsignedDynamicTransaction decodes a dynamic fee transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte) (*MeshTransaction, error) {
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte
 		return nil, fmt.Errorf("invalid dynamic fee transaction: expected 10 fields, got %d", len(fields))
 	}
 
-	// Extract fields according to Rosetta schema
+	// Extract fields according to Mesh schema
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
@@ -240,7 +240,7 @@ func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte
 
 	vechainTx := builder.Build()
 
-	return &RosettaTransaction{
+	return &MeshTransaction{
 		Transaction: vechainTx,
 		Origin:      origin,
 		Delegator:   delegator,
@@ -248,48 +248,48 @@ func (e *RosettaTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte
 }
 
 // encodeSignedLegacyTransaction encodes a signed legacy transaction
-func (e *RosettaTransactionEncoder) encodeSignedLegacyTransaction(rosettaTx *RosettaTransaction) ([]byte, error) {
-	// Create Rosetta signed legacy transaction RLP structure (10 fields)
-	blockRef := rosettaTx.BlockRef()
-	rosettaTxRLP := []any{
-		rosettaTx.ChainTag(),
+func (e *MeshTransactionEncoder) encodeSignedLegacyTransaction(meshTx *MeshTransaction) ([]byte, error) {
+	// Create Mesh signed legacy transaction RLP structure (10 fields)
+	blockRef := meshTx.BlockRef()
+	meshTxRLP := []any{
+		meshTx.ChainTag(),
 		blockRef[:],
-		rosettaTx.Expiration(),
-		e.convertClausesToRosetta(rosettaTx.Clauses()),
-		rosettaTx.Gas(),
-		e.convertNonceToBytes(rosettaTx.Nonce()),
-		rosettaTx.Origin,
-		rosettaTx.Delegator,
-		rosettaTx.GasPriceCoef(),
-		rosettaTx.Signature,
+		meshTx.Expiration(),
+		e.convertClausesToMesh(meshTx.Clauses()),
+		meshTx.Gas(),
+		e.convertNonceToBytes(meshTx.Nonce()),
+		meshTx.Origin,
+		meshTx.Delegator,
+		meshTx.GasPriceCoef(),
+		meshTx.Signature,
 	}
 
-	return rlp.EncodeToBytes(rosettaTxRLP)
+	return rlp.EncodeToBytes(meshTxRLP)
 }
 
 // encodeSignedDynamicTransaction encodes a signed dynamic fee transaction
-func (e *RosettaTransactionEncoder) encodeSignedDynamicTransaction(rosettaTx *RosettaTransaction) ([]byte, error) {
-	// Create Rosetta signed dynamic fee transaction RLP structure (11 fields)
-	blockRef := rosettaTx.BlockRef()
-	rosettaTxRLP := []any{
-		rosettaTx.ChainTag(),
+func (e *MeshTransactionEncoder) encodeSignedDynamicTransaction(meshTx *MeshTransaction) ([]byte, error) {
+	// Create Mesh signed dynamic fee transaction RLP structure (11 fields)
+	blockRef := meshTx.BlockRef()
+	meshTxRLP := []any{
+		meshTx.ChainTag(),
 		blockRef[:],
-		rosettaTx.Expiration(),
-		e.convertClausesToRosetta(rosettaTx.Clauses()),
-		rosettaTx.Gas(),
-		e.convertNonceToBytes(rosettaTx.Nonce()),
-		rosettaTx.Origin,
-		rosettaTx.Delegator,
-		rosettaTx.MaxFeePerGas(),
-		rosettaTx.MaxPriorityFeePerGas(),
-		rosettaTx.Signature,
+		meshTx.Expiration(),
+		e.convertClausesToMesh(meshTx.Clauses()),
+		meshTx.Gas(),
+		e.convertNonceToBytes(meshTx.Nonce()),
+		meshTx.Origin,
+		meshTx.Delegator,
+		meshTx.MaxFeePerGas(),
+		meshTx.MaxPriorityFeePerGas(),
+		meshTx.Signature,
 	}
 
-	return rlp.EncodeToBytes(rosettaTxRLP)
+	return rlp.EncodeToBytes(meshTxRLP)
 }
 
-// decodeSignedLegacyTransaction decodes a signed legacy transaction from Rosetta RLP format
-func (e *RosettaTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (*RosettaTransaction, error) {
+// decodeSignedLegacyTransaction decodes a signed legacy transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (*MeshTransaction, error) {
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
@@ -300,7 +300,7 @@ func (e *RosettaTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (
 		return nil, fmt.Errorf("invalid signed legacy transaction: expected 10 fields, got %d", len(fields))
 	}
 
-	// Extract fields according to Rosetta schema
+	// Extract fields according to Mesh schema
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
@@ -347,7 +347,7 @@ func (e *RosettaTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (
 
 	vechainTx := builder.Build()
 
-	return &RosettaTransaction{
+	return &MeshTransaction{
 		Transaction: vechainTx,
 		Origin:      origin,
 		Delegator:   delegator,
@@ -355,8 +355,8 @@ func (e *RosettaTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (
 	}, nil
 }
 
-// decodeSignedDynamicTransaction decodes a signed dynamic fee transaction from Rosetta RLP format
-func (e *RosettaTransactionEncoder) decodeSignedDynamicTransaction(data []byte) (*RosettaTransaction, error) {
+// decodeSignedDynamicTransaction decodes a signed dynamic fee transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) decodeSignedDynamicTransaction(data []byte) (*MeshTransaction, error) {
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
@@ -367,7 +367,7 @@ func (e *RosettaTransactionEncoder) decodeSignedDynamicTransaction(data []byte) 
 		return nil, fmt.Errorf("invalid signed dynamic fee transaction: expected 11 fields, got %d", len(fields))
 	}
 
-	// Extract fields according to Rosetta schema
+	// Extract fields according to Mesh schema
 	chainTagBytes := fields[0].([]byte)
 	chainTag := chainTagBytes[0]
 	blockRef := fields[1].([]byte)
@@ -422,7 +422,7 @@ func (e *RosettaTransactionEncoder) decodeSignedDynamicTransaction(data []byte) 
 
 	vechainTx := builder.Build()
 
-	return &RosettaTransaction{
+	return &MeshTransaction{
 		Transaction: vechainTx,
 		Origin:      origin,
 		Delegator:   delegator,
@@ -431,7 +431,7 @@ func (e *RosettaTransactionEncoder) decodeSignedDynamicTransaction(data []byte) 
 }
 
 // Helper methods
-func (e *RosettaTransactionEncoder) convertClausesToRosetta(clauses []*tx.Clause) []any {
+func (e *MeshTransactionEncoder) convertClausesToMesh(clauses []*tx.Clause) []any {
 	rosettaClauses := make([]any, len(clauses))
 	for i, clause := range clauses {
 		rosettaClauses[i] = []any{
@@ -443,7 +443,7 @@ func (e *RosettaTransactionEncoder) convertClausesToRosetta(clauses []*tx.Clause
 	return rosettaClauses
 }
 
-func (e *RosettaTransactionEncoder) convertNonceToBytes(nonce uint64) []byte {
+func (e *MeshTransactionEncoder) convertNonceToBytes(nonce uint64) []byte {
 	nonceBytes := make([]byte, 8)
 	for i := 7; i >= 0; i-- {
 		nonceBytes[i] = byte(nonce)
@@ -452,7 +452,7 @@ func (e *RosettaTransactionEncoder) convertNonceToBytes(nonce uint64) []byte {
 	return nonceBytes
 }
 
-func (e *RosettaTransactionEncoder) convertBytesToNonce(nonceBytes []byte) uint64 {
+func (e *MeshTransactionEncoder) convertBytesToNonce(nonceBytes []byte) uint64 {
 	var nonce uint64
 	for i := range 8 {
 		nonce = (nonce << 8) | uint64(nonceBytes[i])
@@ -460,7 +460,7 @@ func (e *RosettaTransactionEncoder) convertBytesToNonce(nonceBytes []byte) uint6
 	return nonce
 }
 
-func (e *RosettaTransactionEncoder) convertBytesToUint64(bytes []byte) uint64 {
+func (e *MeshTransactionEncoder) convertBytesToUint64(bytes []byte) uint64 {
 	var result uint64
 	for i := range bytes {
 		result = (result << 8) | uint64(bytes[i])
@@ -468,7 +468,7 @@ func (e *RosettaTransactionEncoder) convertBytesToUint64(bytes []byte) uint64 {
 	return result
 }
 
-func (e *RosettaTransactionEncoder) convertBytesToUint32(bytes []byte) uint32 {
+func (e *MeshTransactionEncoder) convertBytesToUint32(bytes []byte) uint32 {
 	var result uint32
 	for i := range bytes {
 		result = (result << 8) | uint32(bytes[i])
