@@ -116,10 +116,9 @@ func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Reque
 
 // CheckRunMode validates the run mode
 func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Request) bool {
-	// In Rosetta, run mode is typically "online" or "offline"
-	// For account/balance, we need online mode
+	// In Mesh, run mode is typically "online" or "offline"
 	if v.runMode != "online" {
-		http.Error(w, fmt.Sprintf("Invalid run mode: account/balance requires online mode, got %s", v.runMode), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Invalid run mode: this endpoint requires online mode, got %s", v.runMode), http.StatusBadRequest)
 		return false
 	}
 	return true

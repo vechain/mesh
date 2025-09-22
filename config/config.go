@@ -13,7 +13,7 @@ import (
 
 // Config holds the service configuration
 type Config struct {
-	RosettaVersion    string                   `json:"rosetta_version"`
+	MeshVersion       string                   `json:"mesh_version"`
 	Port              int                      `json:"port"`
 	Mode              string                   `json:"mode"`
 	Network           string                   `json:"network"`
@@ -134,9 +134,9 @@ func (c *Config) GetServiceName() string {
 	return c.ServiceName
 }
 
-// GetRosettaVersion returns the Rosetta version
-func (c *Config) GetRosettaVersion() string {
-	return c.RosettaVersion
+// GetMeshVersion returns the Mesh version
+func (c *Config) GetMeshVersion() string {
+	return c.MeshVersion
 }
 
 // IsOnlineMode returns true if running in online mode
@@ -149,7 +149,7 @@ func (c *Config) PrintConfig() {
 	fmt.Printf(`
 ******************** %s ********************
 |   Api               |   localhost:%d
-|   Rosetta Version   |   %s
+|   Mesh Version      |   %s
 |   Mode              |   %s
 |   Node URL          |   %s
 |   Node Version      |   %s
@@ -159,7 +159,7 @@ func (c *Config) PrintConfig() {
 `,
 		c.ServiceName,
 		c.Port,
-		c.RosettaVersion,
+		c.MeshVersion,
 		c.Mode,
 		c.NodeAPI,
 		c.NodeVersion,

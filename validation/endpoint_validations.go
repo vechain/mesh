@@ -1,6 +1,6 @@
 package validation
 
-// EndpointValidationSets defines the validation sets for different Rosetta endpoints
+// EndpointValidationSets defines the validation sets for different Mesh endpoints
 var EndpointValidationSets = map[string][]ValidationType{
 	// Network API endpoints
 	"/network/list":    NetworkValidations,

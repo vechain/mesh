@@ -3,7 +3,8 @@
 > **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
 >
 > **📋 TODO List:**
-> - Implement mempool endpoints 
+> - Implement mempool endpoints
+> - Validate that all the middlewares are being applied as expected
 > - Refactor request/response endpoints to match rosetta-sdk-go/types
 > - Refactor Thor client within this repo so we use the existing types in [vechain/thor](https://github.com/vechain/thor) when possible
 > - Add GitHub Actions (build, lint, test)
@@ -215,6 +216,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Credits
 
-- [Coinbase Rosetta SDK](https://github.com/coinbase/rosetta-sdk-go) - Base framework for Mesh API implementation
+- [Coinbase Mesh SDK](https://github.com/coinbase/rosetta-sdk-go) - Base framework for Mesh API implementation
 - [Gorilla Mux](https://github.com/gorilla/mux) - HTTP router and URL matcher
 - VeChain developer community for blockchain insights

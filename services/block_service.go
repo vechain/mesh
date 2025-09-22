@@ -335,7 +335,7 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) map[str
 
 		if len(operations) > 0 {
 			// Transaction has operations, include it in transactions
-			transaction := b.buildRosettaTransaction(tx, operations)
+			transaction := b.buildMeshTransaction(tx, operations)
 			transactions = append(transactions, transaction)
 		} else {
 			// Transaction has no operations, add to other_transactions
@@ -366,15 +366,15 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) map[str
 // buildBlockTransactionResponse builds the response for a block transaction request
 func (b *BlockService) buildBlockTransactionResponse(tx *meshthor.Transaction) map[string]any {
 	operations := b.parseTransactionOperations(*tx)
-	rosettaTx := b.buildRosettaTransaction(*tx, operations)
+	meshTx := b.buildMeshTransaction(*tx, operations)
 
 	return map[string]any{
-		"transaction": rosettaTx,
+		"transaction": meshTx,
 	}
 }
 
-// buildRosettaTransaction builds a Rosetta transaction from a VeChain transaction
-func (b *BlockService) buildRosettaTransaction(tx meshthor.Transaction, operations []*types.Operation) *types.Transaction {
+// buildMeshTransaction builds a Mesh transaction from a VeChain transaction
+func (b *BlockService) buildMeshTransaction(tx meshthor.Transaction, operations []*types.Operation) *types.Transaction {
 	return &types.Transaction{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: tx.ID,

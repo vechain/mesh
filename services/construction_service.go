@@ -234,7 +234,7 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		delegatorBytes, _ = hex.DecodeString(delegatorAddr[2:]) // Remove 0x prefix
 	}
 
-	// Encode transaction using Rosetta schema
+	// Encode transaction using Mesh schema
 	unsignedTx, err := c.encoder.EncodeUnsignedTransaction(vechainTx, originBytes, delegatorBytes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -265,11 +265,11 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	var vechainTx *tx.Transaction
-	var rosettaTx *meshutils.MeshTransaction
+	var meshTx *meshutils.MeshTransaction
 
 	if request.Signed {
-		// For signed transactions, try to decode as Rosetta transaction first
-		rosettaTx, err = c.encoder.DecodeSignedTransaction(txBytes)
+		// For signed transactions, try to decode as Mesh transaction first
+		meshTx, err = c.encoder.DecodeSignedTransaction(txBytes)
 		if err != nil {
 			// Fallback to native Thor decoding
 			var nativeTx tx.Transaction
@@ -280,16 +280,16 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			}
 			vechainTx = &nativeTx
 		} else {
-			vechainTx = rosettaTx.Transaction
+			vechainTx = meshTx.Transaction
 		}
 	} else {
-		// For unsigned transactions, decode as Rosetta transaction
-		rosettaTx, err = c.encoder.DecodeUnsignedTransaction(txBytes)
+		// For unsigned transactions, decode as Mesh transaction
+		meshTx, err = c.encoder.DecodeUnsignedTransaction(txBytes)
 		if err != nil {
 			http.Error(w, "Failed to decode unsigned transaction", http.StatusBadRequest)
 			return
 		}
-		vechainTx = rosettaTx.Transaction
+		vechainTx = meshTx.Transaction
 	}
 
 	// Parse operations
@@ -300,11 +300,11 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	var originAddr thor.Address
 	var delegatorAddr *thor.Address
 
-	if rosettaTx != nil {
-		// Use Rosetta transaction fields
-		originAddr = thor.BytesToAddress(rosettaTx.Origin)
-		if len(rosettaTx.Delegator) > 0 {
-			delegator := thor.BytesToAddress(rosettaTx.Delegator)
+	if meshTx != nil {
+		// Use Mesh transaction fields
+		originAddr = thor.BytesToAddress(meshTx.Origin)
+		if len(meshTx.Delegator) > 0 {
+			delegator := thor.BytesToAddress(meshTx.Delegator)
 			delegatorAddr = &delegator
 		}
 	} else {
@@ -456,13 +456,13 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 	}
 
 	// Decode unsigned transaction using unified method
-	rosettaTx, err := c.encoder.DecodeUnsignedTransaction(txBytes)
+	meshTx, err := c.encoder.DecodeUnsignedTransaction(txBytes)
 	if err != nil {
 		http.Error(w, "Failed to decode unsigned transaction", http.StatusBadRequest)
 		return
 	}
 
-	// Apply signatures to Rosetta transaction
+	// Apply signatures to Mesh transaction
 	if len(request.Signatures) == 2 {
 		// VIP191 Fee Delegation with two signatures
 		originSig := request.Signatures[0]
@@ -470,20 +470,20 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 
 		// Combine signatures for VIP191
 		combinedSig := append(originSig.Bytes, delegatorSig.Bytes...)
-		rosettaTx.Signature = combinedSig
+		meshTx.Signature = combinedSig
 
 	} else if len(request.Signatures) == 1 {
 		// Regular transaction: only origin signature
 		sig := request.Signatures[0]
-		rosettaTx.Signature = sig.Bytes
+		meshTx.Signature = sig.Bytes
 
 	} else {
 		http.Error(w, "Invalid number of signatures", http.StatusBadRequest)
 		return
 	}
 
-	// Encode signed Rosetta transaction
-	signedTxBytes, err := c.encoder.EncodeSignedTransaction(rosettaTx)
+	// Encode signed Mesh transaction
+	signedTxBytes, err := c.encoder.EncodeSignedTransaction(meshTx)
 	if err != nil {
 		http.Error(w, "Failed to encode signed transaction", http.StatusInternalServerError)
 		return

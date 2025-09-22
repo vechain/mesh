@@ -432,15 +432,15 @@ func (e *MeshTransactionEncoder) decodeSignedDynamicTransaction(data []byte) (*M
 
 // Helper methods
 func (e *MeshTransactionEncoder) convertClausesToMesh(clauses []*tx.Clause) []any {
-	rosettaClauses := make([]any, len(clauses))
+	meshClauses := make([]any, len(clauses))
 	for i, clause := range clauses {
-		rosettaClauses[i] = []any{
+		meshClauses[i] = []any{
 			clause.To().Bytes(),
 			clause.Value(),
 			clause.Data(),
 		}
 	}
-	return rosettaClauses
+	return meshClauses
 }
 
 func (e *MeshTransactionEncoder) convertNonceToBytes(nonce uint64) []byte {
