@@ -556,7 +556,7 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 }
 
 // getBasicTransactionInfo gets basic transaction information from the network
-func (c *ConstructionService) getBasicTransactionInfo() (*meshclient.Block, int, error) {
+func (c *ConstructionService) getBasicTransactionInfo() (*thorclient.Block, int, error) {
 	bestBlock, err := c.vechainClient.GetBestBlock()
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get best block: %w", err)
