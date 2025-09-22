@@ -525,19 +525,15 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var vechainTx tx.Transaction
-	stream := rlp.NewStream(bytes.NewReader(txBytes), 0)
-	if err := vechainTx.DecodeRLP(stream); err != nil {
+	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
+	if err != nil {
 		http.Error(w, "Failed to decode transaction", http.StatusBadRequest)
 		return
 	}
 
-	// Get transaction ID
-	txID := vechainTx.ID()
-
 	response := map[string]any{
 		"transaction_identifier": &types.TransactionIdentifier{
-			Hash: txID.String(),
+			Hash: meshTx.Transaction.ID().String(),
 		},
 	}
 

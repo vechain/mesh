@@ -68,7 +68,7 @@ func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTran
 // EncodeSignedTransaction encodes a signed Mesh transaction
 func (e *MeshTransactionEncoder) EncodeSignedTransaction(meshTx *MeshTransaction) ([]byte, error) {
 	// Create Mesh RLP structure based on transaction type
-	if meshTx.Transaction.Type() == tx.TypeLegacy {
+	if meshTx.Type() == tx.TypeLegacy {
 		return e.encodeSignedLegacyTransaction(meshTx)
 	} else {
 		return e.encodeSignedDynamicTransaction(meshTx)
