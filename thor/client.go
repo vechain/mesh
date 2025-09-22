@@ -3,7 +3,9 @@ package thor
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/thor/v2/api"
@@ -241,9 +243,36 @@ func convertTransactionsFromAPI(apiTxs []thor.Bytes32) []Transaction {
 
 // GetSyncProgress returns the current sync progress (0.0 to 1.0)
 func (c *VeChainClient) GetSyncProgress() (float64, error) {
-	// For now, return 1.0 (fully synced) as a placeholder
-	// TODO: Implement proper sync progress detection
-	return 1.0, nil
+	// Get best block (head)
+	bestBlock, err := c.GetBestBlock()
+	if err != nil {
+		return 0, err
+	}
+
+	// Get genesis block
+	genesisBlock, err := c.GetBlockByNumber(0)
+	if err != nil {
+		return 0, err
+	}
+
+	nowTsMs := float64(time.Now().UnixMilli())
+	headTsMs := float64(bestBlock.Timestamp * 1000)
+	genesisTsMs := float64(genesisBlock.Timestamp * 1000)
+
+	// If the head block is recent (within 30 seconds), consider it fully synced
+	if nowTsMs-headTsMs < 30*1000 {
+		return 1.0, nil
+	}
+
+	// Calculate sync progress based on time difference
+	progress := (headTsMs - genesisTsMs) / (nowTsMs - genesisTsMs)
+
+	// Return NaN if progress is negative (shouldn't happen in normal conditions)
+	if progress < 0 {
+		return math.NaN(), nil
+	}
+
+	return progress, nil
 }
 
 // GetPeers returns the list of connected peers
