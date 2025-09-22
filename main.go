@@ -10,7 +10,7 @@ import (
 	"time"
 
 	meshconfig "github.com/vechain/mesh/config"
-	"github.com/vechain/networkhub/environments/local"
+	"github.com/vechain/mesh/thor"
 )
 
 func main() {
@@ -23,24 +23,25 @@ func main() {
 	if cfg.Mode == "online" {
 		// Start Thor node
 		log.Println("Starting VeChain Thor node...")
-		thorEnv := local.NewEnv()
 
 		// Configure Thor node based on config.json
-		thorConfig := local.PublicNetworkConfig{
+		thorConfig := thor.Config{
 			NodeID:      "thor-node-1",
 			NetworkType: cfg.GetNetwork(), // "test" or "main" from config.json
 			APIAddr:     "0.0.0.0:8669",   // API address as specified
 			P2PPort:     11235,            // P2P port as specified
 		}
 
-		if err := thorEnv.AttachToPublicNetworkAndStart(thorConfig); err != nil {
+		thorServer := thor.NewServer(thorConfig)
+
+		if err := thorServer.AttachToPublicNetworkAndStart(); err != nil {
 			log.Fatalf("Failed to start Thor node: %v", err)
 		}
 
 		defer func() {
 			// Stop Thor node
 			log.Println("Stopping Thor node...")
-			if err := thorEnv.StopNetwork(); err != nil {
+			if err := thorServer.Stop(); err != nil {
 				log.Printf("Error stopping Thor node: %v", err)
 			} else {
 				log.Println("Thor node stopped successfully")

@@ -11,12 +11,12 @@ import (
 
 	"github.com/gorilla/mux"
 
-	meshclient "github.com/vechain/mesh/client"
+	thorclient "github.com/vechain/mesh/thor"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/services"
 	meshutils "github.com/vechain/mesh/utils"
 	meshvalidation "github.com/vechain/mesh/validation"
-)
+)	
 
 // VeChainMeshServer implements the Mesh API for VeChain
 type VeChainMeshServer struct {
@@ -34,7 +34,7 @@ type VeChainMeshServer struct {
 func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	router := mux.NewRouter()
 
-	vechainClient := meshclient.NewVeChainClient(cfg.GetNodeAPI())
+	vechainClient := thorclient.NewVeChainClient(cfg.GetNodeAPI())
 
 	validationMiddleware := meshvalidation.NewValidationMiddleware(cfg.GetNetworkIdentifier(), cfg.GetRunMode())
 

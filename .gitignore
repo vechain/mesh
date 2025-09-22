@@ -1,6 +1,7 @@
 # Binaries for programs and plugins
 mesh-server
 mesh
+thor_data/
 
 # Test binary, built with `go test -c`
 *.test

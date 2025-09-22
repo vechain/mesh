@@ -7,18 +7,18 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshclient "github.com/vechain/mesh/client"
 	meshmodels "github.com/vechain/mesh/models"
+	thorclient "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
 
 // AccountService handles account-related endpoints
 type AccountService struct {
-	vechainClient *meshclient.VeChainClient
+	vechainClient *thorclient.VeChainClient
 }
 
 // NewAccountService creates a new account service
-func NewAccountService(vechainClient *meshclient.VeChainClient) *AccountService {
+func NewAccountService(vechainClient *thorclient.VeChainClient) *AccountService {
 	return &AccountService{
 		vechainClient: vechainClient,
 	}
