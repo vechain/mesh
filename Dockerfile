@@ -47,7 +47,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o mesh-server .
 # Final stage
 FROM ubuntu:24.04
 
-# Install ca-certificates, wget for health checks, git for networkhub, make, build tools for Thor compilation, and Go
+# Install ca-certificates, wget for health checks, git, make, and build tools
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
