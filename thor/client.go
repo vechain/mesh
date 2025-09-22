@@ -238,3 +238,33 @@ func convertTransactionsFromAPI(apiTxs []thor.Bytes32) []Transaction {
 	}
 	return transactions
 }
+
+// GetSyncProgress returns the current sync progress (0.0 to 1.0)
+func (c *VeChainClient) GetSyncProgress() (float64, error) {
+	// For now, return 1.0 (fully synced) as a placeholder
+	// TODO: Implement proper sync progress detection
+	return 1.0, nil
+}
+
+// GetPeers returns the list of connected peers
+func (c *VeChainClient) GetPeers() ([]Peer, error) {
+	peers, err := c.client.Peers()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]Peer, len(peers))
+	for i, peer := range peers {
+		result[i] = Peer{
+			PeerID:      peer.PeerID,
+			BestBlockID: peer.BestBlockID.String(),
+		}
+	}
+	return result, nil
+}
+
+// Peer represents a connected peer
+type Peer struct {
+	PeerID      string
+	BestBlockID string
+}

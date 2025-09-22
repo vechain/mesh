@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -43,22 +42,56 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody))
 		return
 	}
 
 	// Get real VeChain data
 	bestBlock, err := n.vechainClient.GetBestBlock()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get best block: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetBestBlock))
 		return
 	}
 
 	// Get genesis block (block 0)
 	genesisBlock, err := n.vechainClient.GetBlockByNumber(0)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get genesis block: %v", err), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetGenesisBlock))
 		return
+	}
+
+	// Get sync progress
+	progress, err := n.vechainClient.GetSyncProgress()
+	if err != nil {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetSyncProgress))
+		return
+	}
+
+	// Get peers
+	peers, err := n.vechainClient.GetPeers()
+	if err != nil {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetPeers))
+		return
+	}
+
+	// Convert peers to utils.Peer type
+	utilsPeers := make([]meshutils.Peer, len(peers))
+	for i, peer := range peers {
+		utilsPeers[i] = meshutils.Peer{
+			PeerID:      peer.PeerID,
+			BestBlockID: peer.BestBlockID,
+		}
+	}
+
+	// Calculate target index
+	targetIndex := meshutils.GetTargetIndex(bestBlock.Number, utilsPeers)
+
+	// Convert peers to types.Peer
+	rosettaPeers := make([]*types.Peer, len(peers))
+	for i, peer := range peers {
+		rosettaPeers[i] = &types.Peer{
+			PeerID: peer.PeerID,
+		}
 	}
 
 	status := &types.NetworkStatusResponse{
@@ -71,23 +104,13 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 			Index: genesisBlock.Number,
 			Hash:  genesisBlock.ID,
 		},
-		OldestBlockIdentifier: &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "0x0000000000000000000000000000000000000000000000000000000000000001",
-		},
 		SyncStatus: &types.SyncStatus{
 			CurrentIndex: meshutils.Int64Ptr(bestBlock.Number),
-			TargetIndex:  meshutils.Int64Ptr(bestBlock.Number),
-			Synced:       meshutils.BoolPtr(true),
+			TargetIndex:  meshutils.Int64Ptr(targetIndex),
+			Stage:        meshutils.StringPtr("block sync"),
+			Synced:       meshutils.BoolPtr(progress == 1.0),
 		},
-		Peers: []*types.Peer{
-			{
-				PeerID: "vechain-node",
-				Metadata: map[string]any{
-					"address": "vechain-node",
-				},
-			},
-		},
+		Peers: rosettaPeers,
 	}
 
 	meshutils.WriteJSONResponse(w, status)
@@ -97,7 +120,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody))
 		return
 	}
 
