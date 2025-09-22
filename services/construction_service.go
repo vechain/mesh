@@ -522,8 +522,8 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	response := map[string]any{
-		"transaction_identifier": &types.TransactionIdentifier{
+	response := &types.TransactionIdentifierResponse{
+		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: thorTx.ID().String(),
 		},
 	}
@@ -574,8 +574,8 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 		return
 	}
 
-	response := map[string]any{
-		"transaction_identifier": &types.TransactionIdentifier{
+	response := &types.TransactionIdentifierResponse{
+		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: txID,
 		},
 	}

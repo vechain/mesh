@@ -5,7 +5,6 @@
 > **📋 TODO List:**
 > - Implement mempool endpoints
 > - Validate that all the middlewares are being applied as expected
-> - Refactor request/response endpoints to match rosetta-sdk-go/types
 > - Refactor Thor client within this repo so we use the existing types in [vechain/thor](https://github.com/vechain/thor) when possible
 > - Add GitHub Actions (build, lint, test)
 > - Add e2e tests like in vechain/rosetta
