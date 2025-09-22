@@ -5,10 +5,11 @@ A Coinbase Mesh API implementation for the VeChain blockchain, built in Go.
 ## Features
 
 - ✅ HTTP server with Mesh API endpoints
-- ✅ Support for VeChain networks (mainnet and testnet)
+- ✅ Support for VeChain networks (mainnet, testnet, and solo mode)
 - ✅ Transaction construction endpoints
 - ✅ Balance query and network status endpoints
 - ✅ Modular architecture with separated concerns
+- ✅ Solo mode for local development and testing
 
 ## Quick Start
 
@@ -28,6 +29,9 @@ cd mesh
 # Start with default configuration (testnet)
 docker-compose up --build -d
 
+# Start in solo mode (local development)
+docker-compose -f docker-compose-solo.yml up --build -d
+
 # View logs
 docker-compose logs -f
 
@@ -45,7 +49,7 @@ go mod tidy
 go build -o mesh-server .
 
 # Run with environment variables
-MODE=online NETWORK=test NODEURL=https://testnet.vechain.org ./mesh-server
+MODE=online NETWORK=test ./mesh-server
 ```
 
 ## Configuration
@@ -53,8 +57,7 @@ MODE=online NETWORK=test NODEURL=https://testnet.vechain.org ./mesh-server
 ### Environment Variables
 
 - `MODE`: Server mode - `online` or `offline` (default: `online`)
-- `NETWORK`: Network type - `main`, `test`, or `custom` (default: `test`)
-- `NODEURL`: VeChain node API URL (required for online mode)
+- `NETWORK`: Network type - `main`, `test`, or `solo` (default: `test`)
 - `PORT`: Server port (default: `8080`)
 
 ### Example Configurations
@@ -63,7 +66,6 @@ MODE=online NETWORK=test NODEURL=https://testnet.vechain.org ./mesh-server
 ```bash
 export MODE=online
 export NETWORK=test
-export NODEURL=https://testnet.vechain.org
 export PORT=8080
 ```
 
@@ -71,7 +73,13 @@ export PORT=8080
 ```bash
 export MODE=online
 export NETWORK=main
-export NODEURL=https://mainnet.vechain.org
+export PORT=8080
+```
+
+**Solo Mode (Local Development):**
+```bash
+export MODE=online
+export NETWORK=solo
 export PORT=8080
 ```
 

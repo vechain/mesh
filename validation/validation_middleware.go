@@ -117,7 +117,7 @@ func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Reque
 
 // CheckModeNetwork validates that the mode and network are compatible
 func (v *ValidationMiddleware) CheckModeNetwork(w http.ResponseWriter, r *http.Request) bool {
-	validNetworks := []string{"mainnet", "test"}
+	validNetworks := []string{"main", "test", "solo"}
 
 	isValidNetwork := slices.Contains(validNetworks, v.networkIdentifier.Network)
 
