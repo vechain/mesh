@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	meshmodels "github.com/vechain/mesh/models"
-	thorclient "github.com/vechain/mesh/thor"
+	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
@@ -22,13 +22,13 @@ import (
 
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
-	vechainClient *thorclient.VeChainClient
+	vechainClient *meshthor.VeChainClient
 	baseGasPrice  *big.Int
 	encoder       *meshutils.MeshTransactionEncoder
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *thorclient.VeChainClient, baseGasPrice *big.Int) *ConstructionService {
+func NewConstructionService(vechainClient *meshthor.VeChainClient, baseGasPrice *big.Int) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
 		baseGasPrice:  baseGasPrice,
@@ -572,7 +572,7 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 }
 
 // getBasicTransactionInfo gets basic transaction information from the network
-func (c *ConstructionService) getBasicTransactionInfo() (*thorclient.Block, int, error) {
+func (c *ConstructionService) getBasicTransactionInfo() (*meshthor.Block, int, error) {
 	bestBlock, err := c.vechainClient.GetBestBlock()
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get best block: %w", err)
