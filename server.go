@@ -12,12 +12,12 @@ import (
 
 	"github.com/gorilla/mux"
 
-	meshthor "github.com/vechain/mesh/thor"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/services"
+	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 	meshvalidation "github.com/vechain/mesh/validation"
-)	
+)
 
 // VeChainMeshServer implements the Mesh API for VeChain
 type VeChainMeshServer struct {
