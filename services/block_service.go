@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshthor "github.com/vechain/mesh/thor"
 	meshmodels "github.com/vechain/mesh/models"
+	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 )
 
@@ -315,7 +315,7 @@ func (b *BlockService) findTransactionInBlock(block *meshthor.Block, txHash stri
 }
 
 // buildBlockResponse builds the response for a block request
-func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) map[string]any {
+func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.BlockResponse {
 	blockIdentifier := &types.BlockIdentifier{
 		Index: block.Number,
 		Hash:  block.ID,
@@ -328,7 +328,7 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) map[str
 
 	// Process transactions
 	var transactions []*types.Transaction
-	var otherTransactions []map[string]string
+	var otherTransactions []*types.TransactionIdentifier
 
 	for _, tx := range block.Transactions {
 		operations := b.parseTransactionOperations(tx)
@@ -339,37 +339,39 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) map[str
 			transactions = append(transactions, transaction)
 		} else {
 			// Transaction has no operations, add to other_transactions
-			otherTransactions = append(otherTransactions, map[string]string{
-				"hash": tx.ID,
+			otherTransactions = append(otherTransactions, &types.TransactionIdentifier{
+				Hash: tx.ID,
 			})
 		}
 	}
 
 	// Create response structure
-	response := map[string]any{
-		"block": map[string]any{
-			"block_identifier":        blockIdentifier,
-			"parent_block_identifier": parentBlockIdentifier,
-			"timestamp":               block.Timestamp * 1000, // Convert to milliseconds
-			"transactions":            transactions,
-		},
+	meshBlock := &types.Block{
+		BlockIdentifier:       blockIdentifier,
+		ParentBlockIdentifier: parentBlockIdentifier,
+		Timestamp:             block.Timestamp * 1000, // Convert to milliseconds
+		Transactions:          transactions,
+	}
+
+	response := &types.BlockResponse{
+		Block: meshBlock,
 	}
 
 	// Add other_transactions if there are any
 	if len(otherTransactions) > 0 {
-		response["other_transactions"] = otherTransactions
+		response.OtherTransactions = otherTransactions
 	}
 
 	return response
 }
 
 // buildBlockTransactionResponse builds the response for a block transaction request
-func (b *BlockService) buildBlockTransactionResponse(tx *meshthor.Transaction) map[string]any {
+func (b *BlockService) buildBlockTransactionResponse(tx *meshthor.Transaction) *types.BlockTransactionResponse {
 	operations := b.parseTransactionOperations(*tx)
 	meshTx := b.buildMeshTransaction(*tx, operations)
 
-	return map[string]any{
-		"transaction": meshTx,
+	return &types.BlockTransactionResponse{
+		Transaction: meshTx,
 	}
 }
 
