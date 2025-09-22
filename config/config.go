@@ -61,10 +61,6 @@ func (c *Config) loadFromEnv() {
 		c.Network = network
 	}
 
-	if nodeAPI := os.Getenv("NODEURL"); nodeAPI != "" {
-		c.NodeAPI = nodeAPI
-	}
-
 	if port := os.Getenv("PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			c.Port = p
@@ -78,7 +74,7 @@ func (c *Config) setDerivedFields() {
 	var networkName string
 	switch c.Network {
 	case "main", "mainnet":
-		networkName = "mainnet"
+		networkName = "main"
 		if c.ChainTag == 0 {
 			c.ChainTag = 0x4a // Mainnet chain tag
 		}
@@ -86,6 +82,11 @@ func (c *Config) setDerivedFields() {
 		networkName = "test"
 		if c.ChainTag == 0 {
 			c.ChainTag = 0x27 // Testnet chain tag
+		}
+	case "solo":
+		networkName = "solo"
+		if c.ChainTag == 0 {
+			c.ChainTag = 0xf6 // Solo chain tag
 		}
 	default:
 		networkName = "custom"

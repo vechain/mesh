@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  mesh-solo:
+    build:
+      context: .
+    container_name: vechain-mesh-solo
+    ports:
+      - "8080:8080"  # Mesh API
+      - "8669:8669"  # Thor API (solo mode)
+    environment:
+      - MODE=online
+      - NETWORK=solo
+      - PORT=8080
+    restart: unless-stopped
+    volumes:
+      - thor-solo-data:/tmp/thor_data
+    networks:
+      - vechain-solo-network
+
+volumes:
+  thor-solo-data:
+    driver: local
+
+networks:
+  vechain-solo-network:
+    driver: bridge

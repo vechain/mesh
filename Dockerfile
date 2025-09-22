@@ -1,5 +1,26 @@
-# Build stage
-FROM golang:1.24-bullseye AS builder
+# Thor builder stage
+FROM golang:1.24 AS thor-builder
+
+ARG THOR_REPO=https://github.com/vechain/thor.git
+ARG THOR_VERSION=v2.3.1
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    make \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone and build Thor
+RUN git clone ${THOR_REPO} thor && \
+    cd thor && \
+    git checkout ${THOR_VERSION} && \
+    make all
+
+# Mesh builder stage
+FROM golang:1.24-bullseye AS mesh-builder
 
 # Set working directory
 WORKDIR /app
@@ -26,7 +47,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o mesh-server .
 # Final stage
 FROM ubuntu:24.04
 
-# Install ca-certificates, wget for health checks, git for networkhub, make, build tools for Thor compilation, and Go
+# Install ca-certificates, wget for health checks, git, make, and build tools
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
@@ -41,21 +62,23 @@ RUN useradd -m -s /bin/bash mesh
 # Set working directory
 WORKDIR /app
 
-# Copy the binary from builder stage
-COPY --from=builder /app/mesh-server .
+# Copy Thor binary from thor-builder stage
+COPY --from=thor-builder /app/thor/bin/thor ./thor
 
-# Copy Go from builder stage for networkhub to compile Thor
-COPY --from=builder /usr/local/go /usr/local/go
-ENV PATH="/usr/local/go/bin:${PATH}"
+# Make Thor binary executable
+RUN chmod +x ./thor
+
+# Create and set permissions for Thor data directory
+RUN mkdir -p /tmp/thor_data && chown -R mesh:mesh /tmp/thor_data
+
+# Copy the binary from builder stage
+COPY --from=mesh-builder /app/mesh-server .
 
 # Copy configuration files
-COPY --from=builder /app/config ./config
+COPY --from=mesh-builder /app/config ./config
 
 # Change ownership to mesh user
 RUN chown -R mesh:mesh /app
-
-# Create and set permissions for Thor cache directory
-RUN mkdir -p /tmp/thor_master_reusable && chown -R mesh:mesh /tmp/thor_master_reusable
 
 # Switch to non-root user
 USER mesh

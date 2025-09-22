@@ -6,14 +6,11 @@ replace github.com/syndtr/goleveldb => github.com/vechain/goleveldb v1.0.1-0.202
 
 replace github.com/ethereum/go-ethereum => github.com/vechain/go-ethereum v1.8.15-0.20250708104014-34fea45fc2b7
 
-// uncomment to test local versions
-// replace github.com/vechain/networkhub => ../networkhub
 
 require (
 	github.com/coinbase/rosetta-sdk-go/types v1.0.0
 	github.com/ethereum/go-ethereum v1.8.14
 	github.com/gorilla/mux v1.8.1
-	github.com/vechain/networkhub v0.0.5-0.20250918090224-6338f15182f0
 	github.com/vechain/thor/v2 v2.3.1
 )
 

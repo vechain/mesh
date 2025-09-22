@@ -13,8 +13,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	meshclient "github.com/vechain/mesh/client"
 	meshmodels "github.com/vechain/mesh/models"
+	thorclient "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
@@ -22,12 +22,12 @@ import (
 
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
-	vechainClient *meshclient.VeChainClient
+	vechainClient *thorclient.VeChainClient
 	baseGasPrice  *big.Int
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *meshclient.VeChainClient, baseGasPrice *big.Int) *ConstructionService {
+func NewConstructionService(vechainClient *thorclient.VeChainClient, baseGasPrice *big.Int) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
 		baseGasPrice:  baseGasPrice,
