@@ -62,11 +62,6 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	networkService := services.NewNetworkService(vechainClient, cfg.GetNetwork())
 	accountService := services.NewAccountService(vechainClient)
 
-	// Create baseGasPrice from config (default to 1 Gwei if not set)
-	if cfg.GetBaseGasPrice() == nil {
-		cfg.BaseGasPrice = "10000000000000" // 1 Gwei default
-	}
-
 	constructionService := services.NewConstructionService(vechainClient, cfg)
 	blockService := services.NewBlockService(vechainClient)
 	mempoolService := services.NewMempoolService(vechainClient)
