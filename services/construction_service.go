@@ -24,6 +24,7 @@ import (
 type ConstructionService struct {
 	vechainClient *thorclient.VeChainClient
 	baseGasPrice  *big.Int
+	encoder       *meshutils.RosettaTransactionEncoder
 }
 
 // NewConstructionService creates a new construction service
@@ -31,6 +32,7 @@ func NewConstructionService(vechainClient *thorclient.VeChainClient, baseGasPric
 	return &ConstructionService{
 		vechainClient: vechainClient,
 		baseGasPrice:  baseGasPrice,
+		encoder:       meshutils.NewRosettaTransactionEncoder(),
 	}
 }
 
@@ -213,8 +215,26 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Encode transaction
-	unsignedTx, err := c.encodeTransaction(vechainTx)
+	// Get origin and delegator addresses
+	originAddr, err := meshutils.ComputeAddress(request.PublicKeys[0])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	originBytes, _ := hex.DecodeString(originAddr[2:]) // Remove 0x prefix
+
+	var delegatorBytes []byte
+	if hasFeeDelegation {
+		delegatorAddr, err := meshutils.ComputeAddress(request.PublicKeys[1])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		delegatorBytes, _ = hex.DecodeString(delegatorAddr[2:]) // Remove 0x prefix
+	}
+
+	// Encode transaction using Rosetta schema
+	unsignedTx, err := c.encoder.EncodeUnsignedTransaction(vechainTx, originBytes, delegatorBytes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -390,98 +410,46 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Decode unsigned transaction
+	// Decode unsigned transaction using Rosetta schema
 	txBytes, err := hex.DecodeString(request.UnsignedTransaction)
 	if err != nil {
 		http.Error(w, "Invalid unsigned transaction", http.StatusBadRequest)
 		return
 	}
 
-	var vechainTx tx.Transaction
-	stream := rlp.NewStream(bytes.NewReader(txBytes), 0)
-	if err := vechainTx.DecodeRLP(stream); err != nil {
+	// Decode unsigned transaction using unified method
+	rosettaTx, err := c.encoder.DecodeUnsignedTransaction(txBytes)
+	if err != nil {
 		http.Error(w, "Failed to decode unsigned transaction", http.StatusBadRequest)
 		return
 	}
 
-	// Apply signatures based on transaction type and delegation
-	var signedTx *tx.Transaction
+	// Apply signatures to Rosetta transaction
 	if len(request.Signatures) == 2 {
 		// VIP191 Fee Delegation with two signatures
 		originSig := request.Signatures[0]
 		delegatorSig := request.Signatures[1]
 
-		// Verify origin signature
-		originHash := vechainTx.SigningHash()
-		originPubKey, err := crypto.SigToPub(originHash[:], originSig.Bytes)
-		if err != nil {
-			http.Error(w, "Invalid origin signature", http.StatusBadRequest)
-			return
-		}
-
-		// Verify delegator signature
-		originAddr := crypto.PubkeyToAddress(*originPubKey)
-		thorOriginAddr, _ := thor.ParseAddress(originAddr.Hex())
-		delegatorHash := vechainTx.DelegatorSigningHash(thorOriginAddr)
-		delegatorPubKey, err := crypto.SigToPub(delegatorHash[:], delegatorSig.Bytes)
-		if err != nil {
-			http.Error(w, "Invalid delegator signature", http.StatusBadRequest)
-			return
-		}
-
-		// Verify addresses match
-		recoveredOriginAddr := crypto.PubkeyToAddress(*originPubKey)
-		recoveredDelegatorAddr := crypto.PubkeyToAddress(*delegatorPubKey)
-
-		if !strings.EqualFold(recoveredOriginAddr.Hex(), originSig.SigningPayload.AccountIdentifier.Address) {
-			http.Error(w, "Origin signature address mismatch", http.StatusBadRequest)
-			return
-		}
-
-		if !strings.EqualFold(recoveredDelegatorAddr.Hex(), delegatorSig.SigningPayload.AccountIdentifier.Address) {
-			http.Error(w, "Delegator signature address mismatch", http.StatusBadRequest)
-			return
-		}
-
 		// Combine signatures for VIP191
 		combinedSig := append(originSig.Bytes, delegatorSig.Bytes...)
-		signedTx = vechainTx.WithSignature(combinedSig)
+		rosettaTx.Signature = combinedSig
 
 	} else if len(request.Signatures) == 1 {
 		// Regular transaction: only origin signature
 		sig := request.Signatures[0]
-		hash := vechainTx.SigningHash()
-
-		// Recover public key from signature
-		pubKey, err := crypto.SigToPub(hash[:], sig.Bytes)
-		if err != nil {
-			http.Error(w, "Invalid signature", http.StatusBadRequest)
-			return
-		}
-
-		// Verify the recovered address matches expected address
-		recoveredAddr := crypto.PubkeyToAddress(*pubKey)
-		expectedAddr := sig.SigningPayload.AccountIdentifier.Address
-		if !strings.EqualFold(recoveredAddr.Hex(), expectedAddr) {
-			http.Error(w, "Signature address mismatch", http.StatusBadRequest)
-			return
-		}
-
-		// Set signature
-		signedTx = vechainTx.WithSignature(sig.Bytes)
+		rosettaTx.Signature = sig.Bytes
 
 	} else {
 		http.Error(w, "Invalid number of signatures", http.StatusBadRequest)
 		return
 	}
 
-	// Encode signed transaction
-	var buf bytes.Buffer
-	if err := signedTx.EncodeRLP(&buf); err != nil {
+	// Encode signed Rosetta transaction
+	signedTxBytes, err := c.encoder.EncodeSignedTransaction(rosettaTx)
+	if err != nil {
 		http.Error(w, "Failed to encode signed transaction", http.StatusInternalServerError)
 		return
 	}
-	signedTxBytes := buf.Bytes()
 
 	response := &types.ConstructionCombineResponse{
 		SignedTransaction: hex.EncodeToString(signedTxBytes),
@@ -842,15 +810,6 @@ func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, 
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,
 	}, nil
-}
-
-// encodeTransaction encodes a transaction to RLP bytes
-func (c *ConstructionService) encodeTransaction(vechainTx *tx.Transaction) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := vechainTx.EncodeRLP(&buf); err != nil {
-		return nil, fmt.Errorf("failed to encode transaction: %w", err)
-	}
-	return buf.Bytes(), nil
 }
 
 // getFeeDelegatorAccount extracts fee delegator account from metadata
