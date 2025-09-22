@@ -3,7 +3,7 @@ package validation
 // EndpointValidationSets defines the validation sets for different Mesh endpoints
 var EndpointValidationSets = map[string][]ValidationType{
 	// Network API endpoints
-	"/network/list":    NetworkValidations,
+	"/network/list":    NetworkListValidations,
 	"/network/status":  NetworkValidations,
 	"/network/options": NetworkValidations,
 
