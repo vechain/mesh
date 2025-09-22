@@ -42,35 +42,35 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody))
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Get real VeChain data
 	bestBlock, err := n.vechainClient.GetBestBlock()
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetBestBlock))
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetBestBlock), http.StatusInternalServerError)
 		return
 	}
 
 	// Get genesis block (block 0)
 	genesisBlock, err := n.vechainClient.GetBlockByNumber(0)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetGenesisBlock))
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetGenesisBlock), http.StatusInternalServerError)
 		return
 	}
 
 	// Get sync progress
 	progress, err := n.vechainClient.GetSyncProgress()
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetSyncProgress))
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetSyncProgress), http.StatusInternalServerError)
 		return
 	}
 
 	// Get peers
 	peers, err := n.vechainClient.GetPeers()
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetPeers))
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetPeers), http.StatusInternalServerError)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody))
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 

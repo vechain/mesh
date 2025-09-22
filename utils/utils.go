@@ -50,13 +50,13 @@ func WriteJSONResponse(w http.ResponseWriter, response any) {
 }
 
 // WriteErrorResponse writes an error response in Mesh format
-func WriteErrorResponse(w http.ResponseWriter, err *types.Error) {
+func WriteErrorResponse(w http.ResponseWriter, err *types.Error, statusCode int) {
 	if err == nil {
 		err = GetError(500) // Default to internal server error
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusBadRequest) // Mesh errors typically return 400
+	w.WriteHeader(statusCode)
 
 	errorResponse := map[string]any{
 		"error": err,

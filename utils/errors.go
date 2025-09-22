@@ -42,6 +42,24 @@ const (
 	ErrFailedToGetPeers                      = 36
 	ErrFailedToGetAccount                    = 37
 	ErrFailedToEncodeResponse                = 38
+	ErrPublicKeyRequired                     = 39
+	ErrInvalidPublicKeyFormat                = 40
+	ErrOriginAddressMismatch                 = 41
+	ErrDelegatorAddressMismatch              = 42
+	ErrInvalidTransactionHex                 = 43
+	ErrFailedToDecodeTransaction             = 44
+	ErrFailedToDecodeUnsignedTransaction     = 45
+	ErrInvalidNumberOfSignatures             = 46
+	ErrFailedToEncodeSignedTransaction       = 47
+	ErrFailedToDecodeMeshTransaction         = 48
+	ErrFailedToBuildThorTransaction          = 49
+	ErrFailedToEncodeTransaction             = 50
+	ErrFailedToSubmitTransaction             = 51
+	ErrBlockNotFound                         = 52
+	ErrTransactionNotFound                   = 53
+	ErrFailedToConvertVETBalance             = 54
+	ErrFailedToConvertVTHOBalance            = 55
+	ErrTransactionNotFoundInMempool          = 56
 )
 
 // Errors contains all the predefined Mesh errors for VeChain
@@ -84,6 +102,24 @@ var Errors = map[int]*types.Error{
 	ErrFailedToGetPeers:                      {Code: ErrFailedToGetPeers, Message: "Failed to get peers.", Retriable: true},
 	ErrFailedToGetAccount:                    {Code: ErrFailedToGetAccount, Message: "Failed to get account.", Retriable: true},
 	ErrFailedToEncodeResponse:                {Code: ErrFailedToEncodeResponse, Message: "Failed to encode response.", Retriable: false},
+	ErrPublicKeyRequired:                     {Code: ErrPublicKeyRequired, Message: "Public key is required.", Retriable: false},
+	ErrInvalidPublicKeyFormat:                {Code: ErrInvalidPublicKeyFormat, Message: "Invalid public key format.", Retriable: false},
+	ErrOriginAddressMismatch:                 {Code: ErrOriginAddressMismatch, Message: "Origin address mismatch.", Retriable: false},
+	ErrDelegatorAddressMismatch:              {Code: ErrDelegatorAddressMismatch, Message: "Delegator address mismatch.", Retriable: false},
+	ErrInvalidTransactionHex:                 {Code: ErrInvalidTransactionHex, Message: "Invalid transaction hex.", Retriable: false},
+	ErrFailedToDecodeTransaction:             {Code: ErrFailedToDecodeTransaction, Message: "Failed to decode transaction.", Retriable: false},
+	ErrFailedToDecodeUnsignedTransaction:     {Code: ErrFailedToDecodeUnsignedTransaction, Message: "Failed to decode unsigned transaction.", Retriable: false},
+	ErrInvalidNumberOfSignatures:             {Code: ErrInvalidNumberOfSignatures, Message: "Invalid number of signatures.", Retriable: false},
+	ErrFailedToEncodeSignedTransaction:       {Code: ErrFailedToEncodeSignedTransaction, Message: "Failed to encode signed transaction.", Retriable: false},
+	ErrFailedToDecodeMeshTransaction:         {Code: ErrFailedToDecodeMeshTransaction, Message: "Failed to decode Mesh transaction.", Retriable: false},
+	ErrFailedToBuildThorTransaction:          {Code: ErrFailedToBuildThorTransaction, Message: "Failed to build Thor transaction.", Retriable: false},
+	ErrFailedToEncodeTransaction:             {Code: ErrFailedToEncodeTransaction, Message: "Failed to encode transaction.", Retriable: false},
+	ErrFailedToSubmitTransaction:             {Code: ErrFailedToSubmitTransaction, Message: "Failed to submit transaction.", Retriable: false},
+	ErrBlockNotFound:                         {Code: ErrBlockNotFound, Message: "Block not found.", Retriable: true},
+	ErrTransactionNotFound:                   {Code: ErrTransactionNotFound, Message: "Transaction not found.", Retriable: true},
+	ErrFailedToConvertVETBalance:             {Code: ErrFailedToConvertVETBalance, Message: "Failed to convert VET balance.", Retriable: false},
+	ErrFailedToConvertVTHOBalance:            {Code: ErrFailedToConvertVTHOBalance, Message: "Failed to convert VTHO balance.", Retriable: false},
+	ErrTransactionNotFoundInMempool:          {Code: ErrTransactionNotFoundInMempool, Message: "Transaction not found in mempool.", Retriable: true},
 }
 
 // GetError returns an error by code, or nil if not found
@@ -101,4 +137,22 @@ func GetAllErrors() []*types.Error {
 		errors = append(errors, err)
 	}
 	return errors
+}
+
+// GetErrorWithMetadata returns an error by code with optional metadata, similar to the reference implementation
+func GetErrorWithMetadata(code int, metadata map[string]any) *types.Error {
+	err := GetError(code)
+	if err == nil {
+		return nil
+	}
+
+	// Create a copy of the error to avoid modifying the original
+	errorCopy := &types.Error{
+		Code:      err.Code,
+		Message:   err.Message,
+		Retriable: err.Retriable,
+		Details:   metadata,
+	}
+
+	return errorCopy
 }
