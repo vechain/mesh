@@ -87,9 +87,9 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	targetIndex := meshutils.GetTargetIndex(bestBlock.Number, utilsPeers)
 
 	// Convert peers to types.Peer
-	rosettaPeers := make([]*types.Peer, len(peers))
+	meshPeers := make([]*types.Peer, len(peers))
 	for i, peer := range peers {
-		rosettaPeers[i] = &types.Peer{
+		meshPeers[i] = &types.Peer{
 			PeerID: peer.PeerID,
 		}
 	}
@@ -110,7 +110,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 			Stage:        meshutils.StringPtr("block sync"),
 			Synced:       meshutils.BoolPtr(progress == 1.0),
 		},
-		Peers: rosettaPeers,
+		Peers: meshPeers,
 	}
 
 	meshutils.WriteJSONResponse(w, status)
