@@ -133,12 +133,11 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 		},
 	}
 
-	// TODO: There should be an Error field below
-
 	// Create allow object
 	allow := &types.Allow{
 		OperationStatuses:       operationStatuses,
 		OperationTypes:          operationTypes,
+		Errors:                  meshutils.GetAllErrors(),
 		HistoricalBalanceLookup: true,
 		CallMethods:             []string{},
 		BalanceExemptions:       balanceExemptions,

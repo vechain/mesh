@@ -28,7 +28,7 @@ var (
 		Symbol:   "VET",
 		Decimals: 18,
 	}
-	
+
 	// VTHOCurrency represents the VeChain Thor Energy token
 	VTHOCurrency = &types.Currency{
 		Symbol:   "VTHO",
@@ -92,6 +92,16 @@ func StringPtr(s string) *string {
 	return &s
 }
 
+// Helper functions to create pointers
+func Int64Ptr(i int64) *int64 {
+	return &i
+}
+
+// BoolPtr creates a bool pointer
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
 // ComputeAddress computes address from public key
 func ComputeAddress(publicKey *types.PublicKey) (string, error) {
 	pubKey, err := crypto.DecompressPubkey(publicKey.Bytes)
@@ -142,13 +152,4 @@ func DecodeHexStringWithPrefix(hexStr string) ([]byte, error) {
 	cleanHex := RemoveHexPrefix(hexStr)
 
 	return hex.DecodeString(cleanHex)
-}
-
-// Helper functions to create pointers
-func Int64Ptr(i int64) *int64 {
-	return &i
-}
-
-func BoolPtr(b bool) *bool {
-	return &b
 }
