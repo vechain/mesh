@@ -58,10 +58,6 @@ func (c *Config) loadFromEnv() {
 		c.Network = network
 	}
 
-	if nodeAPI := os.Getenv("NODEURL"); nodeAPI != "" {
-		c.NodeAPI = nodeAPI
-	}
-
 	if port := os.Getenv("PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			c.Port = p
