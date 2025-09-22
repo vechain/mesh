@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -59,14 +60,20 @@ func HasOperationType(operations []any, operationType string) bool {
 	return false
 }
 
+// RemoveHexPrefix removes the "0x" prefix from a hex string if present
+func RemoveHexPrefix(hexStr string) string {
+	if len(hexStr) > 2 && hexStr[:2] == "0x" {
+		return hexStr[2:]
+	}
+	return hexStr
+}
+
 // HexToDecimal converts hex string to decimal string
 func HexToDecimal(hexStr string) (string, error) {
-	if len(hexStr) > 2 && hexStr[:2] == "0x" {
-		hexStr = hexStr[2:]
-	}
+	cleanHex := RemoveHexPrefix(hexStr)
 
 	bigInt := new(big.Int)
-	bigInt, ok := bigInt.SetString(hexStr, 16)
+	bigInt, ok := bigInt.SetString(cleanHex, 16)
 	if !ok {
 		return "", fmt.Errorf("invalid hex string: %s", hexStr)
 	}
@@ -122,4 +129,11 @@ func GetTxOrigins(operations []*types.Operation) []string {
 	}
 
 	return origins
+}
+
+// DecodeHexStringWithPrefix removes the "0x" prefix (if present) and decodes the hex string to bytes
+func DecodeHexStringWithPrefix(hexStr string) ([]byte, error) {
+	cleanHex := RemoveHexPrefix(hexStr)
+
+	return hex.DecodeString(cleanHex)
 }

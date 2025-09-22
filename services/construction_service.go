@@ -257,12 +257,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	// Decode transaction
-	txHex := request.Transaction
-	if len(txHex) > 2 && txHex[:2] == "0x" {
-		txHex = txHex[2:]
-	}
-
-	txBytes, err := hex.DecodeString(txHex)
+	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.Transaction)
 	if err != nil {
 		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
 		return
@@ -453,12 +448,7 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		return
 	}
 
-	unsignedTxHex := request.UnsignedTransaction
-	if len(unsignedTxHex) > 2 && unsignedTxHex[:2] == "0x" {
-		unsignedTxHex = unsignedTxHex[2:]
-	}
-
-	txBytes, err := hex.DecodeString(unsignedTxHex)
+	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.UnsignedTransaction)
 	if err != nil {
 		http.Error(w, "Invalid unsigned transaction", http.StatusBadRequest)
 		return
@@ -514,12 +504,7 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 	}
 
 	// Decode transaction
-	txHex := request.SignedTransaction
-	if len(txHex) > 2 && txHex[:2] == "0x" {
-		txHex = txHex[2:]
-	}
-
-	txBytes, err := hex.DecodeString(txHex)
+	txBytes, err := meshutils.DecodeHexStringWithPrefix(request.SignedTransaction)
 	if err != nil {
 		http.Error(w, "Invalid transaction hex", http.StatusBadRequest)
 		return
