@@ -184,28 +184,22 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 		Hash:  parent.ID.String(),
 	}
 
-	// Process transactions with full data
 	var transactions []*types.Transaction
 	var otherTransactions []*types.TransactionIdentifier
 
 	for _, tx := range block.Transactions {
-		// Convert to common format and parse operations
-		meshTx := meshutils.ConvertMeshThorTransactionToMeshTransaction(tx)
-		operations := meshutils.ParseTransactionOperations(meshTx, "Success")
+		operations := meshutils.ParseTransactionOperationsFromAPI(tx, "Success")
 
 		if len(operations) > 0 {
-			// Transaction has operations, include it in transactions
-			transaction := meshutils.BuildRosettaTransaction(meshTx, operations)
+			transaction := meshutils.BuildMeshTransactionFromAPI(tx, operations)
 			transactions = append(transactions, transaction)
 		} else {
-			// Transaction has no operations, add to other_transactions
 			otherTransactions = append(otherTransactions, &types.TransactionIdentifier{
 				Hash: tx.ID.String(),
 			})
 		}
 	}
 
-	// Create response structure
 	meshBlock := &types.Block{
 		BlockIdentifier:       blockIdentifier,
 		ParentBlockIdentifier: parentBlockIdentifier,
@@ -217,7 +211,6 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 		Block: meshBlock,
 	}
 
-	// Add other_transactions if there are any
 	if len(otherTransactions) > 0 {
 		response.OtherTransactions = otherTransactions
 	}
@@ -227,13 +220,11 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 
 // buildBlockTransactionResponse builds the response for a block transaction request
 func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *types.BlockTransactionResponse {
-	// Convert to common format and parse operations
-	meshTx := meshutils.ConvertMeshThorTransactionToMeshTransaction(tx)
-	operations := meshutils.ParseTransactionOperations(meshTx, "Success")
-	rosettaTx := meshutils.BuildRosettaTransaction(meshTx, operations)
+	operations := meshutils.ParseTransactionOperationsFromAPI(tx, "Success")
+	meshTx := meshutils.BuildMeshTransactionFromAPI(tx, operations)
 
 	return &types.BlockTransactionResponse{
-		Transaction: rosettaTx,
+		Transaction: meshTx,
 	}
 }
 

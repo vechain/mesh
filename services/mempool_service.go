@@ -50,7 +50,7 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to Rosetta format
+	// Convert to Mesh format
 	var transactionIdentifiers []*types.TransactionIdentifier
 	for _, txID := range txIDs {
 		transactionIdentifiers = append(transactionIdentifiers, &types.TransactionIdentifier{
@@ -97,16 +97,13 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Convert VeChain transaction to Mesh transaction format
-	meshTx := meshutils.ConvertVeChainTransactionToMeshTransaction(tx)
-
-	// Use the common transaction parsing logic from utils
-	operations := meshutils.ParseTransactionOperations(meshTx, meshutils.OperationStatusPending)
-	rosettaTx := meshutils.BuildRosettaTransaction(meshTx, operations)
+	// Parse operations directly from transactions.Transaction
+	operations := meshutils.ParseTransactionOperationsFromTransactions(tx, meshutils.OperationStatusPending)
+	meshTx := meshutils.BuildMeshTransactionFromTransactions(tx, operations)
 
 	// Build the response
 	response := &types.MempoolTransactionResponse{
-		Transaction: rosettaTx,
+		Transaction: meshTx,
 	}
 
 	meshutils.WriteJSONResponse(w, response)
