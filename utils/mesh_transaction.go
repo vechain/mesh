@@ -10,16 +10,12 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/vechain/mesh/config"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
 )
-
-// Config interface for accessing configuration values
-type Config interface {
-	GetExpiration() uint32
-}
 
 // MeshTransaction represents a transaction with Mesh-specific fields
 type MeshTransaction struct {
@@ -774,7 +770,7 @@ func parseTransactionSignersAndOperations(vechainTx *thorTx.Transaction, meshTx 
 }
 
 // BuildTransactionFromRequest builds a VeChain transaction from a construction request
-func BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, config Config) (*thorTx.Transaction, error) {
+func BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, config *config.Config) (*thorTx.Transaction, error) {
 	// Extract metadata
 	metadata := request.Metadata
 	blockRef := metadata["blockRef"].(string)
