@@ -189,44 +189,6 @@ Derived address: 0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa
 - Validates derived address for verification
 - Handles hex strings with or without "0x" prefix
 
-## Development
-
-### Using Makefile (Recommended)
-
-```bash
-# Show available commands
-make help
-
-# Build and start in testnet mode
-make docker-up-build
-
-# Start in solo mode for local development
-make docker-solo-up
-
-# View logs
-make docker-logs
-
-# Stop services
-make docker-down
-
-# Clean up Docker resources
-make docker-clean
-```
-
-### Manual Development
-
-```bash
-# Install dependencies
-go mod tidy
-
-# Run tests
-go test ./...
-
-# Build and run
-go build -o mesh-server .
-./mesh-server
-```
-
 ## Troubleshooting
 
 ### Common Issues
