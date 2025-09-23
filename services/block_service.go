@@ -67,6 +67,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Get the full transaction data from the block
 	foundTx, err := b.findTransactionInBlock(block, request.TransactionIdentifier.Hash)
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrTransactionNotFound, map[string]any{
