@@ -84,7 +84,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Calculate target index
-	targetIndex := meshutils.GetTargetIndex(bestBlock.Number, utilsPeers)
+	targetIndex := meshutils.GetTargetIndex(int64(bestBlock.Number), utilsPeers)
 
 	// Convert peers to types.Peer
 	meshPeers := make([]*types.Peer, len(peers))
@@ -96,16 +96,16 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 
 	status := &types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
-			Index: bestBlock.Number,
-			Hash:  bestBlock.ID,
+			Index: int64(bestBlock.Number),
+			Hash:  bestBlock.ID.String(),
 		},
-		CurrentBlockTimestamp: bestBlock.Timestamp * 1000, // Convert to milliseconds
+		CurrentBlockTimestamp: int64(bestBlock.Timestamp) * 1000, // Convert to milliseconds
 		GenesisBlockIdentifier: &types.BlockIdentifier{
-			Index: genesisBlock.Number,
-			Hash:  genesisBlock.ID,
+			Index: int64(genesisBlock.Number),
+			Hash:  genesisBlock.ID.String(),
 		},
 		SyncStatus: &types.SyncStatus{
-			CurrentIndex: meshutils.Int64Ptr(bestBlock.Number),
+			CurrentIndex: meshutils.Int64Ptr(int64(bestBlock.Number)),
 			TargetIndex:  meshutils.Int64Ptr(targetIndex),
 			Stage:        meshutils.StringPtr("block sync"),
 			Synced:       meshutils.BoolPtr(progress == 1.0),

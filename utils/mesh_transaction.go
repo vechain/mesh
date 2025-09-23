@@ -10,7 +10,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	meshthor "github.com/vechain/mesh/thor"
+	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
@@ -881,43 +881,39 @@ func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation)
 	return nil
 }
 
-// ConvertMeshThorTransactionToMeshTransaction converts meshthor.Transaction to meshutils.MeshTransaction
-func ConvertMeshThorTransactionToMeshTransaction(meshTx meshthor.Transaction) *MeshTransaction {
+// ConvertMeshThorTransactionToMeshTransaction converts api.JSONEmbeddedTx to meshutils.MeshTransaction
+func ConvertMeshThorTransactionToMeshTransaction(apiTx *api.JSONEmbeddedTx) *MeshTransaction {
 	// Create a transaction builder to reconstruct the native transaction
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
 
 	// Set basic fields
-	builder.ChainTag(byte(meshTx.ChainTag))
+	builder.ChainTag(byte(apiTx.ChainTag))
 
 	// Parse blockRef from hex string
-	if blockRefBytes, err := DecodeHexStringWithPrefix(meshTx.BlockRef); err == nil {
+	if blockRefBytes, err := DecodeHexStringWithPrefix(apiTx.BlockRef); err == nil {
 		builder.BlockRef(thorTx.BlockRef(blockRefBytes))
 	}
 
-	builder.Expiration(uint32(meshTx.Expiration))
-	builder.Gas(uint64(meshTx.Gas))
-	builder.GasPriceCoef(byte(meshTx.GasPriceCoef))
+	builder.Expiration(uint32(apiTx.Expiration))
+	builder.Gas(uint64(apiTx.Gas))
 
-	// Parse nonce
-	if nonce, err := strconv.ParseUint(meshTx.Nonce, 10, 64); err == nil {
-		builder.Nonce(nonce)
+	// Handle GasPriceCoef (it's a pointer)
+	if apiTx.GasPriceCoef != nil {
+		builder.GasPriceCoef(*apiTx.GasPriceCoef)
 	}
 
-	// Add clauses
-	for _, clause := range meshTx.Clauses {
-		// Parse value from string to big.Int
-		value := new(big.Int)
-		if clause.Value != "" && clause.Value != "0" {
-			value.SetString(clause.Value, 10)
-		}
+	// Parse nonce (it's HexOrDecimal64, not string)
+	builder.Nonce(uint64(apiTx.Nonce))
 
-		// Parse To address
-		var toAddr *thor.Address
-		if clause.To != "" && clause.To != "0x0000000000000000000000000000000000000000" {
-			if addr, err := thor.ParseAddress(clause.To); err == nil {
-				toAddr = &addr
-			}
-		}
+	// Add clauses
+	for _, clause := range apiTx.Clauses {
+		// Parse value from HexOrDecimal256 to big.Int
+		value := new(big.Int)
+		valueBytes, _ := clause.Value.MarshalText()
+		value.SetString(string(valueBytes), 10)
+
+		// Use To address directly (it's already *thor.Address)
+		toAddr := clause.To
 
 		// Parse data from hex string
 		var data []byte
@@ -937,20 +933,13 @@ func ConvertMeshThorTransactionToMeshTransaction(meshTx meshthor.Transaction) *M
 	// Build the transaction
 	nativeTx := builder.Build()
 
-	// Parse origin address
-	var origin []byte
-	if meshTx.Origin != "" {
-		if addr, err := thor.ParseAddress(meshTx.Origin); err == nil {
-			origin = addr[:]
-		}
-	}
+	// Parse origin address (it's already thor.Address)
+	origin := apiTx.Origin[:]
 
-	// Parse delegator address
+	// Parse delegator address (it's *thor.Address)
 	var delegator []byte
-	if meshTx.Delegator != "" {
-		if addr, err := thor.ParseAddress(meshTx.Delegator); err == nil {
-			delegator = addr[:]
-		}
+	if apiTx.Delegator != nil {
+		delegator = apiTx.Delegator[:]
 	}
 
 	// Create MeshTransaction

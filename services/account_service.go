@@ -54,8 +54,12 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Convert HexOrDecimal256 to string
+	balanceBytes, _ := account.Balance.MarshalText()
+	energyBytes, _ := account.Energy.MarshalText()
+
 	// Convert hex balance to decimal
-	vetBalance, err := meshutils.HexToDecimal(account.Balance)
+	vetBalance, err := meshutils.HexToDecimal(string(balanceBytes))
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToConvertVETBalance, map[string]any{
 			"error": err.Error(),
@@ -63,7 +67,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	vthoBalance, err := meshutils.HexToDecimal(account.Energy)
+	vthoBalance, err := meshutils.HexToDecimal(string(energyBytes))
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToConvertVTHOBalance, map[string]any{
 			"error": err.Error(),
@@ -73,8 +77,8 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 
 	balance := &types.AccountBalanceResponse{
 		BlockIdentifier: &types.BlockIdentifier{
-			Index: bestBlock.Number,
-			Hash:  bestBlock.ID,
+			Index: int64(bestBlock.Number),
+			Hash:  bestBlock.ID.String(),
 		},
 		Balances: []*types.Amount{
 			{

@@ -8,6 +8,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/thor/v2/api"
 )
 
 // BlockService handles block API endpoints
@@ -128,7 +129,7 @@ func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.Blo
 }
 
 // getBlockByIdentifier gets a block by its identifier (hash or index)
-func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*meshthor.Block, error) {
+func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != "" {
 		// Get block by hash
 		return b.vechainClient.GetBlockByHash(blockIdentifier.Hash)
@@ -140,7 +141,7 @@ func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifie
 }
 
 // getBlockByPartialIdentifier gets a block by its partial identifier (hash or index)
-func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*meshthor.Block, error) {
+func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
 		// Get block by hash
 		return b.vechainClient.GetBlockByHash(*blockIdentifier.Hash)
@@ -152,37 +153,38 @@ func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.Partial
 }
 
 // getParentBlock gets the parent block of the given block
-func (b *BlockService) getParentBlock(block *meshthor.Block) (*meshthor.Block, error) {
+func (b *BlockService) getParentBlock(block *api.JSONExpandedBlock) (*api.JSONExpandedBlock, error) {
 	if block.Number == 0 {
 		// For genesis block, parent is itself
 		return block, nil
 	}
-	return b.vechainClient.GetBlockByHash(block.ParentID)
+	return b.vechainClient.GetBlockByHash(block.ParentID.String())
 }
 
 // findTransactionInBlock finds a specific transaction in a block
-func (b *BlockService) findTransactionInBlock(block *meshthor.Block, txHash string) (*meshthor.Transaction, error) {
+func (b *BlockService) findTransactionInBlock(block *api.JSONExpandedBlock, txHash string) (*api.JSONEmbeddedTx, error) {
+	// Now we have full transaction data in JSONExpandedBlock
 	for _, tx := range block.Transactions {
-		if tx.ID == txHash {
-			return &tx, nil
+		if tx.ID.String() == txHash {
+			return tx, nil
 		}
 	}
-	return nil, fmt.Errorf("transaction %s not found in block %s", txHash, block.ID)
+	return nil, fmt.Errorf("transaction %s not found in block %s", txHash, block.ID.String())
 }
 
 // buildBlockResponse builds the response for a block request
-func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.BlockResponse {
+func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) *types.BlockResponse {
 	blockIdentifier := &types.BlockIdentifier{
-		Index: block.Number,
-		Hash:  block.ID,
+		Index: int64(block.Number),
+		Hash:  block.ID.String(),
 	}
 
 	parentBlockIdentifier := &types.BlockIdentifier{
-		Index: parent.Number,
-		Hash:  parent.ID,
+		Index: int64(parent.Number),
+		Hash:  parent.ID.String(),
 	}
 
-	// Process transactions
+	// Process transactions with full data
 	var transactions []*types.Transaction
 	var otherTransactions []*types.TransactionIdentifier
 
@@ -198,7 +200,7 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.
 		} else {
 			// Transaction has no operations, add to other_transactions
 			otherTransactions = append(otherTransactions, &types.TransactionIdentifier{
-				Hash: tx.ID,
+				Hash: tx.ID.String(),
 			})
 		}
 	}
@@ -207,7 +209,7 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.
 	meshBlock := &types.Block{
 		BlockIdentifier:       blockIdentifier,
 		ParentBlockIdentifier: parentBlockIdentifier,
-		Timestamp:             block.Timestamp * 1000, // Convert to milliseconds
+		Timestamp:             int64(block.Timestamp) * 1000, // Convert to milliseconds
 		Transactions:          transactions,
 	}
 
@@ -224,9 +226,9 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.
 }
 
 // buildBlockTransactionResponse builds the response for a block transaction request
-func (b *BlockService) buildBlockTransactionResponse(tx *meshthor.Transaction) *types.BlockTransactionResponse {
+func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *types.BlockTransactionResponse {
 	// Convert to common format and parse operations
-	meshTx := meshutils.ConvertMeshThorTransactionToMeshTransaction(*tx)
+	meshTx := meshutils.ConvertMeshThorTransactionToMeshTransaction(tx)
 	operations := meshutils.ParseTransactionOperations(meshTx, "Success")
 	rosettaTx := meshutils.BuildRosettaTransaction(meshTx, operations)
 

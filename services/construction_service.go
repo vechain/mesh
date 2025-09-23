@@ -15,6 +15,7 @@ import (
 	"github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
 )
@@ -135,7 +136,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 
 	// Calculate gas and create blockRef
 	gas := c.calculateGas(request.Options)
-	blockRef := bestBlock.ID[:18]
+	blockRef := bestBlock.ID[:16] // First 8 bytes (16 hex characters)
 	nonce, err := meshutils.GenerateNonce()
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrGettingBlockchainMetadata, map[string]any{
@@ -145,7 +146,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	}
 
 	// Build metadata based on transaction type
-	metadata, gasPrice, err := c.buildMetadata(transactionType, blockRef, int64(chainTag), gas, nonce)
+	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), int64(chainTag), gas, nonce)
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
@@ -560,7 +561,7 @@ func (c *ConstructionService) buildThorTransactionFromMesh(meshTx *meshutils.Mes
 }
 
 // getBasicTransactionInfo gets basic transaction information from the network
-func (c *ConstructionService) getBasicTransactionInfo() (*meshthor.Block, int, error) {
+func (c *ConstructionService) getBasicTransactionInfo() (*api.JSONExpandedBlock, int, error) {
 	bestBlock, err := c.vechainClient.GetBestBlock()
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get best block: %w", err)

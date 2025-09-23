@@ -3,11 +3,9 @@
 > **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
 >
 > **📋 TODO List:**
-> - Implement mempool endpoints
 > - Implement search endpoints
 > - Implement events endpoints
 > - Validate that all the middlewares are being applied as expected
-> - Refactor Thor client within this repo so we use the existing types in [vechain/thor](https://github.com/vechain/thor) when possible
 > - Add GitHub Actions (build, lint, test)
 > - Add e2e tests like in vechain/rosetta
 > - Add unit tests for coverage
