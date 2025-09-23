@@ -80,7 +80,7 @@ func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTran
 // EncodeSignedTransaction encodes a signed Mesh transaction
 func (e *MeshTransactionEncoder) EncodeSignedTransaction(meshTx *MeshTransaction) ([]byte, error) {
 	// Create Mesh RLP structure based on transaction type
-	if meshTx.Transaction.Type() == thorTx.TypeLegacy {
+	if meshTx.Type() == thorTx.TypeLegacy {
 		return e.encodeSignedLegacyTransaction(meshTx)
 	} else {
 		return e.encodeSignedDynamicTransaction(meshTx)
@@ -264,15 +264,15 @@ func (e *MeshTransactionEncoder) encodeSignedLegacyTransaction(meshTx *MeshTrans
 	// Create Mesh signed legacy transaction RLP structure (10 fields)
 	blockRef := meshTx.BlockRef()
 	meshTxRLP := []any{
-		meshTx.Transaction.ChainTag(),
+		meshTx.ChainTag(),
 		blockRef[:],
-		meshTx.Transaction.Expiration(),
+		meshTx.Expiration(),
 		e.convertClausesToMesh(meshTx.Clauses()),
-		meshTx.Transaction.Gas(),
+		meshTx.Gas(),
 		e.convertNonceToBytes(meshTx.Nonce()),
 		meshTx.Origin,
 		meshTx.Delegator,
-		meshTx.Transaction.GasPriceCoef(),
+		meshTx.GasPriceCoef(),
 		meshTx.Signature,
 	}
 
@@ -284,16 +284,16 @@ func (e *MeshTransactionEncoder) encodeSignedDynamicTransaction(meshTx *MeshTran
 	// Create Mesh signed dynamic fee transaction RLP structure (11 fields)
 	blockRef := meshTx.BlockRef()
 	meshTxRLP := []any{
-		meshTx.Transaction.ChainTag(),
+		meshTx.ChainTag(),
 		blockRef[:],
-		meshTx.Transaction.Expiration(),
+		meshTx.Expiration(),
 		e.convertClausesToMesh(meshTx.Clauses()),
-		meshTx.Transaction.Gas(),
+		meshTx.Gas(),
 		e.convertNonceToBytes(meshTx.Nonce()),
 		meshTx.Origin,
 		meshTx.Delegator,
-		meshTx.Transaction.MaxFeePerGas(),
-		meshTx.Transaction.MaxPriorityFeePerGas(),
+		meshTx.MaxFeePerGas(),
+		meshTx.MaxPriorityFeePerGas(),
 		meshTx.Signature,
 	}
 
@@ -883,7 +883,7 @@ func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation)
 }
 
 // ParseTransactionOperationsFromTransactions parses operations directly from transactions.Transaction
-func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction, status string) []*types.Operation {
+func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction) []*types.Operation {
 	var operations []*types.Operation
 
 	// Check if this is a meaningful transaction
@@ -936,7 +936,7 @@ func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction, st
 					Index: int64(operationIndex),
 				},
 				Type:   OperationTypeTransfer,
-				Status: StringPtr(status),
+				Status: StringPtr("Pending"),
 				Account: &types.AccountIdentifier{
 					Address: originAddr,
 				},
@@ -958,7 +958,7 @@ func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction, st
 						Index: int64(operationIndex),
 					},
 					Type:   OperationTypeTransfer,
-					Status: StringPtr(status),
+					Status: StringPtr("Pending"),
 					Account: &types.AccountIdentifier{
 						Address: clause.To.String(),
 					},
@@ -988,7 +988,7 @@ func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction, st
 					Index: int64(operationIndex),
 				},
 				Type:   "ContractCall",
-				Status: StringPtr(status),
+				Status: StringPtr("Pending"),
 				Account: &types.AccountIdentifier{
 					Address: originAddr,
 				},
@@ -1015,7 +1015,7 @@ func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction, st
 				Index: int64(operationIndex),
 			},
 			Type:   OperationTypeFee,
-			Status: StringPtr(status),
+			Status: StringPtr("Pending"),
 			Account: &types.AccountIdentifier{
 				Address: originAddr,
 			},

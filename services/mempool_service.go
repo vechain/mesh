@@ -25,7 +25,7 @@ func NewMempoolService(vechainClient *meshthor.VeChainClient) *MempoolService {
 // Mempool gets mempool information
 func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 	// Parse request body to get metadata (origin filter)
-	var requestBody map[string]interface{}
+	var requestBody map[string]any
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
@@ -33,7 +33,7 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 
 	// Parse origin address from metadata if provided
 	var origin *thor.Address
-	if metadata, ok := requestBody["metadata"].(map[string]interface{}); ok {
+	if metadata, ok := requestBody["metadata"].(map[string]any); ok {
 		if originStr, ok := metadata["origin"].(string); ok && originStr != "" {
 			if parsedOrigin, err := thor.ParseAddress(originStr); err == nil {
 				origin = &parsedOrigin
@@ -98,7 +98,7 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Parse operations directly from transactions.Transaction
-	operations := meshutils.ParseTransactionOperationsFromTransactions(tx, meshutils.OperationStatusPending)
+	operations := meshutils.ParseTransactionOperationsFromTransactions(tx)
 	meshTx := meshutils.BuildMeshTransactionFromTransactions(tx, operations)
 
 	// Build the response
