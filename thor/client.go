@@ -261,3 +261,35 @@ func (c *VeChainClient) GetMempoolTransaction(txID *thor.Bytes32) (*transactions
 func (c *VeChainClient) GetMempoolStatus() (*api.Status, error) {
 	return c.client.TxPoolStatus()
 }
+
+// CallContract makes a contract call and returns the result
+func (c *VeChainClient) CallContract(contractAddress, callData string) (string, error) {
+	// Parse contract address
+	contractAddr, err := thor.ParseAddress(contractAddress)
+	if err != nil {
+		return "", fmt.Errorf("invalid contract address: %w", err)
+	}
+
+	// Create batch call data for InspectClauses
+	batchCallData := &api.BatchCallData{
+		Clauses: []*api.Clause{
+			{
+				To:   &contractAddr,
+				Data: callData,
+			},
+		},
+	}
+
+	// Make the call using InspectClauses
+	results, err := c.client.InspectClauses(batchCallData)
+	if err != nil {
+		return "", fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	if len(results) == 0 {
+		return "", fmt.Errorf("no results returned from contract call")
+	}
+
+	// Return the result data from the first clause
+	return results[0].Data, nil
+}

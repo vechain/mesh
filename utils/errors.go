@@ -63,6 +63,7 @@ const (
 	ErrFailedToGetMempool                    = 57
 	ErrInvalidTransactionIdentifier          = 58
 	ErrInvalidTransactionHash                = 59
+	ErrInvalidCurrency                       = 60
 )
 
 // Errors contains all the predefined Mesh errors for VeChain
@@ -126,6 +127,7 @@ var Errors = map[int]*types.Error{
 	ErrFailedToGetMempool:                    {Code: ErrFailedToGetMempool, Message: "Failed to get mempool data.", Retriable: true},
 	ErrInvalidTransactionIdentifier:          {Code: ErrInvalidTransactionIdentifier, Message: "Invalid transaction identifier.", Retriable: false},
 	ErrInvalidTransactionHash:                {Code: ErrInvalidTransactionHash, Message: "Invalid transaction hash.", Retriable: false},
+	ErrInvalidCurrency:                       {Code: ErrInvalidCurrency, Message: "Invalid currency format.", Retriable: false},
 }
 
 // GetError returns an error by code, or nil if not found
