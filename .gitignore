@@ -2,6 +2,8 @@
 mesh-server
 mesh
 
+scripts/sign_payload
+
 # Test binary, built with `go test -c`
 *.test
 

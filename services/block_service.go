@@ -8,6 +8,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/thor/v2/api"
 )
 
 // BlockService handles block API endpoints
@@ -66,6 +67,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Get the full transaction data from the block
 	foundTx, err := b.findTransactionInBlock(block, request.TransactionIdentifier.Hash)
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrTransactionNotFound, map[string]any{
@@ -76,147 +78,6 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 
 	response := b.buildBlockTransactionResponse(foundTx)
 	b.writeJSONResponse(w, response)
-}
-
-// parseTransactionOperations parses a transaction and returns its operations
-// This analyzes the transaction data to extract meaningful operations
-func (b *BlockService) parseTransactionOperations(tx meshthor.Transaction) []*types.Operation {
-	var operations []*types.Operation
-
-	// Check if this is a meaningful transaction
-	// A transaction is meaningful if it has:
-	// 1. Value transfer (VET) in clauses
-	// 2. Contract interaction in clauses
-	// 3. Energy transfer (VTHO) - gas usage
-
-	hasValueTransfer := false
-	hasContractInteraction := false
-	hasEnergyTransfer := false
-
-	// Analyze clauses for value transfers and contract interactions
-	for _, clause := range tx.Clauses {
-		// Check for value transfer (VET)
-		if clause.Value != "" && clause.Value != "0" {
-			hasValueTransfer = true
-		}
-
-		// Check for contract interaction (has data or calls a contract)
-		if clause.Data != "" || (clause.To != "" && clause.To != "0x0000000000000000000000000000000000000000") {
-			hasContractInteraction = true
-		}
-	}
-
-	// Check for energy transfer (VTHO) - gas usage
-	if tx.Gas > 0 {
-		hasEnergyTransfer = true
-	}
-
-	// If no meaningful operations, return empty array
-	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
-		return operations
-	}
-
-	operationIndex := 0
-
-	// Process each clause for value transfers and contract interactions
-	for clauseIndex, clause := range tx.Clauses {
-		// Add VET transfer operation if there's value transfer in this clause
-		if clause.Value != "" && clause.Value != "0" {
-			// Sender operation (negative amount)
-			senderOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   "Transfer",
-				Status: meshutils.StringPtr("Success"),
-				Account: &types.AccountIdentifier{
-					Address: tx.Origin,
-				},
-				Amount: &types.Amount{
-					Value:    "-" + clause.Value, // Negative for sender
-					Currency: meshutils.VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-				},
-			}
-			operations = append(operations, senderOp)
-			operationIndex++
-
-			// Receiver operation (positive amount) - only if there's a recipient
-			if clause.To != "" && clause.To != "0x0000000000000000000000000000000000000000" {
-				receiverOp := &types.Operation{
-					OperationIdentifier: &types.OperationIdentifier{
-						Index: int64(operationIndex),
-					},
-					Type:   "Transfer",
-					Status: meshutils.StringPtr("Success"),
-					Account: &types.AccountIdentifier{
-						Address: clause.To,
-					},
-					Amount: &types.Amount{
-						Value:    clause.Value, // Positive for receiver
-						Currency: meshutils.VETCurrency,
-					},
-					Metadata: map[string]any{
-						"clauseIndex": clauseIndex,
-					},
-				}
-				operations = append(operations, receiverOp)
-				operationIndex++
-			}
-		}
-
-		// Add contract interaction operation if there's contract interaction in this clause
-		if clause.Data != "" || (clause.To != "" && clause.To != "0x0000000000000000000000000000000000000000") {
-			contractOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   "ContractCall",
-				Status: meshutils.StringPtr("Success"),
-				Account: &types.AccountIdentifier{
-					Address: tx.Origin,
-				},
-				Amount: &types.Amount{
-					Value:    "0", // Contract calls don't transfer value in the operation itself
-					Currency: meshutils.VETCurrency,
-				},
-				Metadata: map[string]any{
-					"to":          clause.To,
-					"data":        clause.Data,
-					"clauseIndex": clauseIndex,
-				},
-			}
-			operations = append(operations, contractOp)
-			operationIndex++
-		}
-	}
-
-	// Add energy (VTHO) transfer operation if there's gas usage
-	if hasEnergyTransfer {
-		// Energy is consumed by the transaction
-		energyOp := &types.Operation{
-			OperationIdentifier: &types.OperationIdentifier{
-				Index: int64(operationIndex),
-			},
-			Type:   "EnergyTransfer",
-			Status: meshutils.StringPtr("Success"),
-			Account: &types.AccountIdentifier{
-				Address: tx.Origin,
-			},
-			Amount: &types.Amount{
-				Value:    "-" + fmt.Sprintf("%d", tx.Gas), // Negative for energy consumption
-				Currency: meshutils.VTHOCurrency,
-			},
-			Metadata: map[string]any{
-				"gasUsed": tx.Gas,
-			},
-		}
-		operations = append(operations, energyOp)
-	}
-
-	return operations
 }
 
 // parseBlockRequest parses and validates a block request
@@ -269,7 +130,7 @@ func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.Blo
 }
 
 // getBlockByIdentifier gets a block by its identifier (hash or index)
-func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*meshthor.Block, error) {
+func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != "" {
 		// Get block by hash
 		return b.vechainClient.GetBlockByHash(blockIdentifier.Hash)
@@ -281,7 +142,7 @@ func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifie
 }
 
 // getBlockByPartialIdentifier gets a block by its partial identifier (hash or index)
-func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*meshthor.Block, error) {
+func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
 		// Get block by hash
 		return b.vechainClient.GetBlockByHash(*blockIdentifier.Hash)
@@ -293,60 +154,57 @@ func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.Partial
 }
 
 // getParentBlock gets the parent block of the given block
-func (b *BlockService) getParentBlock(block *meshthor.Block) (*meshthor.Block, error) {
+func (b *BlockService) getParentBlock(block *api.JSONExpandedBlock) (*api.JSONExpandedBlock, error) {
 	if block.Number == 0 {
 		// For genesis block, parent is itself
 		return block, nil
 	}
-	return b.vechainClient.GetBlockByHash(block.ParentID)
+	return b.vechainClient.GetBlockByHash(block.ParentID.String())
 }
 
 // findTransactionInBlock finds a specific transaction in a block
-func (b *BlockService) findTransactionInBlock(block *meshthor.Block, txHash string) (*meshthor.Transaction, error) {
+func (b *BlockService) findTransactionInBlock(block *api.JSONExpandedBlock, txHash string) (*api.JSONEmbeddedTx, error) {
+	// Now we have full transaction data in JSONExpandedBlock
 	for _, tx := range block.Transactions {
-		if tx.ID == txHash {
-			return &tx, nil
+		if tx.ID.String() == txHash {
+			return tx, nil
 		}
 	}
-	return nil, fmt.Errorf("transaction %s not found in block %s", txHash, block.ID)
+	return nil, fmt.Errorf("transaction %s not found in block %s", txHash, block.ID.String())
 }
 
 // buildBlockResponse builds the response for a block request
-func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.BlockResponse {
+func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) *types.BlockResponse {
 	blockIdentifier := &types.BlockIdentifier{
-		Index: block.Number,
-		Hash:  block.ID,
+		Index: int64(block.Number),
+		Hash:  block.ID.String(),
 	}
 
 	parentBlockIdentifier := &types.BlockIdentifier{
-		Index: parent.Number,
-		Hash:  parent.ID,
+		Index: int64(parent.Number),
+		Hash:  parent.ID.String(),
 	}
 
-	// Process transactions
 	var transactions []*types.Transaction
 	var otherTransactions []*types.TransactionIdentifier
 
 	for _, tx := range block.Transactions {
-		operations := b.parseTransactionOperations(tx)
+		operations := meshutils.ParseTransactionOperationsFromAPI(tx)
 
 		if len(operations) > 0 {
-			// Transaction has operations, include it in transactions
-			transaction := b.buildMeshTransaction(tx, operations)
+			transaction := meshutils.BuildMeshTransactionFromAPI(tx, operations)
 			transactions = append(transactions, transaction)
 		} else {
-			// Transaction has no operations, add to other_transactions
 			otherTransactions = append(otherTransactions, &types.TransactionIdentifier{
-				Hash: tx.ID,
+				Hash: tx.ID.String(),
 			})
 		}
 	}
 
-	// Create response structure
 	meshBlock := &types.Block{
 		BlockIdentifier:       blockIdentifier,
 		ParentBlockIdentifier: parentBlockIdentifier,
-		Timestamp:             block.Timestamp * 1000, // Convert to milliseconds
+		Timestamp:             int64(block.Timestamp) * 1000, // Convert to milliseconds
 		Transactions:          transactions,
 	}
 
@@ -354,7 +212,6 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.
 		Block: meshBlock,
 	}
 
-	// Add other_transactions if there are any
 	if len(otherTransactions) > 0 {
 		response.OtherTransactions = otherTransactions
 	}
@@ -363,30 +220,12 @@ func (b *BlockService) buildBlockResponse(block, parent *meshthor.Block) *types.
 }
 
 // buildBlockTransactionResponse builds the response for a block transaction request
-func (b *BlockService) buildBlockTransactionResponse(tx *meshthor.Transaction) *types.BlockTransactionResponse {
-	operations := b.parseTransactionOperations(*tx)
-	meshTx := b.buildMeshTransaction(*tx, operations)
+func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *types.BlockTransactionResponse {
+	operations := meshutils.ParseTransactionOperationsFromAPI(tx)
+	meshTx := meshutils.BuildMeshTransactionFromAPI(tx, operations)
 
 	return &types.BlockTransactionResponse{
 		Transaction: meshTx,
-	}
-}
-
-// buildMeshTransaction builds a Mesh transaction from a VeChain transaction
-func (b *BlockService) buildMeshTransaction(tx meshthor.Transaction, operations []*types.Operation) *types.Transaction {
-	return &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: tx.ID,
-		},
-		Operations: operations,
-		Metadata: map[string]any{
-			"chainTag":     tx.ChainTag,
-			"blockRef":     tx.BlockRef,
-			"expiration":   tx.Expiration,
-			"gas":          tx.Gas,
-			"gasPriceCoef": tx.GasPriceCoef,
-			"size":         tx.Size,
-		},
 	}
 }
 

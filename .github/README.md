@@ -3,11 +3,9 @@
 > **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
 >
 > **📋 TODO List:**
-> - Implement mempool endpoints
 > - Implement search endpoints
 > - Implement events endpoints
-> - Validate that all the middlewares are being applied as expected
-> - Refactor Thor client within this repo so we use the existing types in [vechain/thor](https://github.com/vechain/thor) when possible
+> - Review if we can leverage better Thor RLP's encoding/decoding
 > - Add GitHub Actions (build, lint, test)
 > - Add e2e tests like in vechain/rosetta
 > - Add unit tests for coverage
@@ -142,6 +140,54 @@ curl -X POST http://localhost:8080/account/balance \
 - **Port**: 8080
 - **URL**: `http://localhost:8080`
 - **Health Check**: `http://localhost:8080/health`
+
+## Scripts
+
+The `scripts/` directory contains utility scripts for development and testing.
+
+### sign_payload
+
+A command-line tool for signing VeChain transaction payloads using secp256k1 cryptography.
+
+**Usage:**
+```bash
+# Build the script
+cd scripts
+go build -o sign_payload sign_payload.go
+
+# Sign a payload
+./sign_payload <private_key_hex> <payload_hex>
+```
+
+**Note:** The `payload_hex` should be the `hex_bytes` field from the `construction/payloads` response, which is a 32-byte hash ready for signing.
+
+**Example construction/payloads response:**
+```json
+{
+    "unsigned_transaction": "0xf85281f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080",
+    "payloads": [
+        {
+            "address": "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+            "hex_bytes": "8d351a7849c1b8b22a6cb366dc54a6fa43599bc4a8304901e0f0df5af4e90251",
+            "account_identifier": {
+                "address": "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa"
+            },
+            "signature_type": "ecdsa_recovery"
+        }
+    ]
+}
+```
+
+**Sample Output:**
+```
+85b9599a774600fd1791031f81c957b0dd9570610f34da4719ca266b3b8db92565513f67cea6e2f0daa7611d96935d6697eddccc241fcdf1399de65e7dc0423901
+Derived address: 0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa
+```
+
+**Features:**
+- Outputs signature in format: r + s + v (where v is 0x00 or 0x01)
+- Validates derived address for verification
+- Handles hex strings with or without "0x" prefix
 
 ## Development
 
