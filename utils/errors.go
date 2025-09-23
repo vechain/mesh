@@ -60,6 +60,9 @@ const (
 	ErrFailedToConvertVETBalance             = 54
 	ErrFailedToConvertVTHOBalance            = 55
 	ErrTransactionNotFoundInMempool          = 56
+	ErrFailedToGetMempool                    = 57
+	ErrInvalidTransactionIdentifier          = 58
+	ErrInvalidTransactionHash                = 59
 )
 
 // Errors contains all the predefined Mesh errors for VeChain
@@ -120,6 +123,9 @@ var Errors = map[int]*types.Error{
 	ErrFailedToConvertVETBalance:             {Code: ErrFailedToConvertVETBalance, Message: "Failed to convert VET balance.", Retriable: false},
 	ErrFailedToConvertVTHOBalance:            {Code: ErrFailedToConvertVTHOBalance, Message: "Failed to convert VTHO balance.", Retriable: false},
 	ErrTransactionNotFoundInMempool:          {Code: ErrTransactionNotFoundInMempool, Message: "Transaction not found in mempool.", Retriable: true},
+	ErrFailedToGetMempool:                    {Code: ErrFailedToGetMempool, Message: "Failed to get mempool data.", Retriable: true},
+	ErrInvalidTransactionIdentifier:          {Code: ErrInvalidTransactionIdentifier, Message: "Invalid transaction identifier.", Retriable: false},
+	ErrInvalidTransactionHash:                {Code: ErrInvalidTransactionHash, Message: "Invalid transaction hash.", Retriable: false},
 }
 
 // GetError returns an error by code, or nil if not found

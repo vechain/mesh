@@ -7,6 +7,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/thor/v2/thor"
 )
 
 // MempoolService handles mempool API endpoints
@@ -23,10 +24,42 @@ func NewMempoolService(vechainClient *meshthor.VeChainClient) *MempoolService {
 
 // Mempool gets mempool information
 func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
-	// For now, return an empty mempool
-	// TODO: Implement actual mempool data retrieval from VeChain
+	// Parse request body to get metadata (origin filter)
+	var requestBody map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+		return
+	}
+
+	// Parse origin address from metadata if provided
+	var origin *thor.Address
+	if metadata, ok := requestBody["metadata"].(map[string]interface{}); ok {
+		if originStr, ok := metadata["origin"].(string); ok && originStr != "" {
+			if parsedOrigin, err := thor.ParseAddress(originStr); err == nil {
+				origin = &parsedOrigin
+			}
+		}
+	}
+
+	// Get all pending transactions from the mempool
+	txIDs, err := m.vechainClient.GetMempoolTransactions(origin)
+	if err != nil {
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetMempool, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to Rosetta format
+	var transactionIdentifiers []*types.TransactionIdentifier
+	for _, txID := range txIDs {
+		transactionIdentifiers = append(transactionIdentifiers, &types.TransactionIdentifier{
+			Hash: txID.String(),
+		})
+	}
+
 	response := &types.MempoolResponse{
-		TransactionIdentifiers: []*types.TransactionIdentifier{},
+		TransactionIdentifiers: transactionIdentifiers,
 	}
 
 	meshutils.WriteJSONResponse(w, response)
@@ -36,11 +69,45 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	var request types.MempoolTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
-	// For now, return a not found error
-	// TODO: Implement actual mempool transaction retrieval from VeChain
-	http.Error(w, "Transaction not found in mempool", http.StatusNotFound)
+	// Validate required fields
+	if request.TransactionIdentifier == nil || request.TransactionIdentifier.Hash == "" {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidTransactionIdentifier), http.StatusBadRequest)
+		return
+	}
+
+	// Parse transaction hash
+	txID, err := thor.ParseBytes32(request.TransactionIdentifier.Hash)
+	if err != nil {
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidTransactionHash, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
+		return
+	}
+
+	// Get transaction from mempool
+	tx, err := m.vechainClient.GetMempoolTransaction(&txID)
+	if err != nil {
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrTransactionNotFoundInMempool, map[string]any{
+			"error": err.Error(),
+		}), http.StatusNotFound)
+		return
+	}
+
+	// Convert VeChain transaction to Mesh transaction format
+	meshTx := meshutils.ConvertVeChainTransactionToMeshTransaction(tx)
+
+	// Use the common transaction parsing logic from utils
+	operations := meshutils.ParseTransactionOperations(meshTx, meshutils.OperationStatusPending)
+	rosettaTx := meshutils.BuildRosettaTransaction(meshTx, operations)
+
+	// Build the response
+	response := &types.MempoolTransactionResponse{
+		Transaction: rosettaTx,
+	}
+
+	meshutils.WriteJSONResponse(w, response)
 }

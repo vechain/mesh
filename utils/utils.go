@@ -21,6 +21,8 @@ const (
 	OperationTypeTransfer      = "Transfer"
 	OperationTypeFee           = "Fee"
 	OperationTypeFeeDelegation = "FeeDelegation"
+
+	OperationStatusPending = "PENDING"
 )
 
 var (

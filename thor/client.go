@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/thor/v2/api"
+	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/thorclient"
 	"github.com/vechain/thor/v2/tx"
@@ -296,4 +297,71 @@ func (c *VeChainClient) GetPeers() ([]Peer, error) {
 type Peer struct {
 	PeerID      string
 	BestBlockID string
+}
+
+// GetMempoolTransactions returns all pending transactions in the mempool
+func (c *VeChainClient) GetMempoolTransactions(origin *thor.Address) ([]*thor.Bytes32, error) {
+	// Get transaction pool with expanded=false to get only transaction IDs
+	txPool, err := c.client.TxPool(false, origin)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert the result to []*thor.Bytes32
+	// The TxPool method returns 'any', so we need to type assert it
+	if txIDs, ok := txPool.([]*thor.Bytes32); ok {
+		return txIDs, nil
+	}
+
+	// If the type assertion fails, try to convert from []thor.Bytes32
+	if txIDs, ok := txPool.([]thor.Bytes32); ok {
+		var result []*thor.Bytes32
+		for _, txID := range txIDs {
+			result = append(result, &txID)
+		}
+		return result, nil
+	}
+
+	// If neither type assertion works, return empty slice
+	return []*thor.Bytes32{}, nil
+}
+
+// GetMempoolTransactionsExpanded returns all pending transactions in the mempool with full transaction data
+func (c *VeChainClient) GetMempoolTransactionsExpanded() ([]*transactions.Transaction, error) {
+	// Get transaction pool with expanded=true to get full transaction objects
+	txPool, err := c.client.TxPool(true, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert the result to []*transactions.Transaction
+	if txs, ok := txPool.([]*transactions.Transaction); ok {
+		return txs, nil
+	}
+
+	// If the type assertion fails, return empty slice
+	return []*transactions.Transaction{}, nil
+}
+
+// GetMempoolTransaction returns a specific transaction from the mempool
+func (c *VeChainClient) GetMempoolTransaction(txID *thor.Bytes32) (*transactions.Transaction, error) {
+	// Get all expanded transactions from mempool and find the specific one
+	txs, err := c.GetMempoolTransactionsExpanded()
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the transaction with the matching ID
+	for _, tx := range txs {
+		if tx.ID == *txID {
+			return tx, nil
+		}
+	}
+
+	return nil, fmt.Errorf("transaction not found in mempool")
+}
+
+// GetMempoolStatus returns the current status of the transaction pool
+func (c *VeChainClient) GetMempoolStatus() (*api.Status, error) {
+	return c.client.TxPoolStatus()
 }

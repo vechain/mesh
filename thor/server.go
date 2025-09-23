@@ -108,6 +108,7 @@ func (ts *Server) StartSoloNode() error {
 		"solo", // Solo mode command
 		"--api-addr", ts.config.APIAddr,
 		"--data-dir", "/tmp/thor_solo_data",
+		"--api-enable-txpool", // Enable txpool API
 	}
 
 	// Add optional solo mode arguments
