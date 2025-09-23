@@ -130,6 +130,8 @@ github.com/vechain/networkhub v0.0.5-0.20250918090224-6338f15182f0 h1:KgI29IuWl+
 github.com/vechain/networkhub v0.0.5-0.20250918090224-6338f15182f0/go.mod h1:eKVUaHh3O3bFDGESAwyQQMy+mkrb4jHE7W1z/YRFySI=
 github.com/vechain/thor/v2 v2.3.1 h1:5/rRwlPFK7iUOAmKzgU3m61zOJ4PUahHJ5yGCzO4Veg=
 github.com/vechain/thor/v2 v2.3.1/go.mod h1:yug1BCTTR34y3qO3SkP7CVmXF0Ozvm+MjW5880bNtz4=
+github.com/vechain/thor/v2 v2.3.2-rc.1.0.20250923124135-c090c1abb138 h1:Q1NUkpAmMBU6A3KFRZtJdNONgM9hPjFuQ2uh/rHG+9U=
+github.com/vechain/thor/v2 v2.3.2-rc.1.0.20250923124135-c090c1abb138/go.mod h1:w2GnA8aGiRWcmp2UdQU8Yv4YAxyD0xrg1t6oXipEJ9U=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
@@ -153,6 +155,8 @@ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
 golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
+golang.org/x/sync v0.17.0 h1:l60nONMj9l5drqw6jlhIELNv9I0A4OFgRsG9k2oT9Ug=
+golang.org/x/sync v0.17.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
