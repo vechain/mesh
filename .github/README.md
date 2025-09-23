@@ -29,8 +29,6 @@ A Coinbase Mesh API implementation for the VeChain blockchain, built in Go.
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- At least 4GB of available RAM
-- At least 10GB of available disk space
 
 ### Docker Setup (Recommended)
 
