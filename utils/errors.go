@@ -152,7 +152,7 @@ func GetAllErrors() []*types.Error {
 	return AllErrors
 }
 
-// GetErrorWithMetadata returns an error by code with optional metadata, similar to the reference implementation
+// GetErrorWithMetadata returns an error by code with optional metadata
 func GetErrorWithMetadata(code int, metadata map[string]any) *types.Error {
 	err := GetError(code)
 	if err == nil {
