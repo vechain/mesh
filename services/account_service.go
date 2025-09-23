@@ -93,9 +93,6 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 			Hash:  block.ID.String(),
 		},
 		Balances: balances,
-		Metadata: map[string]any{
-			"sequence_number": 1,
-		},
 	}
 
 	meshutils.WriteJSONResponse(w, response)
