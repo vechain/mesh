@@ -136,7 +136,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 
 	// Calculate gas and create blockRef
 	gas := c.calculateGas(request.Options)
-	blockRef := bestBlock.ID[:16] // First 8 bytes (16 hex characters)
+	blockRef := bestBlock.ID[:18]
 	nonce, err := meshutils.GenerateNonce()
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrGettingBlockchainMetadata, map[string]any{
