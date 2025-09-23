@@ -889,7 +889,6 @@ func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction) []
 	// Check if this is a meaningful transaction
 	hasValueTransfer := false
 	hasContractInteraction := false
-	hasEnergyTransfer := false
 
 	// Analyze clauses for value transfers and contract interactions
 	for _, clause := range tx.Clauses {
@@ -908,9 +907,7 @@ func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction) []
 	}
 
 	// Check for energy transfer (VTHO) - gas usage
-	if tx.Gas > 0 {
-		hasEnergyTransfer = true
-	}
+	hasEnergyTransfer := tx.Gas > 0
 
 	// If no meaningful operations, return empty array
 	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
