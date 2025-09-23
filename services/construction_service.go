@@ -409,7 +409,6 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 		// Regular transaction: only origin signature
 		sig := request.Signatures[0]
 		meshTx.Signature = sig.Bytes
-
 	} else {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidNumberOfSignatures), http.StatusBadRequest)
 		return
