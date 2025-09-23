@@ -489,7 +489,7 @@ func (e *MeshTransactionEncoder) convertBytesToUint32(bytes []byte) uint32 {
 }
 
 // ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
-func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx, status string) []*types.Operation {
+func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
 	var operations []*types.Operation
 
 	// Check if this is a meaningful transaction
@@ -542,7 +542,7 @@ func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx, status string) []
 					Index: int64(operationIndex),
 				},
 				Type:   OperationTypeTransfer,
-				Status: StringPtr(status),
+				Status: StringPtr("Success"),
 				Account: &types.AccountIdentifier{
 					Address: originAddr,
 				},
@@ -564,7 +564,7 @@ func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx, status string) []
 						Index: int64(operationIndex),
 					},
 					Type:   OperationTypeTransfer,
-					Status: StringPtr(status),
+					Status: StringPtr("Success"),
 					Account: &types.AccountIdentifier{
 						Address: clause.To.String(),
 					},
@@ -594,7 +594,7 @@ func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx, status string) []
 					Index: int64(operationIndex),
 				},
 				Type:   "ContractCall",
-				Status: StringPtr(status),
+				Status: StringPtr("Success"),
 				Account: &types.AccountIdentifier{
 					Address: originAddr,
 				},
@@ -621,7 +621,7 @@ func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx, status string) []
 				Index: int64(operationIndex),
 			},
 			Type:   OperationTypeFee,
-			Status: StringPtr(status),
+			Status: StringPtr("Success"),
 			Account: &types.AccountIdentifier{
 				Address: originAddr,
 			},
