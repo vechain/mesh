@@ -66,10 +66,19 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 	// Call AccountBalance
 	service.AccountBalance(w, req)
 
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("AccountBalance() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
+	// Should succeed with mock client
+	if w.Code != http.StatusOK {
+		t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	// Verify response structure
+	var response types.AccountBalanceResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.Balances == nil {
+		t.Errorf("AccountBalance() response.Balances is nil")
 	}
 }
 
@@ -99,10 +108,19 @@ func TestAccountService_AccountBalance_WithSpecificCurrencies(t *testing.T) {
 	// Call AccountBalance
 	service.AccountBalance(w, req)
 
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("AccountBalance() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
+	// Should succeed with mock client
+	if w.Code != http.StatusOK {
+		t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	// Verify response structure
+	var response types.AccountBalanceResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.Balances == nil {
+		t.Errorf("AccountBalance() response.Balances is nil")
 	}
 }
 
@@ -224,5 +242,132 @@ func TestAccountService_validateCurrencies(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAccountService_AccountBalance_WithBlockIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Create request with block identifier
+	request := types.AccountBalanceRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+		},
+		BlockIdentifier: &types.PartialBlockIdentifier{
+			Index: func() *int64 { i := int64(100); return &i }(),
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Call AccountBalance
+	service.AccountBalance(w, req)
+
+	// Should succeed with mock client
+	if w.Code != http.StatusOK {
+		t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	// Verify response structure
+	var response types.AccountBalanceResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.Balances == nil {
+		t.Errorf("AccountBalance() response.Balances is nil")
+	}
+}
+
+func TestAccountService_AccountBalance_WithVTHOCurrency(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Create request with VTHO currency
+	request := types.AccountBalanceRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+		},
+		Currencies: []*types.Currency{
+			{Symbol: "VTHO", Decimals: 18},
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Call AccountBalance
+	service.AccountBalance(w, req)
+
+	// Should succeed with mock client
+	if w.Code != http.StatusOK {
+		t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	// Verify response structure
+	var response types.AccountBalanceResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.Balances == nil {
+		t.Errorf("AccountBalance() response.Balances is nil")
+	}
+}
+
+func TestAccountService_AccountBalance_WithBothCurrencies(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Create request with both VET and VTHO currencies
+	request := types.AccountBalanceRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+		},
+		Currencies: []*types.Currency{
+			{Symbol: "VET", Decimals: 18},
+			{Symbol: "VTHO", Decimals: 18},
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Call AccountBalance
+	service.AccountBalance(w, req)
+
+	// Should succeed with mock client
+	if w.Code != http.StatusOK {
+		t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	// Verify response structure
+	var response types.AccountBalanceResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.Balances == nil {
+		t.Errorf("AccountBalance() response.Balances is nil")
 	}
 }

@@ -65,7 +65,36 @@ func NewMockVeChainClient() *MockVeChainClient {
 					return hash
 				}(),
 			},
-			Transactions: []*api.JSONEmbeddedTx{},
+			Transactions: []*api.JSONEmbeddedTx{
+				{
+					ID: func() thor.Bytes32 {
+						hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+						return hash
+					}(),
+					Origin: func() thor.Address {
+						addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+						return addr
+					}(),
+					Gas:          21000,
+					GasPriceCoef: func() *uint8 { v := uint8(128); return &v }(),
+					Nonce: func() math.HexOrDecimal64 {
+						return math.HexOrDecimal64(1)
+					}(),
+					Clauses: []*api.JSONClause{
+						{
+							To: func() *thor.Address {
+								addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+								return &addr
+							}(),
+							Value: func() math.HexOrDecimal256 {
+								val, _ := new(big.Int).SetString("1000000000000000000", 10) // 1 VET
+								return math.HexOrDecimal256(*val)
+							}(),
+							Data: "0x",
+						},
+					},
+				},
+			},
 		},
 		MockBlock: &api.JSONExpandedBlock{
 			JSONBlockSummary: &api.JSONBlockSummary{
@@ -100,7 +129,36 @@ func NewMockVeChainClient() *MockVeChainClient {
 					return hash
 				}(),
 			},
-			Transactions: []*api.JSONEmbeddedTx{},
+			Transactions: []*api.JSONEmbeddedTx{
+				{
+					ID: func() thor.Bytes32 {
+						hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+						return hash
+					}(),
+					Origin: func() thor.Address {
+						addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+						return addr
+					}(),
+					Gas:          21000,
+					GasPriceCoef: func() *uint8 { v := uint8(128); return &v }(),
+					Nonce: func() math.HexOrDecimal64 {
+						return math.HexOrDecimal64(1)
+					}(),
+					Clauses: []*api.JSONClause{
+						{
+							To: func() *thor.Address {
+								addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+								return &addr
+							}(),
+							Value: func() math.HexOrDecimal256 {
+								val, _ := new(big.Int).SetString("1000000000000000000", 10) // 1 VET
+								return math.HexOrDecimal256(*val)
+							}(),
+							Data: "0x",
+						},
+					},
+				},
+			},
 		},
 		MockAccount: &api.Account{
 			Balance: func() *math.HexOrDecimal256 {
