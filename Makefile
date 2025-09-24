@@ -58,7 +58,7 @@ test-unit-coverage-threshold-custom:
 	threshold=$(THRESHOLD); \
 	echo "Current coverage: $$coverage%"; \
 	echo "Threshold: $$threshold%"; \
-	if (( $$(echo "$$coverage < $$threshold" | bc -l) )); then \
+	if [ $$(echo "$$coverage < $$threshold" | bc -l) -eq 1 ]; then \
 		echo "❌ Coverage $$coverage% is below threshold $$threshold%"; \
 		exit 1; \
 	else \
@@ -126,28 +126,28 @@ clean:
 
 # Docker commands
 docker-build:
-	docker-compose build
+	docker compose build
 
 docker-up:
-	docker-compose up -d
+	docker compose up -d
 
 docker-up-build:
-	docker-compose up --build -d
+	docker compose up --build -d
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 docker-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 docker-clean:
-	docker-compose down --rmi all --volumes --remove-orphans
+	docker compose down --rmi all --volumes --remove-orphans
 
 docker-solo-up:
-	NETWORK=solo docker-compose up --build -d
+	NETWORK=solo docker compose up --build -d
 
 docker-solo-down:
-	NETWORK=solo docker-compose down
+	NETWORK=solo docker compose down
 
 docker-solo-logs:
-	NETWORK=solo docker-compose logs -f
+	NETWORK=solo docker compose logs -f
