@@ -88,15 +88,15 @@ func (e *MeshTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *thor
 	// Create Mesh legacy transaction RLP structure (9 fields)
 	blockRef := vechainTx.BlockRef()
 	meshTx := []any{
-		vechainTx.ChainTag(),
+		[]byte{vechainTx.ChainTag()},
 		blockRef[:],
-		vechainTx.Expiration(),
+		[]byte{byte(vechainTx.Expiration()), byte(vechainTx.Expiration() >> 8), byte(vechainTx.Expiration() >> 16), byte(vechainTx.Expiration() >> 24)},
 		e.convertClausesToMesh(vechainTx.Clauses()),
-		vechainTx.Gas(),
+		[]byte{byte(vechainTx.Gas()), byte(vechainTx.Gas() >> 8), byte(vechainTx.Gas() >> 16), byte(vechainTx.Gas() >> 24), byte(vechainTx.Gas() >> 32), byte(vechainTx.Gas() >> 40), byte(vechainTx.Gas() >> 48), byte(vechainTx.Gas() >> 56)},
 		e.convertNonceToBytes(vechainTx.Nonce()),
 		origin,
 		delegator,
-		vechainTx.GasPriceCoef(),
+		[]byte{vechainTx.GasPriceCoef()},
 	}
 
 	return rlp.EncodeToBytes(meshTx)
@@ -260,15 +260,15 @@ func (e *MeshTransactionEncoder) encodeSignedLegacyTransaction(meshTx *MeshTrans
 	// Create Mesh signed legacy transaction RLP structure (10 fields)
 	blockRef := meshTx.BlockRef()
 	meshTxRLP := []any{
-		meshTx.ChainTag(),
+		[]byte{meshTx.ChainTag()},
 		blockRef[:],
-		meshTx.Expiration(),
+		[]byte{byte(meshTx.Expiration()), byte(meshTx.Expiration() >> 8), byte(meshTx.Expiration() >> 16), byte(meshTx.Expiration() >> 24)},
 		e.convertClausesToMesh(meshTx.Clauses()),
-		meshTx.Gas(),
+		[]byte{byte(meshTx.Gas()), byte(meshTx.Gas() >> 8), byte(meshTx.Gas() >> 16), byte(meshTx.Gas() >> 24), byte(meshTx.Gas() >> 32), byte(meshTx.Gas() >> 40), byte(meshTx.Gas() >> 48), byte(meshTx.Gas() >> 56)},
 		e.convertNonceToBytes(meshTx.Nonce()),
 		meshTx.Origin,
 		meshTx.Delegator,
-		meshTx.GasPriceCoef(),
+		[]byte{meshTx.GasPriceCoef()},
 		meshTx.Signature,
 	}
 
@@ -822,8 +822,17 @@ func BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, conf
 func createTransactionBuilder(transactionType string, metadata map[string]any) (*thorTx.Builder, error) {
 	if transactionType == "legacy" {
 		builder := thorTx.NewBuilder(thorTx.TypeLegacy)
-		gasPriceCoef := int(metadata["gasPriceCoef"].(float64))
-		builder.GasPriceCoef(uint8(gasPriceCoef))
+		gasPriceCoefValue := metadata["gasPriceCoef"]
+		var gasPriceCoef uint8
+		switch v := gasPriceCoefValue.(type) {
+		case float64:
+			gasPriceCoef = uint8(v)
+		case uint8:
+			gasPriceCoef = v
+		default:
+			return nil, fmt.Errorf("invalid gasPriceCoef type: %T, value: %v", v, v)
+		}
+		builder.GasPriceCoef(gasPriceCoef)
 		return builder, nil
 	}
 
