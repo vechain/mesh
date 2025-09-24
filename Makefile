@@ -39,13 +39,13 @@ test-unit:
 test-unit-coverage:
 	@echo "Generating coverage report..."
 	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
-	go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go"
+	go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
 
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
 	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
-	@echo "Filtering out test files and mock_client.go from coverage report..."
-	grep -v "_test.go\|mock_client.go" coverage.out > coverage_filtered.out
+	@echo "Filtering out files not required from coverage report..."
+	grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out
 	go tool cover -html=coverage_filtered.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 	@echo "Open coverage.html in your browser to view detailed coverage"
