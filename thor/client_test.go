@@ -72,8 +72,19 @@ func TestVeChainClient_GetChainID(t *testing.T) {
 func TestVeChainClient_SubmitTransaction(t *testing.T) {
 	client := NewVeChainClient("http://localhost:8669")
 
-	// Test with a valid transaction
-	_, err := client.SubmitTransaction(&tx.Transaction{})
+	// Test with a valid transaction - create a proper transaction
+	builder := tx.NewBuilder(tx.TypeLegacy)
+	builder.ChainTag(0x27)
+	blockRef := tx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+	builder.BlockRef(blockRef)
+	builder.Expiration(720)
+	builder.Gas(21000)
+	builder.GasPriceCoef(128)
+	builder.Nonce(0x1234567890abcdef)
+
+	validTx := builder.Build()
+
+	_, err := client.SubmitTransaction(validTx)
 	if err == nil {
 		t.Errorf("SubmitTransaction() should return error when no Thor node is available")
 	}
