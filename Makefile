@@ -1,6 +1,6 @@
 # VeChain Mesh API Makefile
 
-.PHONY: help build test clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
+.PHONY: help build test test-e2e test-e2e-verbose test-e2e-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
 
 # Default target
 help:
@@ -19,6 +19,9 @@ help:
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"
 	@echo "  test  - Run Go tests"
+	@echo "  test-e2e - Run e2e tests (requires solo mode server)"
+	@echo "  test-e2e-verbose - Run e2e tests with verbose output"
+	@echo "  test-e2e-full - Full e2e test cycle (start solo, test, stop solo)"
 	@echo "  clean - Clean Go build artifacts and cache"
 	@echo ""
 	@echo "Utilities:"
@@ -30,6 +33,48 @@ build:
 
 test:
 	go test ./...
+
+test-e2e:
+	@echo "Running e2e tests..."
+	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
+	go test -v ./tests/e2e/...
+
+test-e2e-verbose:
+	@echo "Running e2e tests with verbose output..."
+	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
+	go test -v -count=1 ./tests/e2e/...
+
+test-e2e-full:
+	@echo "Starting full e2e test cycle..."
+	@echo "1. Starting solo mode services..."
+	@$(MAKE) docker-solo-up
+	@echo "2. Waiting for services to be ready..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+			echo "✅ Mesh API server is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "❌ Timeout waiting for server to start"; \
+		$(MAKE) docker-solo-down; \
+		exit 1; \
+	fi
+	@echo "3. Running e2e tests..."
+	@$(MAKE) test-e2e
+	test_result=$$?; \
+	echo "4. Stopping solo mode services..."; \
+	$(MAKE) docker-solo-down; \
+	if [ $$test_result -eq 0 ]; then \
+		echo "✅ All e2e tests passed!"; \
+	else \
+		echo "❌ Some e2e tests failed!"; \
+	fi; \
+	exit $$test_result
 
 clean:
 	@echo "Cleaning Go build artifacts and cache..."
