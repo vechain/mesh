@@ -354,3 +354,7 @@ func (m *MockVeChainClient) SetMockBlock(block *api.JSONExpandedBlock) {
 func (m *MockVeChainClient) SetMockMempoolTx(tx *transactions.Transaction) {
 	m.MockMempoolTx = tx
 }
+
+func (m *MockVeChainClient) SetMockCallResult(result string) {
+	m.MockCallResult = result
+}

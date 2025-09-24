@@ -188,7 +188,10 @@ func TestServer_StartSoloNode_WithMockThorBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock Thor binary: %v", err)
 	}
-	file.Close()
+	err = file.Close()
+	if err != nil {
+		t.Fatalf("Failed to close mock Thor binary: %v", err)
+	}
 
 	// Make it executable
 	if err := os.Chmod(mockThorPath, 0755); err != nil {

@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -369,5 +370,159 @@ func TestAccountService_AccountBalance_WithBothCurrencies(t *testing.T) {
 
 	if response.Balances == nil {
 		t.Errorf("AccountBalance() response.Balances is nil")
+	}
+}
+
+func TestAccountService_getVIP180TokenBalance_Success(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Set up mock to return a valid balance
+	mockClient.SetMockCallResult("0x0000000000000000000000000000000000000000000000000de0b6b3a7640000") // 1000000000000000000 (1 token)
+
+	currency := &types.Currency{
+		Symbol:   "TOKEN",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+
+	if err != nil {
+		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
+	}
+
+	if amount.Value != "1000000000000000000" {
+		t.Errorf("getVIP180TokenBalance() value = %v, want 1000000000000000000", amount.Value)
+	}
+
+	if amount.Currency != currency {
+		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
+	}
+}
+
+func TestAccountService_getVIP180TokenBalance_ContractCallError(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Set up mock to return an error
+	mockClient.SetMockError(fmt.Errorf("contract call failed"))
+
+	currency := &types.Currency{
+		Symbol:   "TOKEN",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+
+	if err != nil {
+		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
+	}
+
+	// Should return 0 balance when contract call fails
+	if amount.Value != "0" {
+		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
+	}
+
+	if amount.Currency != currency {
+		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
+	}
+}
+
+func TestAccountService_getVIP180TokenBalance_InvalidResult(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Set up mock to return invalid result (no 0x prefix)
+	mockClient.SetMockCallResult("invalid_result")
+
+	currency := &types.Currency{
+		Symbol:   "TOKEN",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+
+	if err != nil {
+		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
+	}
+
+	// Should return 0 balance when result is invalid
+	if amount.Value != "0" {
+		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
+	}
+
+	if amount.Currency != currency {
+		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
+	}
+}
+
+func TestAccountService_getVIP180TokenBalance_EmptyResult(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Set up mock to return empty result
+	mockClient.SetMockCallResult("")
+
+	currency := &types.Currency{
+		Symbol:   "TOKEN",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+
+	if err != nil {
+		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
+	}
+
+	// Should return 0 balance when result is empty
+	if amount.Value != "0" {
+		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
+	}
+
+	if amount.Currency != currency {
+		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
+	}
+}
+
+func TestAccountService_getVIP180TokenBalance_HexConversionError(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	// Set up mock to return invalid hex
+	mockClient.SetMockCallResult("0xinvalid_hex")
+
+	currency := &types.Currency{
+		Symbol:   "TOKEN",
+		Decimals: 18,
+		Metadata: map[string]any{
+			"contractAddress": "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+
+	if err != nil {
+		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
+	}
+
+	// Should return 0 balance when hex conversion fails
+	if amount.Value != "0" {
+		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
+	}
+
+	if amount.Currency != currency {
+		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
 	}
 }
