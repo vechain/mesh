@@ -65,7 +65,7 @@ test-e2e-full:
 		exit 1; \
 	fi
 	@echo "3. Running e2e tests..."
-	@$(MAKE) test-e2e
+	@bash -c '$(MAKE) test-e2e; \
 	test_result=$$?; \
 	echo "4. Stopping solo mode services..."; \
 	$(MAKE) docker-solo-down; \
@@ -74,7 +74,7 @@ test-e2e-full:
 	else \
 		echo "❌ Some e2e tests failed!"; \
 	fi; \
-	exit $$test_result
+	exit $$test_result'
 
 clean:
 	@echo "Cleaning Go build artifacts and cache..."
