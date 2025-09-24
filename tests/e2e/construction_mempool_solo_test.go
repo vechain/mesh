@@ -102,7 +102,7 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	if err != nil {
 		t.Fatalf("Construction combine test failed: %v", err)
 	}
-	t.Logf("Combine response: %+v", combineResp)
+	t.Logf("Combine response: signed transaction = %s", combineResp.SignedTransaction)
 
 	// Step 9: Construction Hash
 	t.Log("Step 9: Testing /construction/hash")
@@ -110,7 +110,7 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	if err != nil {
 		t.Fatalf("Construction hash test failed: %v", err)
 	}
-	t.Logf("Hash response: %+v", hashResp)
+	t.Logf("Hash response: transaction hash = %s", hashResp.TransactionIdentifier.Hash)
 
 	// Step 10: Construction Submit
 	t.Log("Step 10: Testing /construction/submit")
@@ -118,7 +118,7 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	if err != nil {
 		t.Fatalf("Construction submit test failed: %v", err)
 	}
-	t.Logf("Submit response: %+v", submitResp)
+	t.Logf("Submit response: transaction hash = %s", submitResp.TransactionIdentifier.Hash)
 
 	// Step 11: Mempool
 	t.Log("Step 11: Testing /mempool")
@@ -126,7 +126,10 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	if err != nil {
 		t.Fatalf("Mempool test failed: %v", err)
 	}
-	t.Logf("Mempool response: %+v", mempoolResp)
+	t.Logf("Mempool response: %d transactions", len(mempoolResp.TransactionIdentifiers))
+	for i, txID := range mempoolResp.TransactionIdentifiers {
+		t.Logf("  [%d] %s", i, txID.Hash)
+	}
 
 	// Step 12: Mempool Transaction
 	t.Log("Step 12: Testing /mempool/transaction")
@@ -134,7 +137,14 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	if err != nil {
 		t.Fatalf("Mempool transaction test failed: %v", err)
 	}
-	t.Logf("Mempool transaction response: %+v", mempoolTxResp)
+	t.Logf("Mempool transaction response: transaction hash = %s, operations count = %d",
+		mempoolTxResp.Transaction.TransactionIdentifier.Hash,
+		len(mempoolTxResp.Transaction.Operations))
+
+	for i, op := range mempoolTxResp.Transaction.Operations {
+		t.Logf("  Operation [%d]: type=%s, account=%s, amount=%s %s",
+			i, op.Type, op.Account.Address, op.Amount.Value, op.Amount.Currency.Symbol)
+	}
 
 	t.Logf("✅ All construction steps completed successfully for %s transaction!", transactionType)
 }
