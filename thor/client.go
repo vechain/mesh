@@ -1,13 +1,11 @@
 package thor
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
@@ -22,7 +20,7 @@ type VeChainClientInterface interface {
 	GetBlockByHash(blockHash string) (*api.JSONExpandedBlock, error)
 	GetAccount(address string) (*api.Account, error)
 	GetChainID() (int, error)
-	SubmitTransaction(rawTx []byte) (string, error)
+	SubmitTransaction(vechainTx *tx.Transaction) (string, error)
 	GetDynamicGasPrice() (*DynamicGasPrice, error)
 	GetSyncProgress() (float64, error)
 	GetPeers() ([]Peer, error)
@@ -98,16 +96,10 @@ func (c *VeChainClient) GetChainID() (int, error) {
 }
 
 // SubmitTransaction submits a raw transaction to the VeChain network
-func (c *VeChainClient) SubmitTransaction(rawTx []byte) (string, error) {
-	// Decode the raw transaction bytes into a VeChain transaction
-	var vechainTx tx.Transaction
-	stream := rlp.NewStream(bytes.NewReader(rawTx), 0)
-	if err := vechainTx.DecodeRLP(stream); err != nil {
-		return "", fmt.Errorf("failed to decode transaction: %w", err)
-	}
+func (c *VeChainClient) SubmitTransaction(vechainTx *tx.Transaction) (string, error) {
 
 	// Submit transaction using the VeChain client
-	result, err := c.client.SendTransaction(&vechainTx)
+	result, err := c.client.SendTransaction(vechainTx)
 	if err != nil {
 		return "", fmt.Errorf("failed to submit transaction: %w", err)
 	}

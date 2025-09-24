@@ -20,9 +20,9 @@ import (
 // MeshTransaction represents a transaction with Mesh-specific fields
 type MeshTransaction struct {
 	*thorTx.Transaction
+	// Origin and delegator are required as separate fields because they get encoded when there is no signature
 	Origin    []byte
 	Delegator []byte
-	Signature []byte
 }
 
 // MeshTransactionEncoder handles encoding and decoding of Mesh transactions
@@ -33,624 +33,290 @@ func NewMeshTransactionEncoder() *MeshTransactionEncoder {
 	return &MeshTransactionEncoder{}
 }
 
-// EncodeUnsignedTransaction encodes an unsigned transaction using Mesh RLP schema
-func (e *MeshTransactionEncoder) EncodeUnsignedTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Mesh RLP structure based on transaction type
-	if vechainTx.Type() == thorTx.TypeLegacy {
-		return e.encodeUnsignedLegacyTransaction(vechainTx, origin, delegator)
-	} else {
-		return e.encodeUnsignedDynamicTransaction(vechainTx, origin, delegator)
+// EncodeTransaction encodes a transaction using Mesh RLP schema
+func (e *MeshTransactionEncoder) EncodeTransaction(meshTx *MeshTransaction) ([]byte, error) {
+	// Use native Thor encoding and add Mesh-specific fields
+	thorBytes, err := meshTx.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode Thor transaction: %w", err)
 	}
+
+	if len(meshTx.Signature()) > 0 {
+		return thorBytes, nil
+	}
+
+	// Create Mesh structure if not signed: [thorTransaction, origin, delegator]
+	meshTxRLP := []any{
+		thorBytes,
+		meshTx.Origin,
+		meshTx.Delegator,
+	}
+
+	return rlp.EncodeToBytes(meshTxRLP)
 }
 
 // DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
-	// Try to decode as legacy transaction first (9 fields)
-	if meshTx, err := e.decodeUnsignedLegacyTransaction(data); err == nil {
-		return meshTx, nil
+	// For unsigned transactions, decode as RLP list: [thorTransaction, origin, delegator]
+	var fields []any
+	if err := rlp.DecodeBytes(data, &fields); err != nil {
+		return nil, err
 	}
 
-	// Try to decode as dynamic fee transaction (10 fields)
-	if meshTx, err := e.decodeUnsignedDynamicTransaction(data); err == nil {
-		return meshTx, nil
+	if len(fields) != 3 {
+		return nil, fmt.Errorf("invalid Mesh transaction: expected 3 fields, got %d", len(fields))
 	}
 
-	return nil, fmt.Errorf("failed to decode as either legacy or dynamic fee transaction")
+	// Decode Thor transaction from bytes
+	thorBytes := fields[0].([]byte)
+	var thorTx thorTx.Transaction
+	if err := thorTx.UnmarshalBinary(thorBytes); err != nil {
+		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
+	}
+
+	origin := fields[1].([]byte)
+	delegator := fields[2].([]byte)
+
+	return &MeshTransaction{
+		Transaction: &thorTx,
+		Origin:      origin,
+		Delegator:   delegator,
+	}, nil
 }
 
 // DecodeSignedTransaction decodes a signed transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTransaction, error) {
-	// Try to decode as signed legacy transaction first (10 fields)
-	if meshTx, err := e.decodeSignedLegacyTransaction(data); err == nil {
-		return meshTx, nil
+	// For signed transactions, decode directly as Thor transaction
+	var thorTx thorTx.Transaction
+	if err := thorTx.UnmarshalBinary(data); err != nil {
+		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
 	}
 
-	// Try to decode as signed dynamic fee transaction (11 fields)
-	if meshTx, err := e.decodeSignedDynamicTransaction(data); err == nil {
-		return meshTx, nil
+	originAddr, err := thorTx.Origin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get origin: %w", err)
+	}
+	delegatorAddr, err := thorTx.Delegator()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get delegator: %w", err)
 	}
 
-	return nil, fmt.Errorf("failed to decode as either signed legacy or signed dynamic fee transaction")
-}
-
-// EncodeSignedTransaction encodes a signed Mesh transaction
-func (e *MeshTransactionEncoder) EncodeSignedTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Create Mesh RLP structure based on transaction type
-	if meshTx.Type() == thorTx.TypeLegacy {
-		return e.encodeSignedLegacyTransaction(meshTx)
-	} else {
-		return e.encodeSignedDynamicTransaction(meshTx)
+	var delegatorBytes []byte
+	if delegatorAddr != nil {
+		delegatorBytes = delegatorAddr.Bytes()
 	}
-}
-
-// encodeUnsignedLegacyTransaction encodes a legacy transaction using Mesh RLP schema
-func (e *MeshTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Mesh legacy transaction RLP structure (9 fields)
-	blockRef := vechainTx.BlockRef()
-	meshTx := []any{
-		[]byte{vechainTx.ChainTag()},
-		blockRef[:],
-		[]byte{byte(vechainTx.Expiration() >> 24), byte(vechainTx.Expiration() >> 16), byte(vechainTx.Expiration() >> 8), byte(vechainTx.Expiration())},
-		e.convertClausesToMesh(vechainTx.Clauses()),
-		[]byte{byte(vechainTx.Gas() >> 56), byte(vechainTx.Gas() >> 48), byte(vechainTx.Gas() >> 40), byte(vechainTx.Gas() >> 32), byte(vechainTx.Gas() >> 24), byte(vechainTx.Gas() >> 16), byte(vechainTx.Gas() >> 8), byte(vechainTx.Gas())},
-		e.convertNonceToBytes(vechainTx.Nonce()),
-		origin,
-		delegator,
-		[]byte{vechainTx.GasPriceCoef()},
-	}
-
-	return rlp.EncodeToBytes(meshTx)
-}
-
-// encodeUnsignedDynamicTransaction encodes a dynamic fee transaction using Mesh RLP schema
-func (e *MeshTransactionEncoder) encodeUnsignedDynamicTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Mesh dynamic fee transaction RLP structure (10 fields)
-	blockRef := vechainTx.BlockRef()
-	meshTx := []any{
-		vechainTx.ChainTag(),
-		blockRef[:],
-		vechainTx.Expiration(),
-		e.convertClausesToMesh(vechainTx.Clauses()),
-		vechainTx.Gas(),
-		e.convertNonceToBytes(vechainTx.Nonce()),
-		origin,
-		delegator,
-		vechainTx.MaxFeePerGas(),
-		vechainTx.MaxPriorityFeePerGas(),
-	}
-
-	return rlp.EncodeToBytes(meshTx)
-}
-
-// decodeUnsignedLegacyTransaction decodes a legacy transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Legacy transaction should have 9 fields
-	if len(fields) != 9 {
-		return nil, fmt.Errorf("invalid legacy transaction: expected 9 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	gasPriceCoefBytes := fields[8].([]byte)
-	gasPriceCoef := gasPriceCoefBytes[0]
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.GasPriceCoef(gasPriceCoef)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
 
 	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
+		Transaction: &thorTx,
+		Origin:      originAddr.Bytes(),
+		Delegator:   delegatorBytes,
 	}, nil
 }
 
-// decodeUnsignedDynamicTransaction decodes a dynamic fee transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Dynamic fee transaction should have 10 fields
-	if len(fields) != 10 {
-		return nil, fmt.Errorf("invalid dynamic fee transaction: expected 10 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	maxFeePerGasBytes := fields[8].([]byte)
-	maxFeePerGas := new(big.Int).SetBytes(maxFeePerGasBytes)
-	maxPriorityFeePerGasBytes := fields[9].([]byte)
-	maxPriorityFeePerGas := new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.MaxFeePerGas(maxFeePerGas)
-	builder.MaxPriorityFeePerGas(maxPriorityFeePerGas)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
-
-	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
-	}, nil
-}
-
-// encodeSignedLegacyTransaction encodes a signed legacy transaction
-func (e *MeshTransactionEncoder) encodeSignedLegacyTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Create Mesh signed legacy transaction RLP structure (10 fields)
-	blockRef := meshTx.BlockRef()
-	meshTxRLP := []any{
-		[]byte{meshTx.ChainTag()},
-		blockRef[:],
-		[]byte{byte(meshTx.Expiration() >> 24), byte(meshTx.Expiration() >> 16), byte(meshTx.Expiration() >> 8), byte(meshTx.Expiration())},
-		e.convertClausesToMesh(meshTx.Clauses()),
-		[]byte{byte(meshTx.Gas() >> 56), byte(meshTx.Gas() >> 48), byte(meshTx.Gas() >> 40), byte(meshTx.Gas() >> 32), byte(meshTx.Gas() >> 24), byte(meshTx.Gas() >> 16), byte(meshTx.Gas() >> 8), byte(meshTx.Gas())},
-		e.convertNonceToBytes(meshTx.Nonce()),
-		meshTx.Origin,
-		meshTx.Delegator,
-		[]byte{meshTx.GasPriceCoef()},
-		meshTx.Signature,
-	}
-
-	return rlp.EncodeToBytes(meshTxRLP)
-}
-
-// encodeSignedDynamicTransaction encodes a signed dynamic fee transaction
-func (e *MeshTransactionEncoder) encodeSignedDynamicTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Create Mesh signed dynamic fee transaction RLP structure (11 fields)
-	blockRef := meshTx.BlockRef()
-	meshTxRLP := []any{
-		meshTx.ChainTag(),
-		blockRef[:],
-		meshTx.Expiration(),
-		e.convertClausesToMesh(meshTx.Clauses()),
-		meshTx.Gas(),
-		e.convertNonceToBytes(meshTx.Nonce()),
-		meshTx.Origin,
-		meshTx.Delegator,
-		meshTx.MaxFeePerGas(),
-		meshTx.MaxPriorityFeePerGas(),
-		meshTx.Signature,
-	}
-
-	return rlp.EncodeToBytes(meshTxRLP)
-}
-
-// decodeSignedLegacyTransaction decodes a signed legacy transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Signed legacy transaction should have 10 fields
-	if len(fields) != 10 {
-		return nil, fmt.Errorf("invalid signed legacy transaction: expected 10 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	gasPriceCoefBytes := fields[8].([]byte)
-	gasPriceCoef := gasPriceCoefBytes[0]
-	signature := fields[9].([]byte)
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.GasPriceCoef(gasPriceCoef)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
-
-	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
-		Signature:   signature,
-	}, nil
-}
-
-// decodeSignedDynamicTransaction decodes a signed dynamic fee transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeSignedDynamicTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Signed dynamic fee transaction should have 11 fields
-	if len(fields) != 11 {
-		return nil, fmt.Errorf("invalid signed dynamic fee transaction: expected 11 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	maxFeePerGasBytes := fields[8].([]byte)
-	maxFeePerGas := new(big.Int).SetBytes(maxFeePerGasBytes)
-	maxPriorityFeePerGasBytes := fields[9].([]byte)
-	var maxPriorityFeePerGas *big.Int
-	if len(maxPriorityFeePerGasBytes) > 0 {
-		maxPriorityFeePerGas = new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
-	} else {
-		maxPriorityFeePerGas = big.NewInt(0)
-	}
-	signature := fields[10].([]byte)
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.MaxFeePerGas(maxFeePerGas)
-	builder.MaxPriorityFeePerGas(maxPriorityFeePerGas)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
-
-	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
-		Signature:   signature,
-	}, nil
-}
-
-// Helper methods
-func (e *MeshTransactionEncoder) convertClausesToMesh(clauses []*thorTx.Clause) []any {
-	meshClauses := make([]any, len(clauses))
-	for i, clause := range clauses {
-		meshClauses[i] = []any{
-			clause.To().Bytes(),
-			clause.Value(),
-			clause.Data(),
-		}
-	}
-	return meshClauses
-}
-
-func (e *MeshTransactionEncoder) convertNonceToBytes(nonce uint64) []byte {
-	nonceBytes := make([]byte, 8)
-	for i := 7; i >= 0; i-- {
-		nonceBytes[i] = byte(nonce)
-		nonce >>= 8
-	}
-	return nonceBytes
-}
-
-func (e *MeshTransactionEncoder) convertBytesToNonce(nonceBytes []byte) uint64 {
-	var nonce uint64
-	for i := range 8 {
-		nonce = (nonce << 8) | uint64(nonceBytes[i])
-	}
-	return nonce
-}
-
-func (e *MeshTransactionEncoder) convertBytesToUint64(bytes []byte) uint64 {
-	var result uint64
-	for i := range bytes {
-		result = (result << 8) | uint64(bytes[i])
-	}
-	return result
-}
-
-func (e *MeshTransactionEncoder) convertBytesToUint32(bytes []byte) uint32 {
-	var result uint32
-	for i := range bytes {
-		result = (result << 8) | uint32(bytes[i])
-	}
-	return result
-}
-
-// ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
-func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
+// parseTransactionOperationsFromClauses is a helper function that parses operations from clauses
+func parseTransactionOperationsFromClauses(clauses []*api.JSONClause, originAddr string, gas uint64, status string) []*types.Operation {
 	var operations []*types.Operation
+	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := false, false, gas > 0
 
-	// Check if this is a meaningful transaction
-	hasValueTransfer := false
-	hasContractInteraction := false
-	hasEnergyTransfer := false
-
-	// Analyze clauses for value transfers and contract interactions
-	for _, clause := range tx.Clauses {
-		// Check for value transfer (VET)
+	// Analyze clauses
+	for _, clause := range clauses {
 		valueBytes, _ := clause.Value.MarshalText()
 		value := new(big.Int)
 		value.SetString(string(valueBytes), 10)
 		if value.Cmp(big.NewInt(0)) > 0 {
 			hasValueTransfer = true
 		}
-
-		// Check for contract interaction (has data or calls a contract)
 		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
 			hasContractInteraction = true
 		}
 	}
 
-	// Check for energy transfer (VTHO) - gas usage
-	if tx.Gas > 0 {
-		hasEnergyTransfer = true
-	}
-
-	// If no meaningful operations, return empty array
 	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
 		return operations
 	}
 
 	operationIndex := 0
-
-	// Process each clause for value transfers and contract interactions
-	for clauseIndex, clause := range tx.Clauses {
-		// Add VET transfer operation if there's value transfer in this clause
+	for clauseIndex, clause := range clauses {
 		valueBytes, _ := clause.Value.MarshalText()
 		value := new(big.Int)
 		value.SetString(string(valueBytes), 10)
 
 		if value.Cmp(big.NewInt(0)) > 0 {
 			valueStr := value.String()
-			originAddr := tx.Origin.String()
-
-			// Sender operation (negative amount)
-			senderOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   OperationTypeTransfer,
-				Status: StringPtr("Success"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "-" + valueStr, // Negative for sender
-					Currency: VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-				},
-			}
-			operations = append(operations, senderOp)
+			// Sender operation
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                OperationTypeTransfer,
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "-" + valueStr, Currency: VETCurrency},
+				Metadata:            map[string]any{"clauseIndex": clauseIndex},
+			})
 			operationIndex++
 
-			// Receiver operation (positive amount) - only if there's a recipient
+			// Receiver operation
 			if clause.To != nil && !clause.To.IsZero() {
-				receiverOp := &types.Operation{
-					OperationIdentifier: &types.OperationIdentifier{
-						Index: int64(operationIndex),
-					},
-					Type:   OperationTypeTransfer,
-					Status: StringPtr("Success"),
-					Account: &types.AccountIdentifier{
-						Address: clause.To.String(),
-					},
-					Amount: &types.Amount{
-						Value:    valueStr, // Positive for receiver
-						Currency: VETCurrency,
-					},
-					Metadata: map[string]any{
-						"clauseIndex": clauseIndex,
-					},
-				}
-				operations = append(operations, receiverOp)
+				operations = append(operations, &types.Operation{
+					OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+					Type:                OperationTypeTransfer,
+					Status:              StringPtr(status),
+					Account:             &types.AccountIdentifier{Address: clause.To.String()},
+					Amount:              &types.Amount{Value: valueStr, Currency: VETCurrency},
+					Metadata:            map[string]any{"clauseIndex": clauseIndex},
+				})
 				operationIndex++
 			}
 		}
 
-		// Add contract interaction operation if there's contract interaction in this clause
+		// Contract interaction operation
 		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
-			originAddr := tx.Origin.String()
 			toAddr := ""
 			if clause.To != nil {
 				toAddr = clause.To.String()
 			}
-
-			contractOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   "ContractCall",
-				Status: StringPtr("Success"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "0",
-					Currency: VETCurrency,
-				},
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                "ContractCall",
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "0", Currency: VETCurrency},
 				Metadata: map[string]any{
 					"clauseIndex": clauseIndex,
 					"to":          toAddr,
 					"data":        "0x" + fmt.Sprintf("%x", clause.Data),
 				},
-			}
-			operations = append(operations, contractOp)
+			})
 			operationIndex++
 		}
 	}
 
-	// Add energy transfer operation (VTHO) if there's gas usage
+	// Energy transfer operation
 	if hasEnergyTransfer {
-		originAddr := tx.Origin.String()
-		energyOp := &types.Operation{
-			OperationIdentifier: &types.OperationIdentifier{
-				Index: int64(operationIndex),
-			},
-			Type:   OperationTypeFee,
-			Status: StringPtr("Success"),
-			Account: &types.AccountIdentifier{
-				Address: originAddr,
-			},
-			Amount: &types.Amount{
-				Value:    "-" + strconv.FormatUint(tx.Gas, 10), // Negative for energy consumption
-				Currency: VTHOCurrency,
-			},
-			Metadata: map[string]any{
-				"gas": strconv.FormatUint(tx.Gas, 10),
-			},
-		}
-		operations = append(operations, energyOp)
+		operations = append(operations, &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+			Type:                OperationTypeFee,
+			Status:              StringPtr(status),
+			Account:             &types.AccountIdentifier{Address: originAddr},
+			Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: VTHOCurrency},
+			Metadata:            map[string]any{"gas": strconv.FormatUint(gas, 10)},
+		})
 	}
 
 	return operations
 }
 
+// parseTransactionOperationsFromTransactionsClauses is a helper function that parses operations from transactions.Clauses
+func parseTransactionOperationsFromTransactionsClauses(clauses api.Clauses, originAddr string, gas uint64, status string) []*types.Operation {
+	var operations []*types.Operation
+	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := false, false, gas > 0
+
+	// Analyze clauses
+	for _, clause := range clauses {
+		valueBytes, _ := clause.Value.MarshalText()
+		value := new(big.Int)
+		value.SetString(string(valueBytes), 10)
+		if value.Cmp(big.NewInt(0)) > 0 {
+			hasValueTransfer = true
+		}
+		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
+			hasContractInteraction = true
+		}
+	}
+
+	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
+		return operations
+	}
+
+	operationIndex := 0
+	for clauseIndex, clause := range clauses {
+		valueBytes, _ := clause.Value.MarshalText()
+		value := new(big.Int)
+		value.SetString(string(valueBytes), 10)
+
+		if value.Cmp(big.NewInt(0)) > 0 {
+			valueStr := value.String()
+			// Sender operation
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                OperationTypeTransfer,
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "-" + valueStr, Currency: VETCurrency},
+				Metadata:            map[string]any{"clauseIndex": clauseIndex},
+			})
+			operationIndex++
+
+			// Receiver operation
+			if clause.To != nil && !clause.To.IsZero() {
+				operations = append(operations, &types.Operation{
+					OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+					Type:                OperationTypeTransfer,
+					Status:              StringPtr(status),
+					Account:             &types.AccountIdentifier{Address: clause.To.String()},
+					Amount:              &types.Amount{Value: valueStr, Currency: VETCurrency},
+					Metadata:            map[string]any{"clauseIndex": clauseIndex},
+				})
+				operationIndex++
+			}
+		}
+
+		// Contract interaction operation
+		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
+			toAddr := ""
+			if clause.To != nil {
+				toAddr = clause.To.String()
+			}
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                "ContractCall",
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "0", Currency: VETCurrency},
+				Metadata: map[string]any{
+					"clauseIndex": clauseIndex,
+					"to":          toAddr,
+					"data":        "0x" + fmt.Sprintf("%x", clause.Data),
+				},
+			})
+			operationIndex++
+		}
+	}
+
+	// Energy transfer operation
+	if hasEnergyTransfer {
+		operations = append(operations, &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+			Type:                OperationTypeFee,
+			Status:              StringPtr(status),
+			Account:             &types.AccountIdentifier{Address: originAddr},
+			Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: VTHOCurrency},
+			Metadata:            map[string]any{"gas": strconv.FormatUint(gas, 10)},
+		})
+	}
+
+	return operations
+}
+
+// buildMeshTransaction is a helper function that builds a Mesh transaction
+func buildMeshTransaction(hash string, operations []*types.Operation, metadata map[string]any) *types.Transaction {
+	return &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{Hash: hash},
+		Operations:            operations,
+		Metadata:              metadata,
+	}
+}
+
+// ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
+func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
+	return parseTransactionOperationsFromClauses(tx.Clauses, tx.Origin.String(), tx.Gas, "Success")
+}
+
 // BuildMeshTransactionFromAPI builds a Mesh transaction directly from api.JSONEmbeddedTx
 func BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx, operations []*types.Operation) *types.Transaction {
-	return &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: tx.ID.String(),
-		},
-		Operations: operations,
-		Metadata: map[string]any{
-			"chainTag":     tx.ChainTag,
-			"blockRef":     "0x" + fmt.Sprintf("%x", tx.BlockRef),
-			"expiration":   tx.Expiration,
-			"gas":          tx.Gas,
-			"gasPriceCoef": tx.GasPriceCoef,
-			"size":         tx.Size,
-		},
-	}
+	return buildMeshTransaction(tx.ID.String(), operations, map[string]any{
+		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
+		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
+	})
 }
 
 // ParseTransactionFromBytes parses a transaction from bytes and returns operations and signers
@@ -838,20 +504,14 @@ func createTransactionBuilder(transactionType string, metadata map[string]any) (
 
 	// Dynamic fee transaction
 	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	maxFeePerGas := metadata["maxFeePerGas"].(string)
-	maxPriorityFeePerGas := metadata["maxPriorityFeePerGas"].(string)
-
-	maxFee := new(big.Int)
-	maxFee, ok := maxFee.SetString(maxFeePerGas, 10)
+	maxFee, ok := new(big.Int).SetString(metadata["maxFeePerGas"].(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid maxFeePerGas: %s", maxFeePerGas)
+		return nil, fmt.Errorf("invalid maxFeePerGas: %s", metadata["maxFeePerGas"])
 	}
-	maxPriority := new(big.Int)
-	maxPriority, ok = maxPriority.SetString(maxPriorityFeePerGas, 10)
+	maxPriority, ok := new(big.Int).SetString(metadata["maxPriorityFeePerGas"].(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", maxPriorityFeePerGas)
+		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", metadata["maxPriorityFeePerGas"])
 	}
-
 	builder.MaxFeePerGas(maxFee)
 	builder.MaxPriorityFeePerGas(maxPriority)
 	return builder, nil
@@ -889,166 +549,13 @@ func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation)
 
 // ParseTransactionOperationsFromTransactions parses operations directly from transactions.Transaction
 func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction) []*types.Operation {
-	var operations []*types.Operation
-
-	// Check if this is a meaningful transaction
-	hasValueTransfer := false
-	hasContractInteraction := false
-
-	// Analyze clauses for value transfers and contract interactions
-	for _, clause := range tx.Clauses {
-		// Check for value transfer (VET)
-		valueBytes, _ := clause.Value.MarshalText()
-		value := new(big.Int)
-		value.SetString(string(valueBytes), 10)
-		if value.Cmp(big.NewInt(0)) > 0 {
-			hasValueTransfer = true
-		}
-
-		// Check for contract interaction (has data or calls a contract)
-		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
-			hasContractInteraction = true
-		}
-	}
-
-	// Check for energy transfer (VTHO) - gas usage
-	hasEnergyTransfer := tx.Gas > 0
-
-	// If no meaningful operations, return empty array
-	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
-		return operations
-	}
-
-	operationIndex := 0
-
-	// Process each clause for value transfers and contract interactions
-	for clauseIndex, clause := range tx.Clauses {
-		// Add VET transfer operation if there's value transfer in this clause
-		valueBytes, _ := clause.Value.MarshalText()
-		value := new(big.Int)
-		value.SetString(string(valueBytes), 10)
-
-		if value.Cmp(big.NewInt(0)) > 0 {
-			valueStr := value.String()
-			originAddr := tx.Origin.String()
-
-			// Sender operation (negative amount)
-			senderOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   OperationTypeTransfer,
-				Status: StringPtr("Pending"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "-" + valueStr, // Negative for sender
-					Currency: VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-				},
-			}
-			operations = append(operations, senderOp)
-			operationIndex++
-
-			// Receiver operation (positive amount) - only if there's a recipient
-			if clause.To != nil && !clause.To.IsZero() {
-				receiverOp := &types.Operation{
-					OperationIdentifier: &types.OperationIdentifier{
-						Index: int64(operationIndex),
-					},
-					Type:   OperationTypeTransfer,
-					Status: StringPtr("Pending"),
-					Account: &types.AccountIdentifier{
-						Address: clause.To.String(),
-					},
-					Amount: &types.Amount{
-						Value:    valueStr, // Positive for receiver
-						Currency: VETCurrency,
-					},
-					Metadata: map[string]any{
-						"clauseIndex": clauseIndex,
-					},
-				}
-				operations = append(operations, receiverOp)
-				operationIndex++
-			}
-		}
-
-		// Add contract interaction operation if there's contract interaction in this clause
-		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
-			originAddr := tx.Origin.String()
-			toAddr := ""
-			if clause.To != nil {
-				toAddr = clause.To.String()
-			}
-
-			contractOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   "ContractCall",
-				Status: StringPtr("Pending"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "0",
-					Currency: VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-					"to":          toAddr,
-					"data":        "0x" + fmt.Sprintf("%x", clause.Data),
-				},
-			}
-			operations = append(operations, contractOp)
-			operationIndex++
-		}
-	}
-
-	// Add energy transfer operation (VTHO) if there's gas usage
-	if hasEnergyTransfer {
-		originAddr := tx.Origin.String()
-		energyOp := &types.Operation{
-			OperationIdentifier: &types.OperationIdentifier{
-				Index: int64(operationIndex),
-			},
-			Type:   OperationTypeFee,
-			Status: StringPtr("Pending"),
-			Account: &types.AccountIdentifier{
-				Address: originAddr,
-			},
-			Amount: &types.Amount{
-				Value:    "-" + strconv.FormatUint(tx.Gas, 10), // Negative for energy consumption
-				Currency: VTHOCurrency,
-			},
-			Metadata: map[string]any{
-				"gas": strconv.FormatUint(tx.Gas, 10),
-			},
-		}
-		operations = append(operations, energyOp)
-	}
-
-	return operations
+	return parseTransactionOperationsFromTransactionsClauses(tx.Clauses, tx.Origin.String(), tx.Gas, "Pending")
 }
 
 // BuildMeshTransactionFromTransactions builds a Mesh transaction directly from transactions.Transaction
 func BuildMeshTransactionFromTransactions(tx *transactions.Transaction, operations []*types.Operation) *types.Transaction {
-	return &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: tx.ID.String(),
-		},
-		Operations: operations,
-		Metadata: map[string]any{
-			"chainTag":     tx.ChainTag,
-			"blockRef":     "0x" + fmt.Sprintf("%x", tx.BlockRef),
-			"expiration":   tx.Expiration,
-			"gas":          tx.Gas,
-			"gasPriceCoef": tx.GasPriceCoef,
-			"size":         tx.Size,
-		},
-	}
+	return buildMeshTransaction(tx.ID.String(), operations, map[string]any{
+		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
+		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
+	})
 }

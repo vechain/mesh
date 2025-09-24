@@ -1,7 +1,6 @@
 package services
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -260,7 +259,11 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	}
 
 	// Encode transaction using Mesh schema
-	unsignedTx, err := c.encoder.EncodeUnsignedTransaction(vechainTx, originBytes, delegatorBytes)
+	unsignedTx, err := c.encoder.EncodeTransaction(&meshutils.MeshTransaction{
+		Transaction: vechainTx,
+		Origin:      originBytes,
+		Delegator:   delegatorBytes,
+	})
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToEncodeTransaction, map[string]any{
 			"error": err.Error(),
@@ -403,19 +406,19 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 
 		// Combine signatures for VIP191
 		combinedSig := append(originSig.Bytes, delegatorSig.Bytes...)
-		meshTx.Signature = combinedSig
+		meshTx.Transaction = meshTx.WithSignature(combinedSig)
 
 	} else if len(request.Signatures) == 1 {
 		// Regular transaction: only origin signature
 		sig := request.Signatures[0]
-		meshTx.Signature = sig.Bytes
+		meshTx.Transaction = meshTx.WithSignature(sig.Bytes)
 	} else {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidNumberOfSignatures), http.StatusBadRequest)
 		return
 	}
 
 	// Encode signed Mesh transaction
-	signedTxBytes, err := c.encoder.EncodeSignedTransaction(meshTx)
+	signedTxBytes, err := c.encoder.EncodeTransaction(meshTx)
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToEncodeSignedTransaction), http.StatusInternalServerError)
 		return
@@ -444,21 +447,13 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 
 	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeMeshTransaction), http.StatusBadRequest)
-		return
-	}
-
-	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
-	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToBuildThorTransaction, map[string]any{
-			"error": err.Error(),
-		}), http.StatusInternalServerError)
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToDecodeMeshTransaction, map[string]any{"error": err.Error()}), http.StatusBadRequest)
 		return
 	}
 
 	response := &types.TransactionIdentifierResponse{
 		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: thorTx.ID().String(),
+			Hash: meshTx.Transaction.ID().String(),
 		},
 	}
 
@@ -487,26 +482,8 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Build a new Thor transaction with proper signature and reserved fields
-	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
-	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToBuildThorTransaction, map[string]any{
-			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
-	}
-
-	// Encode the Thor transaction to bytes
-	var txBuffer bytes.Buffer
-	if err := thorTx.EncodeRLP(&txBuffer); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToEncodeTransaction, map[string]any{
-			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
-	}
-
 	// Submit the native Thor transaction to VeChain network
-	txID, err := c.vechainClient.SubmitTransaction(txBuffer.Bytes())
+	txID, err := c.vechainClient.SubmitTransaction(meshTx.Transaction)
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToSubmitTransaction, map[string]any{
 			"error": err.Error(),
@@ -521,42 +498,6 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 	}
 
 	meshutils.WriteJSONResponse(w, response)
-}
-
-// buildThorTransactionFromMesh builds a native Thor transaction from a Mesh transaction
-func (c *ConstructionService) buildThorTransactionFromMesh(meshTx *meshutils.MeshTransaction) (*tx.Transaction, error) {
-	var builder *tx.Builder
-	if meshTx.Type() == tx.TypeLegacy {
-		builder = tx.NewBuilder(tx.TypeLegacy)
-		builder.GasPriceCoef(meshTx.GasPriceCoef())
-	} else {
-		builder = tx.NewBuilder(tx.TypeDynamicFee)
-		builder.MaxFeePerGas(meshTx.MaxFeePerGas())
-		builder.MaxPriorityFeePerGas(meshTx.MaxPriorityFeePerGas())
-	}
-
-	builder.ChainTag(meshTx.ChainTag())
-	builder.BlockRef(meshTx.BlockRef())
-	builder.Expiration(meshTx.Expiration())
-	builder.Gas(meshTx.Gas())
-	builder.Nonce(meshTx.Nonce())
-
-	for _, clause := range meshTx.Clauses() {
-		builder.Clause(clause)
-	}
-
-	if len(meshTx.Delegator) > 0 && meshTx.Delegator[0] != 0 {
-		// Set reserved field for fee delegation (features: 1)
-		builder.Features(1)
-	}
-
-	thorTx := builder.Build()
-
-	if len(meshTx.Signature) > 0 {
-		thorTx = thorTx.WithSignature(meshTx.Signature)
-	}
-
-	return thorTx, nil
 }
 
 // getBasicTransactionInfo gets basic transaction information from the network

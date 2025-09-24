@@ -8,6 +8,7 @@ import (
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/tx"
 )
 
 // MockVeChainClient is a mock client for tests that simulates VeChain responses
@@ -276,7 +277,7 @@ func (m *MockVeChainClient) GetChainID() (int, error) {
 	return m.MockChainID, nil
 }
 
-func (m *MockVeChainClient) SubmitTransaction(rawTx []byte) (string, error) {
+func (m *MockVeChainClient) SubmitTransaction(vechainTx *tx.Transaction) (string, error) {
 	if m.MockError != nil {
 		return "", m.MockError
 	}
