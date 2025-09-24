@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/json"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +12,8 @@ import (
 	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/thor/v2/thor"
+	thorTx "github.com/vechain/thor/v2/tx"
 )
 
 func TestNewConstructionService(t *testing.T) {
@@ -652,5 +655,118 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 	// Check response - this will likely fail but covers more code paths
 	if w.Code != http.StatusOK {
 		t.Errorf("ConstructionSubmit() unexpected status code = %v", w.Code)
+	}
+}
+
+func TestConstructionService_createDelegatorPayload(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Create a valid VeChain transaction using the builder
+	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
+	builder.ChainTag(0x27)
+	blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+	builder.BlockRef(blockRef)
+	builder.Expiration(720)
+	builder.Gas(21000)
+	builder.GasPriceCoef(0)
+	builder.Nonce(0x1234567890abcdef)
+
+	// Add a clause
+	toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+	value := new(big.Int)
+	value.SetString("1000000000000000000", 10) // 1 VET
+
+	thorClause := thorTx.NewClause(&toAddr)
+	thorClause = thorClause.WithValue(value)
+	thorClause = thorClause.WithData([]byte{})
+	builder.Clause(thorClause)
+
+	// Build the transaction
+	vechainTx := builder.Build()
+
+	// Create public keys for origin and delegator
+	publicKeys := []*types.PublicKey{
+		{
+			Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+			CurveType: "secp256k1",
+		},
+		{
+			Bytes:     []byte{0x02, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98},
+			CurveType: "secp256k1",
+		},
+	}
+
+	// Test createDelegatorPayload with valid transaction
+	payload, err := service.createDelegatorPayload(vechainTx, publicKeys)
+	if err != nil {
+		t.Errorf("createDelegatorPayload() error = %v", err)
+	}
+	if payload.AccountIdentifier == nil {
+		t.Errorf("createDelegatorPayload() returned nil AccountIdentifier")
+	}
+	if payload.Bytes == nil {
+		t.Errorf("createDelegatorPayload() returned nil Bytes")
+	}
+	if payload.SignatureType != "ecdsa_recovery" {
+		t.Errorf("createDelegatorPayload() SignatureType = %v, want ecdsa_recovery", payload.SignatureType)
+	}
+
+	// Test with invalid public key (should return error)
+	invalidPublicKeys := []*types.PublicKey{
+		{
+			Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+			CurveType: "secp256k1",
+		},
+		{
+			Bytes:     []byte{0x00}, // Invalid public key
+			CurveType: "secp256k1",
+		},
+	}
+
+	// Test with invalid public key - this should return an error
+	_, err = service.createDelegatorPayload(vechainTx, invalidPublicKeys)
+	if err == nil {
+		t.Errorf("createDelegatorPayload() with invalid public key should return error")
+	}
+}
+
+func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Test with valid fee delegator account
+	metadata := map[string]any{
+		"fee_delegator_account": "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+	}
+
+	account := service.getFeeDelegatorAccount(metadata)
+	if account != "0x16277a1ff38678291c41d1820957c78bb5da59ce" {
+		t.Errorf("getFeeDelegatorAccount() = %v, want 0x16277a1ff38678291c41d1820957c78bb5da59ce", account)
+	}
+
+	// Test with missing fee delegator account
+	metadataEmpty := map[string]any{}
+	accountEmpty := service.getFeeDelegatorAccount(metadataEmpty)
+	if accountEmpty != "" {
+		t.Errorf("getFeeDelegatorAccount() with empty metadata = %v, want empty string", accountEmpty)
+	}
+
+	// Test with nil metadata
+	accountNil := service.getFeeDelegatorAccount(nil)
+	if accountNil != "" {
+		t.Errorf("getFeeDelegatorAccount() with nil metadata = %v, want empty string", accountNil)
 	}
 }
