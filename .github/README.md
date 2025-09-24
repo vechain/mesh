@@ -101,6 +101,8 @@ export PORT=8080
 
 ### Available Endpoints
 
+For a complete overview of endpoint coverage and implementation status, see [Endpoints Coverage](endpoints.md).
+
 - **Health Check**: `GET /health`
 - **Network List**: `POST /network/list`
 - **Network Status**: `POST /network/status`
