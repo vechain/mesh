@@ -44,7 +44,9 @@ test-unit-coverage:
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
 	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
-	go tool cover -html=coverage.out -o coverage.html
+	@echo "Filtering out test files and mock_client.go from coverage report..."
+	grep -v "_test.go\|mock_client.go" coverage.out > coverage_filtered.out
+	go tool cover -html=coverage_filtered.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 	@echo "Open coverage.html in your browser to view detailed coverage"
 
