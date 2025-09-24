@@ -14,11 +14,11 @@ import (
 
 // AccountService handles account-related endpoints
 type AccountService struct {
-	vechainClient *meshthor.VeChainClient
+	vechainClient meshthor.VeChainClientInterface
 }
 
 // NewAccountService creates a new account service
-func NewAccountService(vechainClient *meshthor.VeChainClient) *AccountService {
+func NewAccountService(vechainClient meshthor.VeChainClientInterface) *AccountService {
 	return &AccountService{
 		vechainClient: vechainClient,
 	}

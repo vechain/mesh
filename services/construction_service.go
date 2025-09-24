@@ -22,13 +22,13 @@ import (
 
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
-	vechainClient *meshthor.VeChainClient
+	vechainClient meshthor.VeChainClientInterface
 	encoder       *meshutils.MeshTransactionEncoder
 	config        *config.Config
 }
 
 // NewConstructionService creates a new construction service
-func NewConstructionService(vechainClient *meshthor.VeChainClient, config *config.Config) *ConstructionService {
+func NewConstructionService(vechainClient meshthor.VeChainClientInterface, config *config.Config) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
 		encoder:       meshutils.NewMeshTransactionEncoder(),

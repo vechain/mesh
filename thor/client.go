@@ -15,12 +15,25 @@ import (
 	"github.com/vechain/thor/v2/tx"
 )
 
-// VeChainClient handles communication with VeChain RPC
+// VeChainClientInterface defines a common interface
+type VeChainClientInterface interface {
+	GetBestBlock() (*api.JSONExpandedBlock, error)
+	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
+	GetBlockByHash(blockHash string) (*api.JSONExpandedBlock, error)
+	GetAccount(address string) (*api.Account, error)
+	GetChainID() (int, error)
+	SubmitTransaction(rawTx []byte) (string, error)
+	GetDynamicGasPrice() (*DynamicGasPrice, error)
+	GetSyncProgress() (float64, error)
+	GetPeers() ([]Peer, error)
+	GetMempoolTransactions(origin *thor.Address) ([]*thor.Bytes32, error)
+	GetMempoolTransaction(txID *thor.Bytes32) (*transactions.Transaction, error)
+	GetMempoolStatus() (*api.Status, error)
+	CallContract(contractAddress, callData string) (string, error)
+}
 type VeChainClient struct {
 	client *thorclient.Client
 }
-
-// Use native Thor types instead of duplicating them
 
 // NewVeChainClient creates a new VeChain client
 func NewVeChainClient(baseURL string) *VeChainClient {

@@ -281,11 +281,12 @@ func testConstructionMetadata(client *HTTPClient, networkIdentifier *types.Netwo
 	}
 
 	// Validate type-specific fields
-	if transactionType == TransactionTypeLegacy {
+	switch transactionType {
+	case TransactionTypeLegacy:
 		if err := ValidateLegacyMetadataFields(response.Metadata); err != nil {
 			return nil, err
 		}
-	} else if transactionType == TransactionTypeDynamic {
+	case TransactionTypeDynamic:
 		if err := ValidateDynamicMetadataFields(response.Metadata); err != nil {
 			return nil, err
 		}

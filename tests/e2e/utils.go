@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshutils "github.com/vechain/mesh/utils"
 )
 
 // Transaction types
@@ -71,7 +72,12 @@ func ParseResponse(resp *http.Response, target any) error {
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			fmt.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
@@ -94,21 +100,12 @@ func CreateTestNetworkIdentifier(network string) *types.NetworkIdentifier {
 
 // CreateVETCurrency creates a VET currency definition
 func CreateVETCurrency() *types.Currency {
-	return &types.Currency{
-		Symbol:   "VET",
-		Decimals: 18,
-	}
+	return meshutils.VETCurrency
 }
 
 // CreateVTHOCurrency creates a VTHO currency definition
 func CreateVTHOCurrency() *types.Currency {
-	return &types.Currency{
-		Symbol:   "VTHO",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x0000000000000000000000000000456E65726779",
-		},
-	}
+	return meshutils.VTHOCurrency
 }
 
 // CreateTransferOperations creates transfer operations for testing
@@ -118,8 +115,8 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Type:   "Transfer",
-			Status: stringPtr("None"),
+			Type:   meshutils.OperationTypeTransfer,
+			Status: meshutils.StringPtr("None"),
 			Account: &types.AccountIdentifier{
 				Address: recipientAddress,
 			},
@@ -132,8 +129,8 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Type:   "Transfer",
-			Status: stringPtr("None"),
+			Type:   meshutils.OperationTypeTransfer,
+			Status: meshutils.StringPtr("None"),
 			Account: &types.AccountIdentifier{
 				Address: senderAddress,
 			},
@@ -143,11 +140,6 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 			},
 		},
 	}
-}
-
-// stringPtr returns a pointer to a string
-func stringPtr(s string) *string {
-	return &s
 }
 
 // CreateTestPublicKey creates a test public key
@@ -265,12 +257,12 @@ func ValidateConstructionMetadataResponse(response *types.ConstructionMetadataRe
 		return fmt.Errorf("suggested_fee currency not returned")
 	}
 
-	if fee.Currency.Symbol != "VTHO" {
+	if fee.Currency.Symbol != meshutils.VTHOCurrency.Symbol {
 		return fmt.Errorf("expected VTHO currency, got %s", fee.Currency.Symbol)
 	}
 
-	if fee.Currency.Decimals != 18 {
-		return fmt.Errorf("expected 18 decimals, got %d", fee.Currency.Decimals)
+	if fee.Currency.Decimals != meshutils.VTHOCurrency.Decimals {
+		return fmt.Errorf("expected %d decimals, got %d", meshutils.VTHOCurrency.Decimals, fee.Currency.Decimals)
 	}
 
 	// Validate VTHO contract address
@@ -279,7 +271,8 @@ func ValidateConstructionMetadataResponse(response *types.ConstructionMetadataRe
 	}
 
 	contractAddr, ok := fee.Currency.Metadata["contractAddress"].(string)
-	if !ok || contractAddr != "0x0000000000000000000000000000456E65726779" {
+	expectedContractAddr := meshutils.VTHOCurrency.Metadata["contractAddress"].(string)
+	if !ok || contractAddr != expectedContractAddr {
 		return fmt.Errorf("invalid VTHO contract address: %v", fee.Currency.Metadata["contractAddress"])
 	}
 
@@ -322,11 +315,12 @@ func ValidateMetadataFields(metadata map[string]any) error {
 	}
 
 	// Validate type-specific fields
-	if transactionType == TransactionTypeLegacy {
+	switch transactionType {
+	case TransactionTypeLegacy:
 		if gasPriceCoef, ok := metadata["gasPriceCoef"].(float64); !ok || gasPriceCoef < 0 || gasPriceCoef > 255 {
 			return fmt.Errorf("gasPriceCoef not found or invalid for legacy transaction")
 		}
-	} else if transactionType == TransactionTypeDynamic {
+	case TransactionTypeDynamic:
 		if _, ok := metadata["maxFeePerGas"].(string); !ok {
 			return fmt.Errorf("maxFeePerGas not found for dynamic transaction")
 		}
