@@ -146,6 +146,31 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_ValidData(t *testing.T
 	if decoded.Transaction == nil {
 		t.Errorf("DecodeUnsignedTransaction() returned nil Transaction")
 	}
+
+	// Validate that decoded transaction matches original
+	if decoded.Transaction.ChainTag() != vechainTx.ChainTag() {
+		t.Errorf("DecodeUnsignedTransaction() ChainTag = %v, want %v", decoded.Transaction.ChainTag(), vechainTx.ChainTag())
+	}
+	if decoded.Transaction.Expiration() != vechainTx.Expiration() {
+		t.Errorf("DecodeUnsignedTransaction() Expiration = %v, want %v", decoded.Transaction.Expiration(), vechainTx.Expiration())
+	}
+	if decoded.Transaction.Gas() != vechainTx.Gas() {
+		t.Errorf("DecodeUnsignedTransaction() Gas = %v, want %v", decoded.Transaction.Gas(), vechainTx.Gas())
+	}
+	if decoded.Transaction.Nonce() != vechainTx.Nonce() {
+		t.Errorf("DecodeUnsignedTransaction() Nonce = %v, want %v", decoded.Transaction.Nonce(), vechainTx.Nonce())
+	}
+	if decoded.Transaction.GasPriceCoef() != vechainTx.GasPriceCoef() {
+		t.Errorf("DecodeUnsignedTransaction() GasPriceCoef = %v, want %v", decoded.Transaction.GasPriceCoef(), vechainTx.GasPriceCoef())
+	}
+
+	// Validate origin and delegator
+	if !bytes.Equal(decoded.Origin, origin) {
+		t.Errorf("DecodeUnsignedTransaction() Origin = %v, want %v", decoded.Origin, origin)
+	}
+	if !bytes.Equal(decoded.Delegator, delegator) {
+		t.Errorf("DecodeUnsignedTransaction() Delegator = %v, want %v", decoded.Delegator, delegator)
+	}
 }
 
 func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) {
@@ -171,6 +196,36 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) 
 	}
 	if decoded.Transaction == nil {
 		t.Errorf("DecodeUnsignedTransaction() returned nil Transaction")
+	}
+
+	// Validate that decoded transaction matches original
+	if decoded.Transaction.ChainTag() != vechainTx.ChainTag() {
+		t.Errorf("DecodeUnsignedTransaction() ChainTag = %v, want %v", decoded.Transaction.ChainTag(), vechainTx.ChainTag())
+	}
+	if decoded.Transaction.Expiration() != vechainTx.Expiration() {
+		t.Errorf("DecodeUnsignedTransaction() Expiration = %v, want %v", decoded.Transaction.Expiration(), vechainTx.Expiration())
+	}
+	if decoded.Transaction.Gas() != vechainTx.Gas() {
+		t.Errorf("DecodeUnsignedTransaction() Gas = %v, want %v", decoded.Transaction.Gas(), vechainTx.Gas())
+	}
+	if decoded.Transaction.Nonce() != vechainTx.Nonce() {
+		t.Errorf("DecodeUnsignedTransaction() Nonce = %v, want %v", decoded.Transaction.Nonce(), vechainTx.Nonce())
+	}
+
+	// Validate dynamic fee specific fields
+	if decoded.Transaction.MaxFeePerGas().Cmp(vechainTx.MaxFeePerGas()) != 0 {
+		t.Errorf("DecodeUnsignedTransaction() MaxFeePerGas = %v, want %v", decoded.Transaction.MaxFeePerGas(), vechainTx.MaxFeePerGas())
+	}
+	if decoded.Transaction.MaxPriorityFeePerGas().Cmp(vechainTx.MaxPriorityFeePerGas()) != 0 {
+		t.Errorf("DecodeUnsignedTransaction() MaxPriorityFeePerGas = %v, want %v", decoded.Transaction.MaxPriorityFeePerGas(), vechainTx.MaxPriorityFeePerGas())
+	}
+
+	// Validate origin and delegator
+	if !bytes.Equal(decoded.Origin, origin) {
+		t.Errorf("DecodeUnsignedTransaction() Origin = %v, want %v", decoded.Origin, origin)
+	}
+	if !bytes.Equal(decoded.Delegator, delegator) {
+		t.Errorf("DecodeUnsignedTransaction() Delegator = %v, want %v", decoded.Delegator, delegator)
 	}
 }
 
@@ -207,6 +262,34 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_ValidData(t *testing.T) 
 	if decoded.Transaction == nil {
 		t.Errorf("DecodeSignedTransaction() returned nil Transaction")
 	}
+
+	// Validate that decoded transaction matches original
+	if decoded.Transaction.ChainTag() != meshTx.Transaction.ChainTag() {
+		t.Errorf("DecodeSignedTransaction() ChainTag = %v, want %v", decoded.Transaction.ChainTag(), meshTx.Transaction.ChainTag())
+	}
+	if decoded.Transaction.Expiration() != meshTx.Transaction.Expiration() {
+		t.Errorf("DecodeSignedTransaction() Expiration = %v, want %v", decoded.Transaction.Expiration(), meshTx.Transaction.Expiration())
+	}
+	if decoded.Transaction.Gas() != meshTx.Transaction.Gas() {
+		t.Errorf("DecodeSignedTransaction() Gas = %v, want %v", decoded.Transaction.Gas(), meshTx.Transaction.Gas())
+	}
+	if decoded.Transaction.Nonce() != meshTx.Transaction.Nonce() {
+		t.Errorf("DecodeSignedTransaction() Nonce = %v, want %v", decoded.Transaction.Nonce(), meshTx.Transaction.Nonce())
+	}
+	if decoded.Transaction.GasPriceCoef() != meshTx.Transaction.GasPriceCoef() {
+		t.Errorf("DecodeSignedTransaction() GasPriceCoef = %v, want %v", decoded.Transaction.GasPriceCoef(), meshTx.Transaction.GasPriceCoef())
+	}
+
+	// Validate origin, delegator, and signature
+	if !bytes.Equal(decoded.Origin, meshTx.Origin) {
+		t.Errorf("DecodeSignedTransaction() Origin = %v, want %v", decoded.Origin, meshTx.Origin)
+	}
+	if !bytes.Equal(decoded.Delegator, meshTx.Delegator) {
+		t.Errorf("DecodeSignedTransaction() Delegator = %v, want %v", decoded.Delegator, meshTx.Delegator)
+	}
+	if !bytes.Equal(decoded.Signature, meshTx.Signature) {
+		t.Errorf("DecodeSignedTransaction() Signature = %v, want %v", decoded.Signature, meshTx.Signature)
+	}
 }
 
 func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
@@ -236,6 +319,39 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
 	}
 	if decoded.Transaction == nil {
 		t.Errorf("DecodeSignedTransaction() returned nil Transaction")
+	}
+
+	// Validate that decoded transaction matches original
+	if decoded.Transaction.ChainTag() != meshTx.Transaction.ChainTag() {
+		t.Errorf("DecodeSignedTransaction() ChainTag = %v, want %v", decoded.Transaction.ChainTag(), meshTx.Transaction.ChainTag())
+	}
+	if decoded.Transaction.Expiration() != meshTx.Transaction.Expiration() {
+		t.Errorf("DecodeSignedTransaction() Expiration = %v, want %v", decoded.Transaction.Expiration(), meshTx.Transaction.Expiration())
+	}
+	if decoded.Transaction.Gas() != meshTx.Transaction.Gas() {
+		t.Errorf("DecodeSignedTransaction() Gas = %v, want %v", decoded.Transaction.Gas(), meshTx.Transaction.Gas())
+	}
+	if decoded.Transaction.Nonce() != meshTx.Transaction.Nonce() {
+		t.Errorf("DecodeSignedTransaction() Nonce = %v, want %v", decoded.Transaction.Nonce(), meshTx.Transaction.Nonce())
+	}
+
+	// Validate dynamic fee specific fields
+	if decoded.Transaction.MaxFeePerGas().Cmp(meshTx.Transaction.MaxFeePerGas()) != 0 {
+		t.Errorf("DecodeSignedTransaction() MaxFeePerGas = %v, want %v", decoded.Transaction.MaxFeePerGas(), meshTx.Transaction.MaxFeePerGas())
+	}
+	if decoded.Transaction.MaxPriorityFeePerGas().Cmp(meshTx.Transaction.MaxPriorityFeePerGas()) != 0 {
+		t.Errorf("DecodeSignedTransaction() MaxPriorityFeePerGas = %v, want %v", decoded.Transaction.MaxPriorityFeePerGas(), meshTx.Transaction.MaxPriorityFeePerGas())
+	}
+
+	// Validate origin, delegator, and signature
+	if !bytes.Equal(decoded.Origin, meshTx.Origin) {
+		t.Errorf("DecodeSignedTransaction() Origin = %v, want %v", decoded.Origin, meshTx.Origin)
+	}
+	if !bytes.Equal(decoded.Delegator, meshTx.Delegator) {
+		t.Errorf("DecodeSignedTransaction() Delegator = %v, want %v", decoded.Delegator, meshTx.Delegator)
+	}
+	if !bytes.Equal(decoded.Signature, meshTx.Signature) {
+		t.Errorf("DecodeSignedTransaction() Signature = %v, want %v", decoded.Signature, meshTx.Signature)
 	}
 }
 

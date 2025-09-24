@@ -90,9 +90,9 @@ func (e *MeshTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *thor
 	meshTx := []any{
 		[]byte{vechainTx.ChainTag()},
 		blockRef[:],
-		[]byte{byte(vechainTx.Expiration()), byte(vechainTx.Expiration() >> 8), byte(vechainTx.Expiration() >> 16), byte(vechainTx.Expiration() >> 24)},
+		[]byte{byte(vechainTx.Expiration() >> 24), byte(vechainTx.Expiration() >> 16), byte(vechainTx.Expiration() >> 8), byte(vechainTx.Expiration())},
 		e.convertClausesToMesh(vechainTx.Clauses()),
-		[]byte{byte(vechainTx.Gas()), byte(vechainTx.Gas() >> 8), byte(vechainTx.Gas() >> 16), byte(vechainTx.Gas() >> 24), byte(vechainTx.Gas() >> 32), byte(vechainTx.Gas() >> 40), byte(vechainTx.Gas() >> 48), byte(vechainTx.Gas() >> 56)},
+		[]byte{byte(vechainTx.Gas() >> 56), byte(vechainTx.Gas() >> 48), byte(vechainTx.Gas() >> 40), byte(vechainTx.Gas() >> 32), byte(vechainTx.Gas() >> 24), byte(vechainTx.Gas() >> 16), byte(vechainTx.Gas() >> 8), byte(vechainTx.Gas())},
 		e.convertNonceToBytes(vechainTx.Nonce()),
 		origin,
 		delegator,
@@ -262,9 +262,9 @@ func (e *MeshTransactionEncoder) encodeSignedLegacyTransaction(meshTx *MeshTrans
 	meshTxRLP := []any{
 		[]byte{meshTx.ChainTag()},
 		blockRef[:],
-		[]byte{byte(meshTx.Expiration()), byte(meshTx.Expiration() >> 8), byte(meshTx.Expiration() >> 16), byte(meshTx.Expiration() >> 24)},
+		[]byte{byte(meshTx.Expiration() >> 24), byte(meshTx.Expiration() >> 16), byte(meshTx.Expiration() >> 8), byte(meshTx.Expiration())},
 		e.convertClausesToMesh(meshTx.Clauses()),
-		[]byte{byte(meshTx.Gas()), byte(meshTx.Gas() >> 8), byte(meshTx.Gas() >> 16), byte(meshTx.Gas() >> 24), byte(meshTx.Gas() >> 32), byte(meshTx.Gas() >> 40), byte(meshTx.Gas() >> 48), byte(meshTx.Gas() >> 56)},
+		[]byte{byte(meshTx.Gas() >> 56), byte(meshTx.Gas() >> 48), byte(meshTx.Gas() >> 40), byte(meshTx.Gas() >> 32), byte(meshTx.Gas() >> 24), byte(meshTx.Gas() >> 16), byte(meshTx.Gas() >> 8), byte(meshTx.Gas())},
 		e.convertNonceToBytes(meshTx.Nonce()),
 		meshTx.Origin,
 		meshTx.Delegator,
