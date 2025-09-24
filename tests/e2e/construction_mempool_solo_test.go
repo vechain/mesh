@@ -10,10 +10,9 @@ import (
 )
 
 // TestConstructionMempoolSolo tests the complete construction flow in solo mode
-// This test follows the exact sequence from vechain/rosetta construction.mempool.solo.test
 // It tests both legacy and dynamic transaction types in the same flow
 func TestConstructionMempoolSolo(t *testing.T) {
-	t.Log("Starting construction.mempool.solo test sequence...")
+	t.Log("Starting construction endpoints and then mempool test sequence...")
 
 	// Get test configuration
 	config := GetTestConfig()
@@ -30,7 +29,7 @@ func TestConstructionMempoolSolo(t *testing.T) {
 		})
 	}
 
-	t.Log("✅ All construction.mempool.solo test steps completed successfully!")
+	t.Log("✅ All test steps completed successfully!")
 }
 
 // testTransactionFlow tests the complete transaction flow for a specific transaction type
