@@ -195,10 +195,16 @@ type Peer struct {
 	BestBlockID string
 }
 
+// getTransactions is the unified method that matches the reference implementation
+func (c *VeChainClient) getTransactions(origin *thor.Address, expanded bool) (any, error) {
+	// This matches the reference implementation's getTransactions method
+	return c.client.TxPool(expanded, origin)
+}
+
 // GetMempoolTransactions returns all pending transactions in the mempool
 func (c *VeChainClient) GetMempoolTransactions(origin *thor.Address) ([]*thor.Bytes32, error) {
 	// Get transaction pool with expanded=false to get only transaction IDs
-	txPool, err := c.client.TxPool(false, origin)
+	txPool, err := c.getTransactions(origin, false)
 	if err != nil {
 		return nil, err
 	}
@@ -222,29 +228,23 @@ func (c *VeChainClient) GetMempoolTransactions(origin *thor.Address) ([]*thor.By
 	return []*thor.Bytes32{}, nil
 }
 
-// GetMempoolTransactionsExpanded returns all pending transactions in the mempool with full transaction data
-func (c *VeChainClient) GetMempoolTransactionsExpanded() ([]*transactions.Transaction, error) {
-	// Get transaction pool with expanded=true to get full transaction objects
-	txPool, err := c.client.TxPool(true, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert the result to []*transactions.Transaction
-	if txs, ok := txPool.([]*transactions.Transaction); ok {
-		return txs, nil
-	}
-
-	// If the type assertion fails, return empty slice
-	return []*transactions.Transaction{}, nil
-}
-
 // GetMempoolTransaction returns a specific transaction from the mempool
 func (c *VeChainClient) GetMempoolTransaction(txID *thor.Bytes32) (*transactions.Transaction, error) {
-	// Get all expanded transactions from mempool and find the specific one
-	txs, err := c.GetMempoolTransactionsExpanded()
+	// Get all expanded transactions from mempool (no origin filter)
+	txPool, err := c.getTransactions(nil, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get mempool transactions: %w", err)
+	}
+
+	var txs []*transactions.Transaction
+	if txList, ok := txPool.([]*transactions.Transaction); ok {
+		txs = txList
+	} else if txList, ok := txPool.([]transactions.Transaction); ok {
+		for i := range txList {
+			txs = append(txs, &txList[i])
+		}
+	} else {
+		return nil, fmt.Errorf("unexpected response type from TxPool: %T", txPool)
 	}
 
 	// Find the transaction with the matching ID

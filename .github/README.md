@@ -7,7 +7,6 @@
 > - Implement events endpoints
 > - Review if we can leverage better Thor RLP's encoding/decoding
 > - Add GitHub Actions (build, lint, test)
-> - Add e2e tests like in vechain/rosetta
 > - Add unit tests for coverage
 > - Use mesh-cli to validate endpoints
 >
