@@ -12,9 +12,9 @@ import (
 )
 
 func TestNewAccountService(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
+	mockClient := meshthor.NewMockVeChainClient()
 
-	service := NewAccountService(client)
+	service := NewAccountService(mockClient)
 
 	if service == nil {
 		t.Fatal("NewAccountService() returned nil")
@@ -26,8 +26,8 @@ func TestNewAccountService(t *testing.T) {
 }
 
 func TestAccountService_AccountBalance_InvalidRequestBody(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewAccountService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBufferString("invalid json"))
@@ -44,8 +44,8 @@ func TestAccountService_AccountBalance_InvalidRequestBody(t *testing.T) {
 }
 
 func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewAccountService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
 
 	// Create request
 	request := types.AccountBalanceRequest{
@@ -74,8 +74,8 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 }
 
 func TestAccountService_AccountBalance_WithSpecificCurrencies(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewAccountService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
 
 	// Create request with specific currencies
 	request := types.AccountBalanceRequest{
@@ -107,8 +107,8 @@ func TestAccountService_AccountBalance_WithSpecificCurrencies(t *testing.T) {
 }
 
 func TestAccountService_AccountBalance_InvalidCurrencies(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewAccountService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
 
 	// Create request with invalid currencies (empty symbol)
 	request := types.AccountBalanceRequest{

@@ -15,6 +15,23 @@ import (
 	"github.com/vechain/thor/v2/tx"
 )
 
+// VeChainClientInterface defines the common interface for VeChainClient and MockVeChainClient
+type VeChainClientInterface interface {
+	GetBestBlock() (*api.JSONExpandedBlock, error)
+	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
+	GetBlockByHash(blockHash string) (*api.JSONExpandedBlock, error)
+	GetAccount(address string) (*api.Account, error)
+	GetChainID() (int, error)
+	SubmitTransaction(rawTx []byte) (string, error)
+	GetDynamicGasPrice() (*DynamicGasPrice, error)
+	GetSyncProgress() (float64, error)
+	GetPeers() ([]Peer, error)
+	GetMempoolTransactions(origin *thor.Address) ([]*thor.Bytes32, error)
+	GetMempoolTransaction(txID *thor.Bytes32) (*transactions.Transaction, error)
+	GetMempoolStatus() (*api.Status, error)
+	CallContract(contractAddress, callData string) (string, error)
+}
+
 // VeChainClient handles communication with VeChain RPC
 type VeChainClient struct {
 	client *thorclient.Client

@@ -12,11 +12,11 @@ import (
 
 // MempoolService handles mempool API endpoints
 type MempoolService struct {
-	vechainClient *meshthor.VeChainClient
+	vechainClient meshthor.VeChainClientInterface
 }
 
 // NewMempoolService creates a new mempool service
-func NewMempoolService(vechainClient *meshthor.VeChainClient) *MempoolService {
+func NewMempoolService(vechainClient meshthor.VeChainClientInterface) *MempoolService {
 	return &MempoolService{
 		vechainClient: vechainClient,
 	}

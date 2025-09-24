@@ -13,11 +13,11 @@ import (
 
 // BlockService handles block API endpoints
 type BlockService struct {
-	vechainClient *meshthor.VeChainClient
+	vechainClient meshthor.VeChainClientInterface
 }
 
 // NewBlockService creates a new block service
-func NewBlockService(vechainClient *meshthor.VeChainClient) *BlockService {
+func NewBlockService(vechainClient meshthor.VeChainClientInterface) *BlockService {
 	return &BlockService{
 		vechainClient: vechainClient,
 	}

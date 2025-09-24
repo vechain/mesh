@@ -14,10 +14,10 @@ import (
 
 func TestNewNetworkService(t *testing.T) {
 	// Create a real client for testing
-	client := meshthor.NewVeChainClient("http://localhost:8669")
+	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{}
 
-	service := NewNetworkService(client, config)
+	service := NewNetworkService(mockClient, config)
 
 	if service == nil {
 		t.Fatal("NewNetworkService() returned nil")
@@ -37,8 +37,8 @@ func TestNetworkService_NetworkList(t *testing.T) {
 	config := &meshconfig.Config{}
 	config.Network = "test"
 
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewNetworkService(client, config)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewNetworkService(mockClient, config)
 
 	// Create request
 	req := httptest.NewRequest("POST", "/network/list", nil)
@@ -75,8 +75,8 @@ func TestNetworkService_NetworkList(t *testing.T) {
 
 func TestNetworkService_NetworkOptions(t *testing.T) {
 	config := &meshconfig.Config{}
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewNetworkService(client, config)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewNetworkService(mockClient, config)
 
 	// Create request with proper body
 	request := types.NetworkRequest{
@@ -117,8 +117,8 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 
 func TestNetworkService_NetworkStatus_InvalidRequestBody(t *testing.T) {
 	config := &meshconfig.Config{}
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewNetworkService(client, config)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewNetworkService(mockClient, config)
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/network/status", bytes.NewBufferString("invalid json"))
@@ -136,8 +136,8 @@ func TestNetworkService_NetworkStatus_InvalidRequestBody(t *testing.T) {
 
 func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 	config := &meshconfig.Config{}
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewNetworkService(client, config)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewNetworkService(mockClient, config)
 
 	// Create request
 	request := types.NetworkRequest{

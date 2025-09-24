@@ -12,20 +12,20 @@ import (
 )
 
 func TestNewBlockService(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewBlockService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
 
 	if service == nil {
 		t.Errorf("NewBlockService() returned nil")
 	}
-	if service.vechainClient != client {
-		t.Errorf("NewBlockService() client = %v, want %v", service.vechainClient, client)
+	if service.vechainClient != mockClient {
+		t.Errorf("NewBlockService() client = %v, want %v", service.vechainClient, mockClient)
 	}
 }
 
 func TestBlockService_Block_InvalidRequestBody(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewBlockService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/block", bytes.NewBufferString("invalid json"))
@@ -42,8 +42,8 @@ func TestBlockService_Block_InvalidRequestBody(t *testing.T) {
 }
 
 func TestBlockService_Block_ValidRequest(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewBlockService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
 
 	// Create request with valid block identifier
 	request := types.BlockRequest{
@@ -80,8 +80,8 @@ func TestBlockService_Block_ValidRequest(t *testing.T) {
 }
 
 func TestBlockService_BlockTransaction_InvalidRequestBody(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewBlockService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/block/transaction", bytes.NewBufferString("invalid json"))
@@ -98,8 +98,8 @@ func TestBlockService_BlockTransaction_InvalidRequestBody(t *testing.T) {
 }
 
 func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewBlockService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
 
 	// Create request with valid block and transaction identifiers
 	request := types.BlockTransactionRequest{

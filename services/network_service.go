@@ -12,12 +12,12 @@ import (
 
 // NetworkService handles network-related endpoints
 type NetworkService struct {
-	vechainClient *meshthor.VeChainClient
+	vechainClient meshthor.VeChainClientInterface
 	config        *meshconfig.Config
 }
 
 // NewNetworkService creates a new network service
-func NewNetworkService(vechainClient *meshthor.VeChainClient, config *meshconfig.Config) *NetworkService {
+func NewNetworkService(vechainClient meshthor.VeChainClientInterface, config *meshconfig.Config) *NetworkService {
 	return &NetworkService{
 		vechainClient: vechainClient,
 		config:        config,

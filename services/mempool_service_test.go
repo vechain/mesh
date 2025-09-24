@@ -12,9 +12,9 @@ import (
 )
 
 func TestNewMempoolService(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
+	mockClient := meshthor.NewMockVeChainClient()
 
-	service := NewMempoolService(client)
+	service := NewMempoolService(mockClient)
 
 	if service == nil {
 		t.Fatal("NewMempoolService() returned nil")
@@ -26,8 +26,8 @@ func TestNewMempoolService(t *testing.T) {
 }
 
 func TestMempoolService_Mempool_InvalidRequestBody(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/mempool", bytes.NewBufferString("invalid json"))
@@ -44,8 +44,8 @@ func TestMempoolService_Mempool_InvalidRequestBody(t *testing.T) {
 }
 
 func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request
 	request := map[string]any{
@@ -71,8 +71,8 @@ func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
 }
 
 func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request with origin filter
 	request := map[string]any{
@@ -101,8 +101,8 @@ func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
 }
 
 func TestMempoolService_MempoolTransaction_InvalidRequestBody(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/mempool/transaction", bytes.NewBufferString("invalid json"))
@@ -119,8 +119,8 @@ func TestMempoolService_MempoolTransaction_InvalidRequestBody(t *testing.T) {
 }
 
 func TestMempoolService_MempoolTransaction_MissingTransactionIdentifier(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request without transaction identifier
 	request := types.MempoolTransactionRequest{
@@ -146,8 +146,8 @@ func TestMempoolService_MempoolTransaction_MissingTransactionIdentifier(t *testi
 }
 
 func TestMempoolService_MempoolTransaction_EmptyTransactionHash(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request with empty transaction hash
 	request := types.MempoolTransactionRequest{
@@ -175,8 +175,8 @@ func TestMempoolService_MempoolTransaction_EmptyTransactionHash(t *testing.T) {
 }
 
 func TestMempoolService_MempoolTransaction_InvalidTransactionHash(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request with invalid transaction hash
 	request := types.MempoolTransactionRequest{
@@ -204,8 +204,8 @@ func TestMempoolService_MempoolTransaction_InvalidTransactionHash(t *testing.T) 
 }
 
 func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
-	client := meshthor.NewVeChainClient("http://localhost:8669")
-	service := NewMempoolService(client)
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
 
 	// Create request
 	request := types.MempoolTransactionRequest{
