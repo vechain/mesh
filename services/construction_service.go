@@ -448,17 +448,9 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
-	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToBuildThorTransaction, map[string]any{
-			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
-	}
-
 	response := &types.TransactionIdentifierResponse{
 		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: thorTx.ID().String(),
+			Hash: meshTx.Transaction.ID().String(),
 		},
 	}
 
@@ -487,18 +479,9 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Build a new Thor transaction with proper signature and reserved fields
-	thorTx, err := c.buildThorTransactionFromMesh(meshTx)
-	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToBuildThorTransaction, map[string]any{
-			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
-	}
-
 	// Encode the Thor transaction to bytes
 	var txBuffer bytes.Buffer
-	if err := thorTx.EncodeRLP(&txBuffer); err != nil {
+	if err := meshTx.EncodeRLP(&txBuffer); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToEncodeTransaction, map[string]any{
 			"error": err.Error(),
 		}), http.StatusInternalServerError)
@@ -521,42 +504,6 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 	}
 
 	meshutils.WriteJSONResponse(w, response)
-}
-
-// buildThorTransactionFromMesh builds a native Thor transaction from a Mesh transaction
-func (c *ConstructionService) buildThorTransactionFromMesh(meshTx *meshutils.MeshTransaction) (*tx.Transaction, error) {
-	var builder *tx.Builder
-	if meshTx.Type() == tx.TypeLegacy {
-		builder = tx.NewBuilder(tx.TypeLegacy)
-		builder.GasPriceCoef(meshTx.GasPriceCoef())
-	} else {
-		builder = tx.NewBuilder(tx.TypeDynamicFee)
-		builder.MaxFeePerGas(meshTx.MaxFeePerGas())
-		builder.MaxPriorityFeePerGas(meshTx.MaxPriorityFeePerGas())
-	}
-
-	builder.ChainTag(meshTx.ChainTag())
-	builder.BlockRef(meshTx.BlockRef())
-	builder.Expiration(meshTx.Expiration())
-	builder.Gas(meshTx.Gas())
-	builder.Nonce(meshTx.Nonce())
-
-	for _, clause := range meshTx.Clauses() {
-		builder.Clause(clause)
-	}
-
-	if len(meshTx.Delegator) > 0 && meshTx.Delegator[0] != 0 {
-		// Set reserved field for fee delegation (features: 1)
-		builder.Features(1)
-	}
-
-	thorTx := builder.Build()
-
-	if len(meshTx.Signature) > 0 {
-		thorTx = thorTx.WithSignature(meshTx.Signature)
-	}
-
-	return thorTx, nil
 }
 
 // getBasicTransactionInfo gets basic transaction information from the network
