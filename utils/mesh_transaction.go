@@ -20,9 +20,9 @@ import (
 // MeshTransaction represents a transaction with Mesh-specific fields
 type MeshTransaction struct {
 	*thorTx.Transaction
+	// Origin and delegator are required as separate fields because they get encoded when there is no signature
 	Origin    []byte
 	Delegator []byte
-	Signature []byte
 }
 
 // MeshTransactionEncoder handles encoding and decoding of Mesh transactions
@@ -33,32 +33,64 @@ func NewMeshTransactionEncoder() *MeshTransactionEncoder {
 	return &MeshTransactionEncoder{}
 }
 
-// EncodeUnsignedTransaction encodes an unsigned transaction using Mesh RLP schema
-func (e *MeshTransactionEncoder) EncodeUnsignedTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
+// EncodeTransaction encodes a transaction using Mesh RLP schema
+func (e *MeshTransactionEncoder) EncodeTransaction(meshTx *MeshTransaction) ([]byte, error) {
 	// Use native Thor encoding and add Mesh-specific fields
-	thorBytes, err := rlp.EncodeToBytes(vechainTx)
+	thorBytes, err := meshTx.MarshalBinary()
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode Thor transaction: %w", err)
 	}
 
-	// Create Mesh structure: [thorTransaction, origin, delegator]
-	meshTx := []any{
-		thorBytes,
-		origin,
-		delegator,
+	if len(meshTx.Signature()) > 0 {
+		return thorBytes, nil
 	}
 
-	return rlp.EncodeToBytes(meshTx)
+	// Create Mesh structure if not signed: [thorTransaction, origin, delegator]
+	meshTxRLP := []any{
+		thorBytes,
+		meshTx.Origin,
+		meshTx.Delegator,
+	}
+
+	return rlp.EncodeToBytes(meshTxRLP)
 }
 
 // decodeMeshTransaction decodes a Mesh transaction format
-func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte) (*MeshTransaction, error) {
+func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte, signed bool) (*MeshTransaction, error) {
+	if signed {
+		// For signed transactions, decode directly as Thor transaction
+		var thorTx thorTx.Transaction
+		if err := thorTx.UnmarshalBinary(data); err != nil {
+			return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
+		}
+
+		originAddr, err := thorTx.Origin()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get origin: %w", err)
+		}
+		delegatorAddr, err := thorTx.Delegator()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get delegator: %w", err)
+		}
+
+		var delegatorBytes []byte
+		if delegatorAddr != nil {
+			delegatorBytes = delegatorAddr.Bytes()
+		}
+
+		return &MeshTransaction{
+			Transaction: &thorTx,
+			Origin:      originAddr.Bytes(),
+			Delegator:   delegatorBytes,
+		}, nil
+	}
+
+	// For unsigned transactions, decode as RLP list: [thorTransaction, origin, delegator]
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
 	}
 
-	// This format should have 3 fields: [thorTransaction, origin, delegator]
 	if len(fields) != 3 {
 		return nil, fmt.Errorf("invalid Mesh transaction: expected 3 fields, got %d", len(fields))
 	}
@@ -66,8 +98,7 @@ func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte) (*MeshTransa
 	// Decode Thor transaction from bytes
 	thorBytes := fields[0].([]byte)
 	var thorTx thorTx.Transaction
-	stream := rlp.NewStream(bytes.NewReader(thorBytes), 0)
-	if err := thorTx.DecodeRLP(stream); err != nil {
+	if err := thorTx.UnmarshalBinary(thorBytes); err != nil {
 		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
 	}
 
@@ -83,71 +114,22 @@ func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte) (*MeshTransa
 
 // DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
-	if meshTx, err := e.decodeMeshTransaction(data); err == nil {
-		return meshTx, nil
+	meshTx, err := e.decodeMeshTransaction(data, false)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("failed to decode an unsigned Mesh transaction")
+	return meshTx, nil
 }
 
 // DecodeSignedTransaction decodes a signed transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTransaction, error) {
-	if meshTx, err := e.decodeSignedMeshTransaction(data); err == nil {
-		return meshTx, nil
-	}
-
-	return nil, fmt.Errorf("failed to decode a signed Mesh transaction")
-}
-
-// EncodeSignedTransaction encodes a signed Mesh transaction
-func (e *MeshTransactionEncoder) EncodeSignedTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Use native Thor encoding and add Mesh-specific fields
-	thorBytes, err := rlp.EncodeToBytes(meshTx.Transaction)
+	meshTx, err := e.decodeMeshTransaction(data, true)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode Thor transaction: %w", err)
-	}
-
-	// Create Mesh structure: [thorTransaction, origin, delegator, signature]
-	meshTxRLP := []any{
-		thorBytes,
-		meshTx.Origin,
-		meshTx.Delegator,
-		meshTx.Signature,
-	}
-
-	return rlp.EncodeToBytes(meshTxRLP)
-}
-
-// decodeSignedMeshTransaction decodes a signed Mesh transaction format
-func (e *MeshTransactionEncoder) decodeSignedMeshTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
 	}
 
-	// This signed format should have 4 fields: [thorTransaction, origin, delegator, signature]
-	if len(fields) != 4 {
-		return nil, fmt.Errorf("invalid signed Mesh transaction: expected 4 fields, got %d", len(fields))
-	}
-
-	// Decode Thor transaction from bytes
-	thorBytes := fields[0].([]byte)
-	var thorTx thorTx.Transaction
-	stream := rlp.NewStream(bytes.NewReader(thorBytes), 0)
-	if err := thorTx.DecodeRLP(stream); err != nil {
-		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
-	}
-
-	origin := fields[1].([]byte)
-	delegator := fields[2].([]byte)
-	signature := fields[3].([]byte)
-
-	return &MeshTransaction{
-		Transaction: &thorTx,
-		Origin:      origin,
-		Delegator:   delegator,
-		Signature:   signature,
-	}, nil
+	return meshTx, nil
 }
 
 // ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx

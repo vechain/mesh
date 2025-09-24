@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/tx"
 )
 
 func TestNewVeChainClient(t *testing.T) {
@@ -72,8 +73,7 @@ func TestVeChainClient_SubmitTransaction(t *testing.T) {
 	client := NewVeChainClient("http://localhost:8669")
 
 	// Test with a valid transaction
-	txData := []byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef}
-	_, err := client.SubmitTransaction(txData)
+	_, err := client.SubmitTransaction(&tx.Transaction{})
 	if err == nil {
 		t.Errorf("SubmitTransaction() should return error when no Thor node is available")
 	}
