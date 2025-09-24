@@ -51,16 +51,16 @@ func (e *MeshTransactionEncoder) EncodeUnsignedTransaction(vechainTx *thorTx.Tra
 	return rlp.EncodeToBytes(meshTx)
 }
 
-// decodeSimplifiedMeshTransaction decodes a simplified Mesh transaction format
-func (e *MeshTransactionEncoder) decodeSimplifiedMeshTransaction(data []byte) (*MeshTransaction, error) {
+// decodeMeshTransaction decodes a Mesh transaction format
+func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte) (*MeshTransaction, error) {
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
 	}
 
-	// Simplified format should have 3 fields: [thorTransaction, origin, delegator]
+	// This format should have 3 fields: [thorTransaction, origin, delegator]
 	if len(fields) != 3 {
-		return nil, fmt.Errorf("invalid simplified Mesh transaction: expected 3 fields, got %d", len(fields))
+		return nil, fmt.Errorf("invalid Mesh transaction: expected 3 fields, got %d", len(fields))
 	}
 
 	// Decode Thor transaction from bytes
@@ -83,12 +83,11 @@ func (e *MeshTransactionEncoder) decodeSimplifiedMeshTransaction(data []byte) (*
 
 // DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
-	// Try new simplified format first: [thorTransaction, origin, delegator]
-	if meshTx, err := e.decodeSimplifiedMeshTransaction(data); err == nil {
+	if meshTx, err := e.decodeMeshTransaction(data); err == nil {
 		return meshTx, nil
 	}
 
-	return nil, fmt.Errorf("failed to decode as simplified Mesh transaction")
+	return nil, fmt.Errorf("failed to decode an unsigned Mesh transaction")
 }
 
 // DecodeSignedTransaction decodes a signed transaction from Mesh RLP format
@@ -97,7 +96,7 @@ func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTran
 		return meshTx, nil
 	}
 
-	return nil, fmt.Errorf("failed to decode as simplified signed Mesh transaction")
+	return nil, fmt.Errorf("failed to decode a signed Mesh transaction")
 }
 
 // EncodeSignedTransaction encodes a signed Mesh transaction
@@ -126,9 +125,9 @@ func (e *MeshTransactionEncoder) decodeSignedMeshTransaction(data []byte) (*Mesh
 		return nil, err
 	}
 
-	// Simplified signed format should have 4 fields: [thorTransaction, origin, delegator, signature]
+	// This signed format should have 4 fields: [thorTransaction, origin, delegator, signature]
 	if len(fields) != 4 {
-		return nil, fmt.Errorf("invalid simplified signed Mesh transaction: expected 4 fields, got %d", len(fields))
+		return nil, fmt.Errorf("invalid signed Mesh transaction: expected 4 fields, got %d", len(fields))
 	}
 
 	// Decode Thor transaction from bytes
