@@ -55,36 +55,8 @@ func (e *MeshTransactionEncoder) EncodeTransaction(meshTx *MeshTransaction) ([]b
 	return rlp.EncodeToBytes(meshTxRLP)
 }
 
-// decodeMeshTransaction decodes a Mesh transaction format
-func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte, signed bool) (*MeshTransaction, error) {
-	if signed {
-		// For signed transactions, decode directly as Thor transaction
-		var thorTx thorTx.Transaction
-		if err := thorTx.UnmarshalBinary(data); err != nil {
-			return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
-		}
-
-		originAddr, err := thorTx.Origin()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get origin: %w", err)
-		}
-		delegatorAddr, err := thorTx.Delegator()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get delegator: %w", err)
-		}
-
-		var delegatorBytes []byte
-		if delegatorAddr != nil {
-			delegatorBytes = delegatorAddr.Bytes()
-		}
-
-		return &MeshTransaction{
-			Transaction: &thorTx,
-			Origin:      originAddr.Bytes(),
-			Delegator:   delegatorBytes,
-		}, nil
-	}
-
+// DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
+func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
 	// For unsigned transactions, decode as RLP list: [thorTransaction, origin, delegator]
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
@@ -112,24 +84,33 @@ func (e *MeshTransactionEncoder) decodeMeshTransaction(data []byte, signed bool)
 	}, nil
 }
 
-// DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
-	meshTx, err := e.decodeMeshTransaction(data, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return meshTx, nil
-}
-
 // DecodeSignedTransaction decodes a signed transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTransaction, error) {
-	meshTx, err := e.decodeMeshTransaction(data, true)
-	if err != nil {
-		return nil, err
+	// For signed transactions, decode directly as Thor transaction
+	var thorTx thorTx.Transaction
+	if err := thorTx.UnmarshalBinary(data); err != nil {
+		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
 	}
 
-	return meshTx, nil
+	originAddr, err := thorTx.Origin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get origin: %w", err)
+	}
+	delegatorAddr, err := thorTx.Delegator()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get delegator: %w", err)
+	}
+
+	var delegatorBytes []byte
+	if delegatorAddr != nil {
+		delegatorBytes = delegatorAddr.Bytes()
+	}
+
+	return &MeshTransaction{
+		Transaction: &thorTx,
+		Origin:      originAddr.Bytes(),
+		Delegator:   delegatorBytes,
+	}, nil
 }
 
 // parseTransactionOperationsFromClauses is a helper function that parses operations from clauses
