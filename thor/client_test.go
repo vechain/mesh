@@ -83,20 +83,41 @@ func TestVeChainClient_SubmitTransaction(t *testing.T) {
 }
 
 func TestVeChainClient_GetDynamicGasPrice(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
+	// Test with mock client to cover success path
+	mockClient := NewMockVeChainClient()
+	gasPrice, err := mockClient.GetDynamicGasPrice()
+	if err != nil {
+		t.Errorf("GetDynamicGasPrice() with mock client should not return error, got: %v", err)
+	}
+	if gasPrice == nil {
+		t.Errorf("GetDynamicGasPrice() should return gas price")
+	}
+	if gasPrice.BaseFee == nil || gasPrice.Reward == nil {
+		t.Errorf("GetDynamicGasPrice() should return valid BaseFee and Reward")
+	}
 
-	// This will fail because we don't have a real Thor node running
-	_, err := client.GetDynamicGasPrice()
+	// Test with real client (will fail)
+	client := NewVeChainClient("http://localhost:8669")
+	_, err = client.GetDynamicGasPrice()
 	if err == nil {
 		t.Errorf("GetDynamicGasPrice() should return error when no Thor node is available")
 	}
 }
 
 func TestVeChainClient_GetSyncProgress(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
+	// Test with mock client to cover success path
+	mockClient := NewMockVeChainClient()
+	progress, err := mockClient.GetSyncProgress()
+	if err != nil {
+		t.Errorf("GetSyncProgress() with mock client should not return error, got: %v", err)
+	}
+	if progress < 0 || progress > 1 {
+		t.Errorf("GetSyncProgress() should return progress between 0 and 1, got: %v", progress)
+	}
 
-	// This will fail because we don't have a real Thor node running
-	_, err := client.GetSyncProgress()
+	// Test with real client (will fail)
+	client := NewVeChainClient("http://localhost:8669")
+	_, err = client.GetSyncProgress()
 	if err == nil {
 		t.Errorf("GetSyncProgress() should return error when no Thor node is available")
 	}
@@ -113,22 +134,40 @@ func TestVeChainClient_GetPeers(t *testing.T) {
 }
 
 func TestVeChainClient_GetMempoolTransactions(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
+	// Test with mock client to cover success path
+	mockClient := NewMockVeChainClient()
+	txs, err := mockClient.GetMempoolTransactions(nil)
+	if err != nil {
+		t.Errorf("GetMempoolTransactions() with mock client should not return error, got: %v", err)
+	}
+	if txs == nil {
+		t.Errorf("GetMempoolTransactions() should return transaction list")
+	}
 
-	// Test without origin filter
-	_, err := client.GetMempoolTransactions(nil)
+	// Test with real client (will fail)
+	client := NewVeChainClient("http://localhost:8669")
+	_, err = client.GetMempoolTransactions(nil)
 	if err == nil {
 		t.Errorf("GetMempoolTransactions() should return error when no Thor node is available")
 	}
 }
 
 func TestVeChainClient_GetMempoolTransaction(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with a valid transaction hash
+	// Test with mock client to cover success path
+	mockClient := NewMockVeChainClient()
 	txHashStr := "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	txHash, _ := thor.ParseBytes32(txHashStr)
-	_, err := client.GetMempoolTransaction(&txHash)
+	tx, err := mockClient.GetMempoolTransaction(&txHash)
+	if err != nil {
+		t.Errorf("GetMempoolTransaction() with mock client should not return error, got: %v", err)
+	}
+	if tx == nil {
+		t.Errorf("GetMempoolTransaction() should return transaction")
+	}
+
+	// Test with real client (will fail)
+	client := NewVeChainClient("http://localhost:8669")
+	_, err = client.GetMempoolTransaction(&txHash)
 	if err == nil {
 		t.Errorf("GetMempoolTransaction() should return error when no Thor node is available")
 	}

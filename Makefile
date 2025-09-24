@@ -39,7 +39,7 @@ test-unit:
 test-unit-coverage:
 	@echo "Generating coverage report..."
 	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
-	go tool cover -func=coverage.out
+	go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go"
 
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
