@@ -38,6 +38,30 @@ func createTestVeChainTransaction() *thorTx.Transaction {
 	return builder.Build()
 }
 
+func createTestVeChainDynamicTransaction() *thorTx.Transaction {
+	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
+	builder.ChainTag(0x27)
+	blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+	builder.BlockRef(blockRef)
+	builder.Expiration(720)
+	builder.Gas(21000)
+	builder.MaxFeePerGas(big.NewInt(1000000000000000000))        // 1 VET
+	builder.MaxPriorityFeePerGas(big.NewInt(100000000000000000)) // 0.1 VET
+	builder.Nonce(0x1234567890abcdef)
+
+	// Add a clause
+	toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+	value := new(big.Int)
+	value.SetString("1000000000000000000", 10) // 1 VET
+
+	thorClause := thorTx.NewClause(&toAddr)
+	thorClause = thorClause.WithValue(value)
+	thorClause = thorClause.WithData([]byte{})
+	builder.Clause(thorClause)
+
+	return builder.Build()
+}
+
 func createTestMeshTransaction() *MeshTransaction {
 	vechainTx := createTestVeChainTransaction()
 	return &MeshTransaction{
@@ -84,28 +108,7 @@ func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Legacy(t *testing.T) {
 func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Dynamic(t *testing.T) {
 	encoder := NewMeshTransactionEncoder()
 
-	// Create dynamic transaction
-	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	builder.ChainTag(0x27)
-	blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
-	builder.BlockRef(blockRef)
-	builder.Expiration(720)
-	builder.Gas(21000)
-	builder.MaxFeePerGas(big.NewInt(1000000000000000000))
-	builder.MaxPriorityFeePerGas(big.NewInt(1000000000000000000))
-	builder.Nonce(0x1234567890abcdef)
-
-	// Add a clause
-	toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
-	value := new(big.Int)
-	value.SetString("1000000000000000000", 10) // 1 VET
-
-	thorClause := thorTx.NewClause(&toAddr)
-	thorClause = thorClause.WithValue(value)
-	thorClause = thorClause.WithData([]byte{})
-	builder.Clause(thorClause)
-
-	vechainTx := builder.Build()
+	vechainTx := createTestVeChainDynamicTransaction()
 	origin := []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f}
 	delegator := []byte{}
 
@@ -145,6 +148,32 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_ValidData(t *testing.T
 	}
 }
 
+func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) {
+	encoder := NewMeshTransactionEncoder()
+
+	// First encode a dynamic transaction
+	vechainTx := createTestVeChainDynamicTransaction()
+	origin := []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f}
+	delegator := []byte{}
+
+	encoded, err := encoder.EncodeUnsignedTransaction(vechainTx, origin, delegator)
+	if err != nil {
+		t.Fatalf("EncodeUnsignedTransaction() error = %v", err)
+	}
+
+	// Then decode it
+	decoded, err := encoder.DecodeUnsignedTransaction(encoded)
+	if err != nil {
+		t.Errorf("DecodeUnsignedTransaction() error = %v", err)
+	}
+	if decoded == nil {
+		t.Errorf("DecodeUnsignedTransaction() returned nil")
+	}
+	if decoded.Transaction == nil {
+		t.Errorf("DecodeUnsignedTransaction() returned nil Transaction")
+	}
+}
+
 func TestMeshTransactionEncoder_DecodeUnsignedTransaction_InvalidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder()
 
@@ -162,6 +191,36 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_ValidData(t *testing.T) 
 
 	// First encode a signed transaction
 	meshTx := createTestMeshTransaction()
+	encoded, err := encoder.EncodeSignedTransaction(meshTx)
+	if err != nil {
+		t.Fatalf("EncodeSignedTransaction() error = %v", err)
+	}
+
+	// Then decode it
+	decoded, err := encoder.DecodeSignedTransaction(encoded)
+	if err != nil {
+		t.Errorf("DecodeSignedTransaction() error = %v", err)
+	}
+	if decoded == nil {
+		t.Errorf("DecodeSignedTransaction() returned nil")
+	}
+	if decoded.Transaction == nil {
+		t.Errorf("DecodeSignedTransaction() returned nil Transaction")
+	}
+}
+
+func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
+	encoder := NewMeshTransactionEncoder()
+
+	// Create a dynamic mesh transaction
+	vechainTx := createTestVeChainDynamicTransaction()
+	meshTx := &MeshTransaction{
+		Transaction: vechainTx,
+		Origin:      []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+		Delegator:   []byte{},
+		Signature:   []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65},
+	}
+
 	encoded, err := encoder.EncodeSignedTransaction(meshTx)
 	if err != nil {
 		t.Fatalf("EncodeSignedTransaction() error = %v", err)
