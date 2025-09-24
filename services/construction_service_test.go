@@ -25,15 +25,16 @@ func TestNewConstructionService(t *testing.T) {
 
 	if service == nil {
 		t.Errorf("NewConstructionService() returned nil")
-	}
-	if service.vechainClient != mockClient {
-		t.Errorf("NewConstructionService() client = %v, want %v", service.vechainClient, mockClient)
-	}
-	if service.config != config {
-		t.Errorf("NewConstructionService() config = %v, want %v", service.config, config)
-	}
-	if service.encoder == nil {
-		t.Errorf("NewConstructionService() encoder is nil")
+	} else {
+		if service.vechainClient != mockClient {
+			t.Errorf("NewConstructionService() client = %v, want %v", service.vechainClient, mockClient)
+		}
+		if service.config != config {
+			t.Errorf("NewConstructionService() config = %v, want %v", service.config, config)
+		}
+		if service.encoder == nil {
+			t.Errorf("NewConstructionService() encoder is nil")
+		}
 	}
 }
 
@@ -164,7 +165,7 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 				},
 			},
 		},
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"transactionType": "legacy",
 		},
 	}
@@ -234,7 +235,7 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 			Blockchain: "vechainthor",
 			Network:    "test",
 		},
-		Options: map[string]interface{}{
+		Options: map[string]any{
 			"transactionType": "legacy",
 		},
 	}
@@ -283,7 +284,7 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 			Blockchain: "vechainthor",
 			Network:    "test",
 		},
-		Options: map[string]interface{}{
+		Options: map[string]any{
 			"transactionType": "dynamic",
 		},
 	}
@@ -375,7 +376,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 				CurveType: "secp256k1",
 			},
 		},
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"transactionType": "legacy",
 			"blockRef":        "0x0000000000000000",
 			"chainTag":        float64(1),
@@ -444,14 +445,13 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 	}
 	service := NewConstructionService(mockClient, config)
 
-	// Create valid request
 	request := types.ConstructionParseRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: "vechainthor",
 			Network:    "test",
 		},
 		Signed:      false,
-		Transaction: "f8a001808252089400000000000000000000000000000000456e6572677980b844a9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a764000080808080",
+		Transaction: "0xf85081e486039791786ecd81b4dad99416277a1ff38678291c41d1820957c78bb5da59ce82271080828ca088e6e47234f992efad94c05c334533c673582616ac2bf404b6c55efa1087808609184e72a00080",
 	}
 
 	requestBody, _ := json.Marshal(request)
@@ -459,11 +459,9 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Call ConstructionParse
 	service.ConstructionParse(w, req)
 
-	// Check response - this will likely fail but covers more code paths
-	if w.Code != http.StatusOK && w.Code != http.StatusBadRequest && w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusOK {
 		t.Errorf("ConstructionParse() unexpected status code = %v", w.Code)
 	}
 }
@@ -478,15 +476,12 @@ func TestConstructionService_ConstructionCombine_InvalidRequestBody(t *testing.T
 	}
 	service := NewConstructionService(mockClient, config)
 
-	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Call ConstructionCombine
 	service.ConstructionCombine(w, req)
 
-	// Check response
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("ConstructionCombine() status code = %v, want %v", w.Code, http.StatusBadRequest)
 	}
@@ -496,22 +491,34 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      "solo",
 		Mode:         "online",
 		BaseGasPrice: "1000000000000000000", // 1 VTHO
 	}
 	service := NewConstructionService(mockClient, config)
 
-	// Create valid request
+	// Create valid request with the provided values
 	request := types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: "vechainthor",
-			Network:    "test",
+			Network:    "solo",
 		},
-		UnsignedTransaction: "f8a001808252089400000000000000000000000000000000456e6572677980b844a9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a764000080808080",
+		UnsignedTransaction: "0xf85281f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080",
 		Signatures: []*types.Signature{
 			{
-				Bytes: []byte{0x1, 0x2, 0x3, 0x4},
+				SigningPayload: &types.SigningPayload{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					},
+					Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
+					SignatureType: "ecdsa_recovery",
+				},
+				PublicKey: &types.PublicKey{
+					Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+					CurveType: "secp256k1",
+				},
+				SignatureType: "ecdsa_recovery",
+				Bytes:         []byte{0x03, 0xf8, 0xa1, 0xca, 0x4d, 0xd3, 0x9d, 0x99, 0xab, 0x54, 0x97, 0xf9, 0x4b, 0x8b, 0x79, 0x11, 0x34, 0x0c, 0xea, 0xc7, 0x18, 0x20, 0x19, 0xb7, 0xbe, 0x9d, 0x81, 0xf0, 0x43, 0xc7, 0x43, 0xf9, 0x5a, 0x69, 0x43, 0x1d, 0x71, 0x5a, 0xde, 0x0c, 0x9b, 0x74, 0x1f, 0x7c, 0x83, 0xd9, 0x57, 0x2a, 0xd8, 0x42, 0x71, 0xb4, 0xf2, 0xec, 0xb6, 0x2c, 0x8f, 0x49, 0xdd, 0xfa, 0x3e, 0x8c, 0x3a, 0xea, 0x01},
 			},
 		},
 	}
@@ -521,12 +528,19 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Call ConstructionCombine
 	service.ConstructionCombine(w, req)
 
-	// Check response - this will likely fail but covers more code paths
-	if w.Code != http.StatusOK && w.Code != http.StatusBadRequest && w.Code != http.StatusInternalServerError {
-		t.Errorf("ConstructionCombine() unexpected status code = %v", w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("ConstructionCombine() expected status code 200, got %v. Response: %s", w.Code, w.Body.String())
+	}
+
+	// Verify response structure
+	var response types.ConstructionCombineResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+	if response.SignedTransaction == "" {
+		t.Errorf("Expected signed transaction in response")
 	}
 }
 
@@ -564,13 +578,12 @@ func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
 	}
 	service := NewConstructionService(mockClient, config)
 
-	// Create valid request
 	request := types.ConstructionHashRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: "vechainthor",
 			Network:    "test",
 		},
-		SignedTransaction: "f8a001808252089400000000000000000000000000000000456e6572677980b844a9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a764000080808080",
+		SignedTransaction: "0xf89581f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080b84103f8a1ca4dd39d99ab5497f94b8b7911340ceac7182019b7be9d81f043c743f95a69431d715ade0c9b741f7c83d9572ad84271b4f2ecb62c8f49ddfa3e8c3aea01",
 	}
 
 	requestBody, _ := json.Marshal(request)
@@ -578,11 +591,9 @@ func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Call ConstructionHash
 	service.ConstructionHash(w, req)
 
-	// Check response - this will likely fail but covers more code paths
-	if w.Code != http.StatusOK && w.Code != http.StatusBadRequest && w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusOK {
 		t.Errorf("ConstructionHash() unexpected status code = %v", w.Code)
 	}
 }
@@ -615,7 +626,7 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      "solo",
 		Mode:         "online",
 		BaseGasPrice: "1000000000000000000", // 1 VTHO
 	}
@@ -625,9 +636,9 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 	request := types.ConstructionSubmitRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: "vechainthor",
-			Network:    "test",
+			Network:    "solo",
 		},
-		SignedTransaction: "f8a001808252089400000000000000000000000000000000456e6572677980b844a9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a764000080808080",
+		SignedTransaction: "0xf89581f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080b84103f8a1ca4dd39d99ab5497f94b8b7911340ceac7182019b7be9d81f043c743f95a69431d715ade0c9b741f7c83d9572ad84271b4f2ecb62c8f49ddfa3e8c3aea01",
 	}
 
 	requestBody, _ := json.Marshal(request)
@@ -639,7 +650,7 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 	service.ConstructionSubmit(w, req)
 
 	// Check response - this will likely fail but covers more code paths
-	if w.Code != http.StatusOK && w.Code != http.StatusBadRequest && w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusOK {
 		t.Errorf("ConstructionSubmit() unexpected status code = %v", w.Code)
 	}
 }

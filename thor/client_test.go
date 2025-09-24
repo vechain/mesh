@@ -10,11 +10,8 @@ func TestNewVeChainClient(t *testing.T) {
 	baseURL := "http://localhost:8669"
 	client := NewVeChainClient(baseURL)
 
-	if client == nil {
+	if client == nil || client.client == nil {
 		t.Errorf("NewVeChainClient() returned nil")
-	}
-	if client.client == nil {
-		t.Errorf("NewVeChainClient() client is nil")
 	}
 }
 
@@ -89,11 +86,8 @@ func TestVeChainClient_GetDynamicGasPrice(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetDynamicGasPrice() with mock client should not return error, got: %v", err)
 	}
-	if gasPrice == nil {
-		t.Errorf("GetDynamicGasPrice() should return gas price")
-	}
-	if gasPrice.BaseFee == nil || gasPrice.Reward == nil {
-		t.Errorf("GetDynamicGasPrice() should return valid BaseFee and Reward")
+	if gasPrice == nil || gasPrice.BaseFee == nil || gasPrice.Reward == nil {
+		t.Errorf("GetDynamicGasPrice() should return gas price or BaseFee and Reward are nil")
 	}
 
 	// Test with real client (will fail)

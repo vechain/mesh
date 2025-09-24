@@ -115,7 +115,7 @@ func TestGenerateNonce(t *testing.T) {
 	// Test multiple calls to ensure randomness
 	nonces := make(map[string]bool)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		nonce, err := GenerateNonce()
 		if err != nil {
 			t.Errorf("GenerateNonce() error = %v", err)
@@ -531,11 +531,8 @@ func TestOperationTypeConstants(t *testing.T) {
 func TestInt64Ptr(t *testing.T) {
 	value := int64(42)
 	ptr := Int64Ptr(value)
-	if ptr == nil {
-		t.Errorf("Int64Ptr() returned nil")
-	}
-	if *ptr != value {
-		t.Errorf("Int64Ptr() = %v, want %v", *ptr, value)
+	if ptr == nil || *ptr != value {
+		t.Errorf("Int64Ptr() returned nil or value mismatch")
 	}
 }
 
@@ -552,11 +549,8 @@ func TestBoolPtr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ptr := BoolPtr(tt.input)
-			if ptr == nil {
-				t.Errorf("BoolPtr() returned nil")
-			}
-			if *ptr != tt.expected {
-				t.Errorf("BoolPtr() = %v, want %v", *ptr, tt.expected)
+			if ptr == nil || *ptr != tt.expected {
+				t.Errorf("BoolPtr() returned nil or value mismatch")
 			}
 		})
 	}

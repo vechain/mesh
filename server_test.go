@@ -26,24 +26,25 @@ func TestNewVeChainMeshServer(t *testing.T) {
 
 	if server == nil {
 		t.Errorf("NewVeChainMeshServer() returned nil")
-	}
-	if server.router == nil {
-		t.Errorf("NewVeChainMeshServer() router is nil")
-	}
-	if server.networkService == nil {
-		t.Errorf("NewVeChainMeshServer() networkService is nil")
-	}
-	if server.accountService == nil {
-		t.Errorf("NewVeChainMeshServer() accountService is nil")
-	}
-	if server.constructionService == nil {
-		t.Errorf("NewVeChainMeshServer() constructionService is nil")
-	}
-	if server.blockService == nil {
-		t.Errorf("NewVeChainMeshServer() blockService is nil")
-	}
-	if server.mempoolService == nil {
-		t.Errorf("NewVeChainMeshServer() mempoolService is nil")
+	} else {
+		if server.router == nil {
+			t.Errorf("NewVeChainMeshServer() router is nil")
+		}
+		if server.networkService == nil {
+			t.Errorf("NewVeChainMeshServer() networkService is nil")
+		}
+		if server.accountService == nil {
+			t.Errorf("NewVeChainMeshServer() accountService is nil")
+		}
+		if server.constructionService == nil {
+			t.Errorf("NewVeChainMeshServer() constructionService is nil")
+		}
+		if server.blockService == nil {
+			t.Errorf("NewVeChainMeshServer() blockService is nil")
+		}
+		if server.mempoolService == nil {
+			t.Errorf("NewVeChainMeshServer() mempoolService is nil")
+		}
 	}
 }
 
@@ -69,7 +70,7 @@ func TestVeChainMeshServer_HealthCheck(t *testing.T) {
 	}
 
 	// Check response body
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}

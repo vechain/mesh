@@ -14,7 +14,11 @@ func TestNewConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
 
 	// Go up one directory to project root
 	if err := os.Chdir(".."); err != nil {
@@ -65,7 +69,11 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
 
 	// Go up one directory to project root
 	if err := os.Chdir(".."); err != nil {
@@ -73,13 +81,31 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	}
 
 	// Set environment variables
-	os.Setenv("MODE", "offline")
-	os.Setenv("NETWORK", "test")
-	os.Setenv("PORT", "9090")
+	err = os.Setenv("MODE", "offline")
+	if err != nil {
+		t.Fatalf("Failed to set MODE environment variable: %v", err)
+	}
+	err = os.Setenv("NETWORK", "test")
+	if err != nil {
+		t.Fatalf("Failed to set NETWORK environment variable: %v", err)
+	}
+	err = os.Setenv("PORT", "9090")
+	if err != nil {
+		t.Fatalf("Failed to set PORT environment variable: %v", err)
+	}
 	defer func() {
-		os.Unsetenv("MODE")
-		os.Unsetenv("NETWORK")
-		os.Unsetenv("PORT")
+		err = os.Unsetenv("MODE")
+		if err != nil {
+			t.Fatalf("Failed to unset MODE environment variable: %v", err)
+		}
+		err = os.Unsetenv("NETWORK")
+		if err != nil {
+			t.Fatalf("Failed to unset NETWORK environment variable: %v", err)
+		}
+		err = os.Unsetenv("PORT")
+		if err != nil {
+			t.Fatalf("Failed to unset PORT environment variable: %v", err)
+		}
 	}()
 
 	// Test config loading with environment variables
@@ -292,13 +318,31 @@ func TestIsOnlineMode(t *testing.T) {
 
 func TestLoadFromEnv(t *testing.T) {
 	// Set environment variables
-	os.Setenv("MODE", "offline")
-	os.Setenv("NETWORK", "test")
-	os.Setenv("PORT", "9090")
+	err := os.Setenv("MODE", "offline")
+	if err != nil {
+		t.Fatalf("Failed to set MODE environment variable: %v", err)
+	}
+	err = os.Setenv("NETWORK", "test")
+	if err != nil {
+		t.Fatalf("Failed to set NETWORK environment variable: %v", err)
+	}
+	err = os.Setenv("PORT", "9090")
+	if err != nil {
+		t.Fatalf("Failed to set PORT environment variable: %v", err)
+	}
 	defer func() {
-		os.Unsetenv("MODE")
-		os.Unsetenv("NETWORK")
-		os.Unsetenv("PORT")
+		err = os.Unsetenv("MODE")
+		if err != nil {
+			t.Fatalf("Failed to unset MODE environment variable: %v", err)
+		}
+		err = os.Unsetenv("NETWORK")
+		if err != nil {
+			t.Fatalf("Failed to unset NETWORK environment variable: %v", err)
+		}
+		err = os.Unsetenv("PORT")
+		if err != nil {
+			t.Fatalf("Failed to unset PORT environment variable: %v", err)
+		}
 	}()
 
 	config := &Config{
@@ -323,8 +367,16 @@ func TestLoadFromEnv(t *testing.T) {
 
 func TestLoadFromEnvWithInvalidPort(t *testing.T) {
 	// Set invalid port environment variable
-	os.Setenv("PORT", "invalid")
-	defer os.Unsetenv("PORT")
+	err := os.Setenv("PORT", "invalid")
+	if err != nil {
+		t.Fatalf("Failed to set PORT environment variable: %v", err)
+	}
+	defer func() {
+		err = os.Unsetenv("PORT")
+		if err != nil {
+			t.Fatalf("Failed to unset PORT environment variable: %v", err)
+		}
+	}()
 
 	config := &Config{Port: 8080}
 	config.loadFromEnv()
@@ -343,7 +395,11 @@ func TestNewConfigWithMissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
 
 	if err := os.Chdir(tempDir); err != nil {
 		t.Fatalf("Failed to change to temp directory: %v", err)
@@ -371,7 +427,11 @@ func TestNewConfigWithInvalidJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
 
 	if err := os.Chdir(tempDir); err != nil {
 		t.Fatalf("Failed to change to temp directory: %v", err)

@@ -20,12 +20,13 @@ func TestNewValidationMiddleware(t *testing.T) {
 
 	if middleware == nil {
 		t.Errorf("NewValidationMiddleware() returned nil")
-	}
-	if middleware.networkIdentifier != networkIdentifier {
-		t.Errorf("NewValidationMiddleware() networkIdentifier = %v, want %v", middleware.networkIdentifier, networkIdentifier)
-	}
-	if middleware.runMode != runMode {
-		t.Errorf("NewValidationMiddleware() runMode = %v, want %v", middleware.runMode, runMode)
+	} else {
+		if middleware.networkIdentifier != networkIdentifier {
+			t.Errorf("NewValidationMiddleware() networkIdentifier = %v, want %v", middleware.networkIdentifier, networkIdentifier)
+		}
+		if middleware.runMode != runMode {
+			t.Errorf("NewValidationMiddleware() runMode = %v, want %v", middleware.runMode, runMode)
+		}
 	}
 }
 

@@ -15,11 +15,8 @@ func TestNewBlockService(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewBlockService(mockClient)
 
-	if service == nil {
-		t.Errorf("NewBlockService() returned nil")
-	}
-	if service.vechainClient != mockClient {
-		t.Errorf("NewBlockService() client = %v, want %v", service.vechainClient, mockClient)
+	if service == nil || service.vechainClient != mockClient {
+		t.Errorf("NewBlockService() returned nil or client mismatch")
 	}
 }
 
