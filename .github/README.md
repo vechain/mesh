@@ -6,7 +6,7 @@
 > - Implement search endpoints
 > - Implement events endpoints
 > - Review if we can leverage better Thor RLP's encoding/decoding
-- Codecov integration (GHA)
+> - Codecov integration (GHA)
 > - Use mesh-cli to validate endpoints
 >
 > Expect more changes and improvements in upcoming releases.
