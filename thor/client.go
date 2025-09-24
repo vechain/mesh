@@ -15,7 +15,7 @@ import (
 	"github.com/vechain/thor/v2/tx"
 )
 
-// VeChainClientInterface defines the common interface for VeChainClient and MockVeChainClient
+// VeChainClientInterface defines a common interface
 type VeChainClientInterface interface {
 	GetBestBlock() (*api.JSONExpandedBlock, error)
 	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
@@ -31,13 +31,9 @@ type VeChainClientInterface interface {
 	GetMempoolStatus() (*api.Status, error)
 	CallContract(contractAddress, callData string) (string, error)
 }
-
-// VeChainClient handles communication with VeChain RPC
 type VeChainClient struct {
 	client *thorclient.Client
 }
-
-// Use native Thor types instead of duplicating them
 
 // NewVeChainClient creates a new VeChain client
 func NewVeChainClient(baseURL string) *VeChainClient {
