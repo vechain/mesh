@@ -527,3 +527,125 @@ func TestOperationTypeConstants(t *testing.T) {
 		}
 	}
 }
+
+func TestInt64Ptr(t *testing.T) {
+	value := int64(42)
+	ptr := Int64Ptr(value)
+	if ptr == nil {
+		t.Errorf("Int64Ptr() returned nil")
+	}
+	if *ptr != value {
+		t.Errorf("Int64Ptr() = %v, want %v", *ptr, value)
+	}
+}
+
+func TestBoolPtr(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    bool
+		expected bool
+	}{
+		{"true", true, true},
+		{"false", false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ptr := BoolPtr(tt.input)
+			if ptr == nil {
+				t.Errorf("BoolPtr() returned nil")
+			}
+			if *ptr != tt.expected {
+				t.Errorf("BoolPtr() = %v, want %v", *ptr, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetTargetIndex(t *testing.T) {
+	tests := []struct {
+		name       string
+		localIndex int64
+		peers      []Peer
+		expected   int64
+	}{
+		{
+			name:       "no peers",
+			localIndex: 100,
+			peers:      []Peer{},
+			expected:   100,
+		},
+		{
+			name:       "peers with lower block numbers",
+			localIndex: 100,
+			peers: []Peer{
+				{PeerID: "peer1", BestBlockID: "0000000000000050"}, // 80 in decimal
+				{PeerID: "peer2", BestBlockID: "0000000000000060"}, // 96 in decimal
+			},
+			expected: 100,
+		},
+		{
+			name:       "peers with higher block numbers",
+			localIndex: 100,
+			peers: []Peer{
+				{PeerID: "peer1", BestBlockID: "0000000000000080"}, // 128 in decimal
+				{PeerID: "peer2", BestBlockID: "00000000000000A0"}, // 160 in decimal
+			},
+			expected: 160,
+		},
+		{
+			name:       "peers with invalid block IDs",
+			localIndex: 100,
+			peers: []Peer{
+				{PeerID: "peer1", BestBlockID: "invalid"},
+				{PeerID: "peer2", BestBlockID: "short"},
+			},
+			expected: 100,
+		},
+		{
+			name:       "mixed valid and invalid peers",
+			localIndex: 100,
+			peers: []Peer{
+				{PeerID: "peer1", BestBlockID: "invalid"},
+				{PeerID: "peer2", BestBlockID: "0000000000000080"}, // 128 in decimal
+			},
+			expected: 128,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetTargetIndex(tt.localIndex, tt.peers)
+			if result != tt.expected {
+				t.Errorf("GetTargetIndex() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestComputeAddress(t *testing.T) {
+	// Test with a valid public key
+	validPubKey := &types.PublicKey{
+		Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+		CurveType: "secp256k1",
+	}
+
+	address, err := ComputeAddress(validPubKey)
+	if err != nil {
+		t.Errorf("ComputeAddress() error = %v", err)
+	}
+	if address != "0xf077b491b355e64048ce21e3a6fc4751eeea77fa" {
+		t.Errorf("ComputeAddress() = %v, want 0xf077b491b355e64048ce21e3a6fc4751eeea77fa", address)
+	}
+
+	// Test with invalid public key
+	invalidPubKey := &types.PublicKey{
+		Bytes:     []byte{0x00}, // Invalid public key
+		CurveType: "secp256k1",
+	}
+
+	_, err = ComputeAddress(invalidPubKey)
+	if err == nil {
+		t.Errorf("ComputeAddress() with invalid key should return error")
+	}
+}
