@@ -16,6 +16,52 @@ import (
 	thorTx "github.com/vechain/thor/v2/tx"
 )
 
+func createMockConstructionService() *ConstructionService {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	return NewConstructionService(mockClient, config)
+}
+
+func createTestPublicKey() *types.PublicKey {
+	return &types.PublicKey{
+		Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+		CurveType: "secp256k1",
+	}
+}
+
+func createTestNetworkIdentifier(network string) *types.NetworkIdentifier {
+	return &types.NetworkIdentifier{
+		Blockchain: "vechainthor",
+		Network:    network,
+	}
+}
+
+func createTestOperation(accountAddress, amount string) *types.Operation {
+	return &types.Operation{
+		OperationIdentifier: &types.OperationIdentifier{Index: 0},
+		Type:                meshutils.OperationTypeTransfer,
+		Account: &types.AccountIdentifier{
+			Address: accountAddress,
+		},
+		Amount: &types.Amount{
+			Value:    amount,
+			Currency: meshutils.VETCurrency,
+		},
+	}
+}
+
+func makeHTTPRequest(method, url string, body []byte) (*httptest.ResponseRecorder, *http.Request) {
+	req := httptest.NewRequest(method, url, bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	return w, req
+}
+
 func TestNewConstructionService(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
@@ -42,19 +88,10 @@ func TestNewConstructionService(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionDerive_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/derive", bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+	w, req := makeHTTPRequest("POST", "/construction/derive", []byte("invalid json"))
 
 	// Call ConstructionDerive
 	service.ConstructionDerive(w, req)
@@ -66,31 +103,16 @@ func TestConstructionService_ConstructionDerive_InvalidRequestBody(t *testing.T)
 }
 
 func TestConstructionService_ConstructionDerive_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request
 	request := types.ConstructionDeriveRequest{
-		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
-			Network:    "test",
-		},
-		PublicKey: &types.PublicKey{
-			Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
-			CurveType: "secp256k1",
-		},
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		PublicKey:         createTestPublicKey(),
 	}
 
 	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/derive", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+	w, req := makeHTTPRequest("POST", "/construction/derive", requestBody)
 
 	// Call ConstructionDerive
 	service.ConstructionDerive(w, req)
@@ -116,19 +138,10 @@ func TestConstructionService_ConstructionDerive_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionPreprocess_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/preprocess", bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+	w, req := makeHTTPRequest("POST", "/construction/preprocess", []byte("invalid json"))
 
 	// Call ConstructionPreprocess
 	service.ConstructionPreprocess(w, req)
@@ -140,33 +153,13 @@ func TestConstructionService_ConstructionPreprocess_InvalidRequestBody(t *testin
 }
 
 func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request
 	request := types.ConstructionPreprocessRequest{
-		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
-			Network:    "test",
-		},
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
 		Operations: []*types.Operation{
-			{
-				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                meshutils.OperationTypeTransfer,
-				Account: &types.AccountIdentifier{
-					Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
-				},
-				Amount: &types.Amount{
-					Value:    "1000000000000000000",
-					Currency: meshutils.VETCurrency,
-				},
-			},
+			createTestOperation("0x16277a1ff38678291c41d1820957c78bb5da59ce", "1000000000000000000"),
 		},
 		Metadata: map[string]any{
 			"transactionType": "legacy",
@@ -174,9 +167,7 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 	}
 
 	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/preprocess", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+	w, req := makeHTTPRequest("POST", "/construction/preprocess", requestBody)
 
 	// Call ConstructionPreprocess
 	service.ConstructionPreprocess(w, req)
@@ -199,14 +190,7 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionMetadata_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/construction/metadata", bytes.NewBufferString("invalid json"))
@@ -223,14 +207,7 @@ func TestConstructionService_ConstructionMetadata_InvalidRequestBody(t *testing.
 }
 
 func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request for legacy
 	request := types.ConstructionMetadataRequest{
@@ -272,14 +249,7 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request for dynamic
 	request := types.ConstructionMetadataRequest{
@@ -321,14 +291,7 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionPayloads_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBufferString("invalid json"))
@@ -345,14 +308,7 @@ func TestConstructionService_ConstructionPayloads_InvalidRequestBody(t *testing.
 }
 
 func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request
 	request := types.ConstructionPayloadsRequest{
@@ -415,14 +371,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with mismatched origin address
 	request := types.ConstructionPayloadsRequest{
@@ -474,14 +423,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 }
 
 func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid public key
 	request := types.ConstructionPayloadsRequest{
@@ -533,14 +475,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 }
 
 func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with fee delegation but mismatched delegator address
 	request := types.ConstructionPayloadsRequest{
@@ -597,14 +532,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 }
 
 func TestConstructionService_ConstructionParse_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/construction/parse", bytes.NewBufferString("invalid json"))
@@ -621,14 +549,7 @@ func TestConstructionService_ConstructionParse_InvalidRequestBody(t *testing.T) 
 }
 
 func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	request := types.ConstructionParseRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
@@ -652,14 +573,7 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionCombine_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
@@ -673,14 +587,7 @@ func TestConstructionService_ConstructionCombine_InvalidRequestBody(t *testing.T
 }
 
 func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "solo",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request with the provided values
 	request := types.ConstructionCombineRequest{
@@ -730,14 +637,7 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "solo",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid unsigned transaction
 	request := types.ConstructionCombineRequest{
@@ -778,14 +678,7 @@ func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *t
 }
 
 func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "solo",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with no signatures
 	request := types.ConstructionCombineRequest{
@@ -870,14 +763,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 }
 
 func TestConstructionService_ConstructionHash_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/construction/hash", bytes.NewBufferString("invalid json"))
@@ -894,14 +780,7 @@ func TestConstructionService_ConstructionHash_InvalidRequestBody(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	request := types.ConstructionHashRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
@@ -924,14 +803,7 @@ func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_ConstructionSubmit_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create request with invalid JSON
 	req := httptest.NewRequest("POST", "/construction/submit", bytes.NewBufferString("invalid json"))
@@ -948,14 +820,7 @@ func TestConstructionService_ConstructionSubmit_InvalidRequestBody(t *testing.T)
 }
 
 func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "solo",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000", // 1 VTHO
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create valid request
 	request := types.ConstructionSubmitRequest{
@@ -981,14 +846,7 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 }
 
 func TestConstructionService_createDelegatorPayload(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Create a valid VeChain transaction using the builder
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
@@ -1060,14 +918,7 @@ func TestConstructionService_createDelegatorPayload(t *testing.T) {
 }
 
 func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Test with valid fee delegator account
 	metadata := map[string]any{
@@ -1094,14 +945,7 @@ func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
 }
 
 func TestConstructionService_calculateGas(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	config := &meshconfig.Config{
-		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
-		Mode:         "online",
-		BaseGasPrice: "1000000000000000000",
-	}
-	service := NewConstructionService(mockClient, config)
+	service := createMockConstructionService()
 
 	// Test with no clauses (base gas only)
 	options := map[string]any{}
