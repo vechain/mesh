@@ -132,173 +132,210 @@ func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTran
 	return meshTx, nil
 }
 
-// ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
-func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
+// parseTransactionOperationsFromClauses is a helper function that parses operations from clauses
+func parseTransactionOperationsFromClauses(clauses []*api.JSONClause, originAddr string, gas uint64, status string) []*types.Operation {
 	var operations []*types.Operation
+	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := false, false, gas > 0
 
-	// Check if this is a meaningful transaction
-	hasValueTransfer := false
-	hasContractInteraction := false
-	hasEnergyTransfer := false
-
-	// Analyze clauses for value transfers and contract interactions
-	for _, clause := range tx.Clauses {
-		// Check for value transfer (VET)
+	// Analyze clauses
+	for _, clause := range clauses {
 		valueBytes, _ := clause.Value.MarshalText()
 		value := new(big.Int)
 		value.SetString(string(valueBytes), 10)
 		if value.Cmp(big.NewInt(0)) > 0 {
 			hasValueTransfer = true
 		}
-
-		// Check for contract interaction (has data or calls a contract)
 		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
 			hasContractInteraction = true
 		}
 	}
 
-	// Check for energy transfer (VTHO) - gas usage
-	if tx.Gas > 0 {
-		hasEnergyTransfer = true
-	}
-
-	// If no meaningful operations, return empty array
 	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
 		return operations
 	}
 
 	operationIndex := 0
-
-	// Process each clause for value transfers and contract interactions
-	for clauseIndex, clause := range tx.Clauses {
-		// Add VET transfer operation if there's value transfer in this clause
+	for clauseIndex, clause := range clauses {
 		valueBytes, _ := clause.Value.MarshalText()
 		value := new(big.Int)
 		value.SetString(string(valueBytes), 10)
 
 		if value.Cmp(big.NewInt(0)) > 0 {
 			valueStr := value.String()
-			originAddr := tx.Origin.String()
-
-			// Sender operation (negative amount)
-			senderOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   OperationTypeTransfer,
-				Status: StringPtr("Success"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "-" + valueStr, // Negative for sender
-					Currency: VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-				},
-			}
-			operations = append(operations, senderOp)
+			// Sender operation
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                OperationTypeTransfer,
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "-" + valueStr, Currency: VETCurrency},
+				Metadata:            map[string]any{"clauseIndex": clauseIndex},
+			})
 			operationIndex++
 
-			// Receiver operation (positive amount) - only if there's a recipient
+			// Receiver operation
 			if clause.To != nil && !clause.To.IsZero() {
-				receiverOp := &types.Operation{
-					OperationIdentifier: &types.OperationIdentifier{
-						Index: int64(operationIndex),
-					},
-					Type:   OperationTypeTransfer,
-					Status: StringPtr("Success"),
-					Account: &types.AccountIdentifier{
-						Address: clause.To.String(),
-					},
-					Amount: &types.Amount{
-						Value:    valueStr, // Positive for receiver
-						Currency: VETCurrency,
-					},
-					Metadata: map[string]any{
-						"clauseIndex": clauseIndex,
-					},
-				}
-				operations = append(operations, receiverOp)
+				operations = append(operations, &types.Operation{
+					OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+					Type:                OperationTypeTransfer,
+					Status:              StringPtr(status),
+					Account:             &types.AccountIdentifier{Address: clause.To.String()},
+					Amount:              &types.Amount{Value: valueStr, Currency: VETCurrency},
+					Metadata:            map[string]any{"clauseIndex": clauseIndex},
+				})
 				operationIndex++
 			}
 		}
 
-		// Add contract interaction operation if there's contract interaction in this clause
+		// Contract interaction operation
 		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
-			originAddr := tx.Origin.String()
 			toAddr := ""
 			if clause.To != nil {
 				toAddr = clause.To.String()
 			}
-
-			contractOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   "ContractCall",
-				Status: StringPtr("Success"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "0",
-					Currency: VETCurrency,
-				},
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                "ContractCall",
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "0", Currency: VETCurrency},
 				Metadata: map[string]any{
 					"clauseIndex": clauseIndex,
 					"to":          toAddr,
 					"data":        "0x" + fmt.Sprintf("%x", clause.Data),
 				},
-			}
-			operations = append(operations, contractOp)
+			})
 			operationIndex++
 		}
 	}
 
-	// Add energy transfer operation (VTHO) if there's gas usage
+	// Energy transfer operation
 	if hasEnergyTransfer {
-		originAddr := tx.Origin.String()
-		energyOp := &types.Operation{
-			OperationIdentifier: &types.OperationIdentifier{
-				Index: int64(operationIndex),
-			},
-			Type:   OperationTypeFee,
-			Status: StringPtr("Success"),
-			Account: &types.AccountIdentifier{
-				Address: originAddr,
-			},
-			Amount: &types.Amount{
-				Value:    "-" + strconv.FormatUint(tx.Gas, 10), // Negative for energy consumption
-				Currency: VTHOCurrency,
-			},
-			Metadata: map[string]any{
-				"gas": strconv.FormatUint(tx.Gas, 10),
-			},
-		}
-		operations = append(operations, energyOp)
+		operations = append(operations, &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+			Type:                OperationTypeFee,
+			Status:              StringPtr(status),
+			Account:             &types.AccountIdentifier{Address: originAddr},
+			Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: VTHOCurrency},
+			Metadata:            map[string]any{"gas": strconv.FormatUint(gas, 10)},
+		})
 	}
 
 	return operations
 }
 
+// parseTransactionOperationsFromTransactionsClauses is a helper function that parses operations from transactions.Clauses
+func parseTransactionOperationsFromTransactionsClauses(clauses api.Clauses, originAddr string, gas uint64, status string) []*types.Operation {
+	var operations []*types.Operation
+	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := false, false, gas > 0
+
+	// Analyze clauses
+	for _, clause := range clauses {
+		valueBytes, _ := clause.Value.MarshalText()
+		value := new(big.Int)
+		value.SetString(string(valueBytes), 10)
+		if value.Cmp(big.NewInt(0)) > 0 {
+			hasValueTransfer = true
+		}
+		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
+			hasContractInteraction = true
+		}
+	}
+
+	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
+		return operations
+	}
+
+	operationIndex := 0
+	for clauseIndex, clause := range clauses {
+		valueBytes, _ := clause.Value.MarshalText()
+		value := new(big.Int)
+		value.SetString(string(valueBytes), 10)
+
+		if value.Cmp(big.NewInt(0)) > 0 {
+			valueStr := value.String()
+			// Sender operation
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                OperationTypeTransfer,
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "-" + valueStr, Currency: VETCurrency},
+				Metadata:            map[string]any{"clauseIndex": clauseIndex},
+			})
+			operationIndex++
+
+			// Receiver operation
+			if clause.To != nil && !clause.To.IsZero() {
+				operations = append(operations, &types.Operation{
+					OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+					Type:                OperationTypeTransfer,
+					Status:              StringPtr(status),
+					Account:             &types.AccountIdentifier{Address: clause.To.String()},
+					Amount:              &types.Amount{Value: valueStr, Currency: VETCurrency},
+					Metadata:            map[string]any{"clauseIndex": clauseIndex},
+				})
+				operationIndex++
+			}
+		}
+
+		// Contract interaction operation
+		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
+			toAddr := ""
+			if clause.To != nil {
+				toAddr = clause.To.String()
+			}
+			operations = append(operations, &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+				Type:                "ContractCall",
+				Status:              StringPtr(status),
+				Account:             &types.AccountIdentifier{Address: originAddr},
+				Amount:              &types.Amount{Value: "0", Currency: VETCurrency},
+				Metadata: map[string]any{
+					"clauseIndex": clauseIndex,
+					"to":          toAddr,
+					"data":        "0x" + fmt.Sprintf("%x", clause.Data),
+				},
+			})
+			operationIndex++
+		}
+	}
+
+	// Energy transfer operation
+	if hasEnergyTransfer {
+		operations = append(operations, &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
+			Type:                OperationTypeFee,
+			Status:              StringPtr(status),
+			Account:             &types.AccountIdentifier{Address: originAddr},
+			Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: VTHOCurrency},
+			Metadata:            map[string]any{"gas": strconv.FormatUint(gas, 10)},
+		})
+	}
+
+	return operations
+}
+
+// buildMeshTransaction is a helper function that builds a Mesh transaction
+func buildMeshTransaction(hash string, operations []*types.Operation, metadata map[string]any) *types.Transaction {
+	return &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{Hash: hash},
+		Operations:            operations,
+		Metadata:              metadata,
+	}
+}
+
+// ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
+func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
+	return parseTransactionOperationsFromClauses(tx.Clauses, tx.Origin.String(), tx.Gas, "Success")
+}
+
 // BuildMeshTransactionFromAPI builds a Mesh transaction directly from api.JSONEmbeddedTx
 func BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx, operations []*types.Operation) *types.Transaction {
-	return &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: tx.ID.String(),
-		},
-		Operations: operations,
-		Metadata: map[string]any{
-			"chainTag":     tx.ChainTag,
-			"blockRef":     "0x" + fmt.Sprintf("%x", tx.BlockRef),
-			"expiration":   tx.Expiration,
-			"gas":          tx.Gas,
-			"gasPriceCoef": tx.GasPriceCoef,
-			"size":         tx.Size,
-		},
-	}
+	return buildMeshTransaction(tx.ID.String(), operations, map[string]any{
+		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
+		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
+	})
 }
 
 // ParseTransactionFromBytes parses a transaction from bytes and returns operations and signers
@@ -486,20 +523,14 @@ func createTransactionBuilder(transactionType string, metadata map[string]any) (
 
 	// Dynamic fee transaction
 	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	maxFeePerGas := metadata["maxFeePerGas"].(string)
-	maxPriorityFeePerGas := metadata["maxPriorityFeePerGas"].(string)
-
-	maxFee := new(big.Int)
-	maxFee, ok := maxFee.SetString(maxFeePerGas, 10)
+	maxFee, ok := new(big.Int).SetString(metadata["maxFeePerGas"].(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid maxFeePerGas: %s", maxFeePerGas)
+		return nil, fmt.Errorf("invalid maxFeePerGas: %s", metadata["maxFeePerGas"])
 	}
-	maxPriority := new(big.Int)
-	maxPriority, ok = maxPriority.SetString(maxPriorityFeePerGas, 10)
+	maxPriority, ok := new(big.Int).SetString(metadata["maxPriorityFeePerGas"].(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", maxPriorityFeePerGas)
+		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", metadata["maxPriorityFeePerGas"])
 	}
-
 	builder.MaxFeePerGas(maxFee)
 	builder.MaxPriorityFeePerGas(maxPriority)
 	return builder, nil
@@ -537,166 +568,13 @@ func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation)
 
 // ParseTransactionOperationsFromTransactions parses operations directly from transactions.Transaction
 func ParseTransactionOperationsFromTransactions(tx *transactions.Transaction) []*types.Operation {
-	var operations []*types.Operation
-
-	// Check if this is a meaningful transaction
-	hasValueTransfer := false
-	hasContractInteraction := false
-
-	// Analyze clauses for value transfers and contract interactions
-	for _, clause := range tx.Clauses {
-		// Check for value transfer (VET)
-		valueBytes, _ := clause.Value.MarshalText()
-		value := new(big.Int)
-		value.SetString(string(valueBytes), 10)
-		if value.Cmp(big.NewInt(0)) > 0 {
-			hasValueTransfer = true
-		}
-
-		// Check for contract interaction (has data or calls a contract)
-		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
-			hasContractInteraction = true
-		}
-	}
-
-	// Check for energy transfer (VTHO) - gas usage
-	hasEnergyTransfer := tx.Gas > 0
-
-	// If no meaningful operations, return empty array
-	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
-		return operations
-	}
-
-	operationIndex := 0
-
-	// Process each clause for value transfers and contract interactions
-	for clauseIndex, clause := range tx.Clauses {
-		// Add VET transfer operation if there's value transfer in this clause
-		valueBytes, _ := clause.Value.MarshalText()
-		value := new(big.Int)
-		value.SetString(string(valueBytes), 10)
-
-		if value.Cmp(big.NewInt(0)) > 0 {
-			valueStr := value.String()
-			originAddr := tx.Origin.String()
-
-			// Sender operation (negative amount)
-			senderOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   OperationTypeTransfer,
-				Status: StringPtr("Pending"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "-" + valueStr, // Negative for sender
-					Currency: VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-				},
-			}
-			operations = append(operations, senderOp)
-			operationIndex++
-
-			// Receiver operation (positive amount) - only if there's a recipient
-			if clause.To != nil && !clause.To.IsZero() {
-				receiverOp := &types.Operation{
-					OperationIdentifier: &types.OperationIdentifier{
-						Index: int64(operationIndex),
-					},
-					Type:   OperationTypeTransfer,
-					Status: StringPtr("Pending"),
-					Account: &types.AccountIdentifier{
-						Address: clause.To.String(),
-					},
-					Amount: &types.Amount{
-						Value:    valueStr, // Positive for receiver
-						Currency: VETCurrency,
-					},
-					Metadata: map[string]any{
-						"clauseIndex": clauseIndex,
-					},
-				}
-				operations = append(operations, receiverOp)
-				operationIndex++
-			}
-		}
-
-		// Add contract interaction operation if there's contract interaction in this clause
-		if len(clause.Data) > 0 || (clause.To != nil && !clause.To.IsZero()) {
-			originAddr := tx.Origin.String()
-			toAddr := ""
-			if clause.To != nil {
-				toAddr = clause.To.String()
-			}
-
-			contractOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type:   "ContractCall",
-				Status: StringPtr("Pending"),
-				Account: &types.AccountIdentifier{
-					Address: originAddr,
-				},
-				Amount: &types.Amount{
-					Value:    "0",
-					Currency: VETCurrency,
-				},
-				Metadata: map[string]any{
-					"clauseIndex": clauseIndex,
-					"to":          toAddr,
-					"data":        "0x" + fmt.Sprintf("%x", clause.Data),
-				},
-			}
-			operations = append(operations, contractOp)
-			operationIndex++
-		}
-	}
-
-	// Add energy transfer operation (VTHO) if there's gas usage
-	if hasEnergyTransfer {
-		originAddr := tx.Origin.String()
-		energyOp := &types.Operation{
-			OperationIdentifier: &types.OperationIdentifier{
-				Index: int64(operationIndex),
-			},
-			Type:   OperationTypeFee,
-			Status: StringPtr("Pending"),
-			Account: &types.AccountIdentifier{
-				Address: originAddr,
-			},
-			Amount: &types.Amount{
-				Value:    "-" + strconv.FormatUint(tx.Gas, 10), // Negative for energy consumption
-				Currency: VTHOCurrency,
-			},
-			Metadata: map[string]any{
-				"gas": strconv.FormatUint(tx.Gas, 10),
-			},
-		}
-		operations = append(operations, energyOp)
-	}
-
-	return operations
+	return parseTransactionOperationsFromTransactionsClauses(tx.Clauses, tx.Origin.String(), tx.Gas, "Pending")
 }
 
 // BuildMeshTransactionFromTransactions builds a Mesh transaction directly from transactions.Transaction
 func BuildMeshTransactionFromTransactions(tx *transactions.Transaction, operations []*types.Operation) *types.Transaction {
-	return &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: tx.ID.String(),
-		},
-		Operations: operations,
-		Metadata: map[string]any{
-			"chainTag":     tx.ChainTag,
-			"blockRef":     "0x" + fmt.Sprintf("%x", tx.BlockRef),
-			"expiration":   tx.Expiration,
-			"gas":          tx.Gas,
-			"gasPriceCoef": tx.GasPriceCoef,
-			"size":         tx.Size,
-		},
-	}
+	return buildMeshTransaction(tx.ID.String(), operations, map[string]any{
+		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
+		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
+	})
 }
