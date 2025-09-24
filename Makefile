@@ -1,6 +1,6 @@
 # VeChain Mesh API Makefile
 
-.PHONY: help build test test-e2e test-e2e-verbose test-e2e-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
+.PHONY: help build test-unit test-coverage test-coverage-html test-e2e test-e2e-verbose test-e2e-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
 
 # Default target
 help:
@@ -18,7 +18,9 @@ help:
 	@echo ""
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"
-	@echo "  test  - Run Go tests"
+	@echo "  test-unit - Run unit tests (excludes e2e tests)"
+	@echo "  test-unit-coverage - Run unit tests with coverage report"
+	@echo "  test-unit-coverage-html - Run unit tests and generate HTML coverage report"
 	@echo "  test-e2e - Run e2e tests (requires solo mode server)"
 	@echo "  test-e2e-verbose - Run e2e tests with verbose output"
 	@echo "  test-e2e-full - Full e2e test cycle (start solo, test, stop solo)"
@@ -33,6 +35,18 @@ build:
 
 test-unit:
 	go test $(shell go list ./... | grep -v /tests/e2e)
+
+test-unit-coverage:
+	@echo "Generating coverage report..."
+	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e)
+	go tool cover -func=coverage.out
+
+test-unit-coverage-html:
+	@echo "Generating HTML coverage report..."
+	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e)
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+	@echo "Open coverage.html in your browser to view detailed coverage"
 
 test-e2e:
 	@echo "Running e2e tests..."
