@@ -414,6 +414,188 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 	}
 }
 
+func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Create request with mismatched origin address
+	request := types.ConstructionPayloadsRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshutils.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0x1234567890123456789012345678901234567890", // Different address
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshutils.VETCurrency,
+				},
+			},
+		},
+		PublicKeys: []*types.PublicKey{
+			{
+				Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+				CurveType: "secp256k1",
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": "legacy",
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Call ConstructionPayloads
+	service.ConstructionPayloads(w, req)
+
+	// Check response
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionPayloads() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Create request with invalid public key
+	request := types.ConstructionPayloadsRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshutils.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshutils.VETCurrency,
+				},
+			},
+		},
+		PublicKeys: []*types.PublicKey{
+			{
+				Bytes:     []byte{0x01, 0x02, 0x03}, // Invalid public key (too short)
+				CurveType: "secp256k1",
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": "legacy",
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Call ConstructionPayloads
+	service.ConstructionPayloads(w, req)
+
+	// Check response
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionPayloads() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Create request with fee delegation but mismatched delegator address
+	request := types.ConstructionPayloadsRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshutils.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshutils.VETCurrency,
+				},
+			},
+		},
+		PublicKeys: []*types.PublicKey{
+			{
+				Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+				CurveType: "secp256k1",
+			},
+			{
+				Bytes:     []byte{0x02, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98},
+				CurveType: "secp256k1",
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType":       "legacy",
+			"blockRef":              "0x0000000000000000",
+			"chainTag":              float64(1),
+			"gas":                   float64(21000),
+			"nonce":                 "0x1",
+			"gasPriceCoef":          uint8(128),
+			"fee_delegator_account": "0x1234567890123456789012345678901234567890", // Different from public key
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Call ConstructionPayloads
+	service.ConstructionPayloads(w, req)
+
+	// Check response
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionPayloads() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
 func TestConstructionService_ConstructionParse_InvalidRequestBody(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
@@ -544,6 +726,146 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 	}
 	if response.SignedTransaction == "" {
 		t.Errorf("Expected signed transaction in response")
+	}
+}
+
+func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "solo",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Create request with invalid unsigned transaction
+	request := types.ConstructionCombineRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "solo",
+		},
+		UnsignedTransaction: "invalid_hex",
+		Signatures: []*types.Signature{
+			{
+				SigningPayload: &types.SigningPayload{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					},
+					Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
+					SignatureType: "ecdsa_recovery",
+				},
+				PublicKey: &types.PublicKey{
+					Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+					CurveType: "secp256k1",
+				},
+				SignatureType: "ecdsa_recovery",
+				Bytes:         []byte{0x03, 0xf8, 0xa1, 0xca, 0x4d, 0xd3, 0x9d, 0x99, 0xab, 0x54, 0x97, 0xf9, 0x4b, 0x8b, 0x79, 0x11, 0x34, 0x0c, 0xea, 0xc7, 0x18, 0x20, 0x19, 0xb7, 0xbe, 0x9d, 0x81, 0xf0, 0x43, 0xc7, 0x43, 0xf9, 0x5a, 0x69, 0x43, 0x1d, 0x71, 0x5a, 0xde, 0x0c, 0x9b, 0x74, 0x1f, 0x7c, 0x83, 0xd9, 0x57, 0x2a, 0xd8, 0x42, 0x71, 0xb4, 0xf2, 0xec, 0xb6, 0x2c, 0x8f, 0x49, 0xdd, 0xfa, 0x3e, 0x8c, 0x3a, 0xea, 0x01},
+			},
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	service.ConstructionCombine(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionCombine() expected status code 400, got %v. Response: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "solo",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Create request with no signatures
+	request := types.ConstructionCombineRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "solo",
+		},
+		UnsignedTransaction: "0xf85281f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080",
+		Signatures:          []*types.Signature{}, // No signatures
+	}
+
+	requestBody, _ := json.Marshal(request)
+	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	service.ConstructionCombine(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionCombine() expected status code 400, got %v. Response: %s", w.Code, w.Body.String())
+	}
+
+	// Test with too many signatures (3)
+	request.Signatures = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
+				SignatureType: "ecdsa_recovery",
+			},
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+				CurveType: "secp256k1",
+			},
+			SignatureType: "ecdsa_recovery",
+			Bytes:         []byte{0x03, 0xf8, 0xa1, 0xca, 0x4d, 0xd3, 0x9d, 0x99, 0xab, 0x54, 0x97, 0xf9, 0x4b, 0x8b, 0x79, 0x11, 0x34, 0x0c, 0xea, 0xc7, 0x18, 0x20, 0x19, 0xb7, 0xbe, 0x9d, 0x81, 0xf0, 0x43, 0xc7, 0x43, 0xf9, 0x5a, 0x69, 0x43, 0x1d, 0x71, 0x5a, 0xde, 0x0c, 0x9b, 0x74, 0x1f, 0x7c, 0x83, 0xd9, 0x57, 0x2a, 0xd8, 0x42, 0x71, 0xb4, 0xf2, 0xec, 0xb6, 0x2c, 0x8f, 0x49, 0xdd, 0xfa, 0x3e, 0x8c, 0x3a, 0xea, 0x01},
+		},
+		{
+			SigningPayload: &types.SigningPayload{
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
+				SignatureType: "ecdsa_recovery",
+			},
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+				CurveType: "secp256k1",
+			},
+			SignatureType: "ecdsa_recovery",
+			Bytes:         []byte{0x03, 0xf8, 0xa1, 0xca, 0x4d, 0xd3, 0x9d, 0x99, 0xab, 0x54, 0x97, 0xf9, 0x4b, 0x8b, 0x79, 0x11, 0x34, 0x0c, 0xea, 0xc7, 0x18, 0x20, 0x19, 0xb7, 0xbe, 0x9d, 0x81, 0xf0, 0x43, 0xc7, 0x43, 0xf9, 0x5a, 0x69, 0x43, 0x1d, 0x71, 0x5a, 0xde, 0x0c, 0x9b, 0x74, 0x1f, 0x7c, 0x83, 0xd9, 0x57, 0x2a, 0xd8, 0x42, 0x71, 0xb4, 0xf2, 0xec, 0xb6, 0x2c, 0x8f, 0x49, 0xdd, 0xfa, 0x3e, 0x8c, 0x3a, 0xea, 0x01},
+		},
+		{
+			SigningPayload: &types.SigningPayload{
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
+				SignatureType: "ecdsa_recovery",
+			},
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+				CurveType: "secp256k1",
+			},
+			SignatureType: "ecdsa_recovery",
+			Bytes:         []byte{0x03, 0xf8, 0xa1, 0xca, 0x4d, 0xd3, 0x9d, 0x99, 0xab, 0x54, 0x97, 0xf9, 0x4b, 0x8b, 0x79, 0x11, 0x34, 0x0c, 0xea, 0xc7, 0x18, 0x20, 0x19, 0xb7, 0xbe, 0x9d, 0x81, 0xf0, 0x43, 0xc7, 0x43, 0xf9, 0x5a, 0x69, 0x43, 0x1d, 0x71, 0x5a, 0xde, 0x0c, 0x9b, 0x74, 0x1f, 0x7c, 0x83, 0xd9, 0x57, 0x2a, 0xd8, 0x42, 0x71, 0xb4, 0xf2, 0xec, 0xb6, 0x2c, 0x8f, 0x49, 0xdd, 0xfa, 0x3e, 0x8c, 0x3a, 0xea, 0x01},
+		},
+	}
+
+	requestBody, _ = json.Marshal(request)
+	req = httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+
+	service.ConstructionCombine(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionCombine() expected status code 400, got %v. Response: %s", w.Code, w.Body.String())
 	}
 }
 
@@ -768,5 +1090,93 @@ func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
 	accountNil := service.getFeeDelegatorAccount(nil)
 	if accountNil != "" {
 		t.Errorf("getFeeDelegatorAccount() with nil metadata = %v, want empty string", accountNil)
+	}
+}
+
+func TestConstructionService_calculateGas(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         "online",
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Test with no clauses (base gas only)
+	options := map[string]any{}
+	gas := service.calculateGas(options)
+	expected := int64(20000 * 1.2) // Base gas + 20% buffer
+	if gas != expected {
+		t.Errorf("calculateGas() with no clauses = %d, want %d", gas, expected)
+	}
+
+	// Test with VTHO contract clause
+	options = map[string]any{
+		"clauses": []any{
+			map[string]any{
+				"to": meshutils.VTHOCurrency.Metadata["contractAddress"].(string),
+			},
+		},
+	}
+	gas = service.calculateGas(options)
+	expected = int64((20000 + 50000) * 1.2) // Base + VTHO gas + 20% buffer
+	if gas != expected {
+		t.Errorf("calculateGas() with VTHO clause = %d, want %d", gas, expected)
+	}
+
+	// Test with regular contract clause
+	options = map[string]any{
+		"clauses": []any{
+			map[string]any{
+				"to": "0x1234567890123456789012345678901234567890",
+			},
+		},
+	}
+	gas = service.calculateGas(options)
+	expected = int64((20000 + 10000) * 1.2) // Base + regular gas + 20% buffer
+	if gas != expected {
+		t.Errorf("calculateGas() with regular clause = %d, want %d", gas, expected)
+	}
+
+	// Test with multiple clauses
+	options = map[string]any{
+		"clauses": []any{
+			map[string]any{
+				"to": meshutils.VTHOCurrency.Metadata["contractAddress"].(string),
+			},
+			map[string]any{
+				"to": "0x1234567890123456789012345678901234567890",
+			},
+		},
+	}
+	gas = service.calculateGas(options)
+	expected = int64((20000 + 50000 + 10000) * 1.2) // Base + VTHO + regular + 20% buffer
+	if gas != expected {
+		t.Errorf("calculateGas() with multiple clauses = %d, want %d", gas, expected)
+	}
+
+	// Test with invalid clauses format
+	options = map[string]any{
+		"clauses": "invalid_format",
+	}
+	gas = service.calculateGas(options)
+	expected = int64(20000 * 1.2) // Base gas only + 20% buffer
+	if gas != expected {
+		t.Errorf("calculateGas() with invalid clauses = %d, want %d", gas, expected)
+	}
+
+	// Test with clause missing 'to' field
+	options = map[string]any{
+		"clauses": []any{
+			map[string]any{
+				"value": "1000000000000000000",
+			},
+		},
+	}
+	gas = service.calculateGas(options)
+	expected = int64(20000 * 1.2) // Base gas only + 20% buffer
+	if gas != expected {
+		t.Errorf("calculateGas() with clause missing 'to' = %d, want %d", gas, expected)
 	}
 }
