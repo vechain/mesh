@@ -35,453 +35,120 @@ func NewMeshTransactionEncoder() *MeshTransactionEncoder {
 
 // EncodeUnsignedTransaction encodes an unsigned transaction using Mesh RLP schema
 func (e *MeshTransactionEncoder) EncodeUnsignedTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Mesh RLP structure based on transaction type
-	if vechainTx.Type() == thorTx.TypeLegacy {
-		return e.encodeUnsignedLegacyTransaction(vechainTx, origin, delegator)
-	} else {
-		return e.encodeUnsignedDynamicTransaction(vechainTx, origin, delegator)
+	// Use native Thor encoding and add Mesh-specific fields
+	thorBytes, err := rlp.EncodeToBytes(vechainTx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode Thor transaction: %w", err)
 	}
+
+	// Create Mesh structure: [thorTransaction, origin, delegator]
+	meshTx := []any{
+		thorBytes,
+		origin,
+		delegator,
+	}
+
+	return rlp.EncodeToBytes(meshTx)
+}
+
+// decodeSimplifiedMeshTransaction decodes a simplified Mesh transaction format
+func (e *MeshTransactionEncoder) decodeSimplifiedMeshTransaction(data []byte) (*MeshTransaction, error) {
+	var fields []any
+	if err := rlp.DecodeBytes(data, &fields); err != nil {
+		return nil, err
+	}
+
+	// Simplified format should have 3 fields: [thorTransaction, origin, delegator]
+	if len(fields) != 3 {
+		return nil, fmt.Errorf("invalid simplified Mesh transaction: expected 3 fields, got %d", len(fields))
+	}
+
+	// Decode Thor transaction from bytes
+	thorBytes := fields[0].([]byte)
+	var thorTx thorTx.Transaction
+	stream := rlp.NewStream(bytes.NewReader(thorBytes), 0)
+	if err := thorTx.DecodeRLP(stream); err != nil {
+		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
+	}
+
+	origin := fields[1].([]byte)
+	delegator := fields[2].([]byte)
+
+	return &MeshTransaction{
+		Transaction: &thorTx,
+		Origin:      origin,
+		Delegator:   delegator,
+	}, nil
 }
 
 // DecodeUnsignedTransaction decodes an unsigned transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeUnsignedTransaction(data []byte) (*MeshTransaction, error) {
-	// Try to decode as legacy transaction first (9 fields)
-	if meshTx, err := e.decodeUnsignedLegacyTransaction(data); err == nil {
+	// Try new simplified format first: [thorTransaction, origin, delegator]
+	if meshTx, err := e.decodeSimplifiedMeshTransaction(data); err == nil {
 		return meshTx, nil
 	}
 
-	// Try to decode as dynamic fee transaction (10 fields)
-	if meshTx, err := e.decodeUnsignedDynamicTransaction(data); err == nil {
-		return meshTx, nil
-	}
-
-	return nil, fmt.Errorf("failed to decode as either legacy or dynamic fee transaction")
+	return nil, fmt.Errorf("failed to decode as simplified Mesh transaction")
 }
 
 // DecodeSignedTransaction decodes a signed transaction from Mesh RLP format
 func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTransaction, error) {
-	// Try to decode as signed legacy transaction first (10 fields)
-	if meshTx, err := e.decodeSignedLegacyTransaction(data); err == nil {
+	if meshTx, err := e.decodeSignedMeshTransaction(data); err == nil {
 		return meshTx, nil
 	}
 
-	// Try to decode as signed dynamic fee transaction (11 fields)
-	if meshTx, err := e.decodeSignedDynamicTransaction(data); err == nil {
-		return meshTx, nil
-	}
-
-	return nil, fmt.Errorf("failed to decode as either signed legacy or signed dynamic fee transaction")
+	return nil, fmt.Errorf("failed to decode as simplified signed Mesh transaction")
 }
 
 // EncodeSignedTransaction encodes a signed Mesh transaction
 func (e *MeshTransactionEncoder) EncodeSignedTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Create Mesh RLP structure based on transaction type
-	if meshTx.Type() == thorTx.TypeLegacy {
-		return e.encodeSignedLegacyTransaction(meshTx)
-	} else {
-		return e.encodeSignedDynamicTransaction(meshTx)
-	}
-}
-
-// encodeUnsignedLegacyTransaction encodes a legacy transaction using Mesh RLP schema
-func (e *MeshTransactionEncoder) encodeUnsignedLegacyTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Mesh legacy transaction RLP structure (9 fields)
-	blockRef := vechainTx.BlockRef()
-	meshTx := []any{
-		[]byte{vechainTx.ChainTag()},
-		blockRef[:],
-		[]byte{byte(vechainTx.Expiration() >> 24), byte(vechainTx.Expiration() >> 16), byte(vechainTx.Expiration() >> 8), byte(vechainTx.Expiration())},
-		e.convertClausesToMesh(vechainTx.Clauses()),
-		[]byte{byte(vechainTx.Gas() >> 56), byte(vechainTx.Gas() >> 48), byte(vechainTx.Gas() >> 40), byte(vechainTx.Gas() >> 32), byte(vechainTx.Gas() >> 24), byte(vechainTx.Gas() >> 16), byte(vechainTx.Gas() >> 8), byte(vechainTx.Gas())},
-		e.convertNonceToBytes(vechainTx.Nonce()),
-		origin,
-		delegator,
-		[]byte{vechainTx.GasPriceCoef()},
+	// Use native Thor encoding and add Mesh-specific fields
+	thorBytes, err := rlp.EncodeToBytes(meshTx.Transaction)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode Thor transaction: %w", err)
 	}
 
-	return rlp.EncodeToBytes(meshTx)
-}
-
-// encodeUnsignedDynamicTransaction encodes a dynamic fee transaction using Mesh RLP schema
-func (e *MeshTransactionEncoder) encodeUnsignedDynamicTransaction(vechainTx *thorTx.Transaction, origin, delegator []byte) ([]byte, error) {
-	// Create Mesh dynamic fee transaction RLP structure (10 fields)
-	blockRef := vechainTx.BlockRef()
-	meshTx := []any{
-		vechainTx.ChainTag(),
-		blockRef[:],
-		vechainTx.Expiration(),
-		e.convertClausesToMesh(vechainTx.Clauses()),
-		vechainTx.Gas(),
-		e.convertNonceToBytes(vechainTx.Nonce()),
-		origin,
-		delegator,
-		vechainTx.MaxFeePerGas(),
-		vechainTx.MaxPriorityFeePerGas(),
-	}
-
-	return rlp.EncodeToBytes(meshTx)
-}
-
-// decodeUnsignedLegacyTransaction decodes a legacy transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeUnsignedLegacyTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Legacy transaction should have 9 fields
-	if len(fields) != 9 {
-		return nil, fmt.Errorf("invalid legacy transaction: expected 9 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	gasPriceCoefBytes := fields[8].([]byte)
-	gasPriceCoef := gasPriceCoefBytes[0]
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.GasPriceCoef(gasPriceCoef)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
-
-	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
-	}, nil
-}
-
-// decodeUnsignedDynamicTransaction decodes a dynamic fee transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeUnsignedDynamicTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Dynamic fee transaction should have 10 fields
-	if len(fields) != 10 {
-		return nil, fmt.Errorf("invalid dynamic fee transaction: expected 10 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	maxFeePerGasBytes := fields[8].([]byte)
-	maxFeePerGas := new(big.Int).SetBytes(maxFeePerGasBytes)
-	maxPriorityFeePerGasBytes := fields[9].([]byte)
-	maxPriorityFeePerGas := new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.MaxFeePerGas(maxFeePerGas)
-	builder.MaxPriorityFeePerGas(maxPriorityFeePerGas)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
-
-	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
-	}, nil
-}
-
-// encodeSignedLegacyTransaction encodes a signed legacy transaction
-func (e *MeshTransactionEncoder) encodeSignedLegacyTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Create Mesh signed legacy transaction RLP structure (10 fields)
-	blockRef := meshTx.BlockRef()
+	// Create Mesh structure: [thorTransaction, origin, delegator, signature]
 	meshTxRLP := []any{
-		[]byte{meshTx.ChainTag()},
-		blockRef[:],
-		[]byte{byte(meshTx.Expiration() >> 24), byte(meshTx.Expiration() >> 16), byte(meshTx.Expiration() >> 8), byte(meshTx.Expiration())},
-		e.convertClausesToMesh(meshTx.Clauses()),
-		[]byte{byte(meshTx.Gas() >> 56), byte(meshTx.Gas() >> 48), byte(meshTx.Gas() >> 40), byte(meshTx.Gas() >> 32), byte(meshTx.Gas() >> 24), byte(meshTx.Gas() >> 16), byte(meshTx.Gas() >> 8), byte(meshTx.Gas())},
-		e.convertNonceToBytes(meshTx.Nonce()),
+		thorBytes,
 		meshTx.Origin,
 		meshTx.Delegator,
-		[]byte{meshTx.GasPriceCoef()},
 		meshTx.Signature,
 	}
 
 	return rlp.EncodeToBytes(meshTxRLP)
 }
 
-// encodeSignedDynamicTransaction encodes a signed dynamic fee transaction
-func (e *MeshTransactionEncoder) encodeSignedDynamicTransaction(meshTx *MeshTransaction) ([]byte, error) {
-	// Create Mesh signed dynamic fee transaction RLP structure (11 fields)
-	blockRef := meshTx.BlockRef()
-	meshTxRLP := []any{
-		meshTx.ChainTag(),
-		blockRef[:],
-		meshTx.Expiration(),
-		e.convertClausesToMesh(meshTx.Clauses()),
-		meshTx.Gas(),
-		e.convertNonceToBytes(meshTx.Nonce()),
-		meshTx.Origin,
-		meshTx.Delegator,
-		meshTx.MaxFeePerGas(),
-		meshTx.MaxPriorityFeePerGas(),
-		meshTx.Signature,
-	}
-
-	return rlp.EncodeToBytes(meshTxRLP)
-}
-
-// decodeSignedLegacyTransaction decodes a signed legacy transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeSignedLegacyTransaction(data []byte) (*MeshTransaction, error) {
+// decodeSignedMeshTransaction decodes a signed Mesh transaction format
+func (e *MeshTransactionEncoder) decodeSignedMeshTransaction(data []byte) (*MeshTransaction, error) {
 	var fields []any
 	if err := rlp.DecodeBytes(data, &fields); err != nil {
 		return nil, err
 	}
 
-	// Signed legacy transaction should have 10 fields
-	if len(fields) != 10 {
-		return nil, fmt.Errorf("invalid signed legacy transaction: expected 10 fields, got %d", len(fields))
+	// Simplified signed format should have 4 fields: [thorTransaction, origin, delegator, signature]
+	if len(fields) != 4 {
+		return nil, fmt.Errorf("invalid simplified signed Mesh transaction: expected 4 fields, got %d", len(fields))
 	}
 
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	gasPriceCoefBytes := fields[8].([]byte)
-	gasPriceCoef := gasPriceCoefBytes[0]
-	signature := fields[9].([]byte)
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.GasPriceCoef(gasPriceCoef)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
+	// Decode Thor transaction from bytes
+	thorBytes := fields[0].([]byte)
+	var thorTx thorTx.Transaction
+	stream := rlp.NewStream(bytes.NewReader(thorBytes), 0)
+	if err := thorTx.DecodeRLP(stream); err != nil {
+		return nil, fmt.Errorf("failed to decode Thor transaction: %w", err)
 	}
 
-	vechainTx := builder.Build()
+	origin := fields[1].([]byte)
+	delegator := fields[2].([]byte)
+	signature := fields[3].([]byte)
 
 	return &MeshTransaction{
-		Transaction: vechainTx,
+		Transaction: &thorTx,
 		Origin:      origin,
 		Delegator:   delegator,
 		Signature:   signature,
 	}, nil
-}
-
-// decodeSignedDynamicTransaction decodes a signed dynamic fee transaction from Mesh RLP format
-func (e *MeshTransactionEncoder) decodeSignedDynamicTransaction(data []byte) (*MeshTransaction, error) {
-	var fields []any
-	if err := rlp.DecodeBytes(data, &fields); err != nil {
-		return nil, err
-	}
-
-	// Signed dynamic fee transaction should have 11 fields
-	if len(fields) != 11 {
-		return nil, fmt.Errorf("invalid signed dynamic fee transaction: expected 11 fields, got %d", len(fields))
-	}
-
-	// Extract fields according to Mesh schema
-	chainTagBytes := fields[0].([]byte)
-	chainTag := chainTagBytes[0]
-	blockRef := fields[1].([]byte)
-	expirationBytes := fields[2].([]byte)
-	expiration := e.convertBytesToUint32(expirationBytes)
-	clauses := fields[3].([]any)
-	gasBytes := fields[4].([]byte)
-	gas := e.convertBytesToUint64(gasBytes)
-	nonce := fields[5].([]byte)
-	origin := fields[6].([]byte)
-	delegator := fields[7].([]byte)
-	maxFeePerGasBytes := fields[8].([]byte)
-	maxFeePerGas := new(big.Int).SetBytes(maxFeePerGasBytes)
-	maxPriorityFeePerGasBytes := fields[9].([]byte)
-	var maxPriorityFeePerGas *big.Int
-	if len(maxPriorityFeePerGasBytes) > 0 {
-		maxPriorityFeePerGas = new(big.Int).SetBytes(maxPriorityFeePerGasBytes)
-	} else {
-		maxPriorityFeePerGas = big.NewInt(0)
-	}
-	signature := fields[10].([]byte)
-
-	// Build Thor transaction using native builder
-	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	builder.ChainTag(chainTag)
-
-	// Convert blockRef to 8-byte array
-	var blockRefArray [8]byte
-	copy(blockRefArray[:], blockRef)
-	builder.BlockRef(thorTx.BlockRef(blockRefArray))
-
-	builder.Expiration(expiration)
-	builder.Gas(gas)
-	builder.Nonce(e.convertBytesToNonce(nonce))
-	builder.MaxFeePerGas(maxFeePerGas)
-	builder.MaxPriorityFeePerGas(maxPriorityFeePerGas)
-
-	// Add clauses using Thor's native methods
-	for _, clauseData := range clauses {
-		clause := clauseData.([]any)
-		to := clause[0].([]byte)
-		valueBytes := clause[1].([]byte)
-		value := new(big.Int).SetBytes(valueBytes)
-		data := clause[2].([]byte)
-
-		toAddr := thor.BytesToAddress(to)
-		thorClause := thorTx.NewClause(&toAddr)
-		thorClause = thorClause.WithValue(value)
-		thorClause = thorClause.WithData(data)
-		builder.Clause(thorClause)
-	}
-
-	vechainTx := builder.Build()
-
-	return &MeshTransaction{
-		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
-		Signature:   signature,
-	}, nil
-}
-
-// Helper methods
-func (e *MeshTransactionEncoder) convertClausesToMesh(clauses []*thorTx.Clause) []any {
-	meshClauses := make([]any, len(clauses))
-	for i, clause := range clauses {
-		meshClauses[i] = []any{
-			clause.To().Bytes(),
-			clause.Value(),
-			clause.Data(),
-		}
-	}
-	return meshClauses
-}
-
-func (e *MeshTransactionEncoder) convertNonceToBytes(nonce uint64) []byte {
-	nonceBytes := make([]byte, 8)
-	for i := 7; i >= 0; i-- {
-		nonceBytes[i] = byte(nonce)
-		nonce >>= 8
-	}
-	return nonceBytes
-}
-
-func (e *MeshTransactionEncoder) convertBytesToNonce(nonceBytes []byte) uint64 {
-	var nonce uint64
-	for i := range 8 {
-		nonce = (nonce << 8) | uint64(nonceBytes[i])
-	}
-	return nonce
-}
-
-func (e *MeshTransactionEncoder) convertBytesToUint64(bytes []byte) uint64 {
-	var result uint64
-	for i := range bytes {
-		result = (result << 8) | uint64(bytes[i])
-	}
-	return result
-}
-
-func (e *MeshTransactionEncoder) convertBytesToUint32(bytes []byte) uint32 {
-	var result uint32
-	for i := range bytes {
-		result = (result << 8) | uint32(bytes[i])
-	}
-	return result
 }
 
 // ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
