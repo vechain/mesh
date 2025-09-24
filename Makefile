@@ -31,8 +31,8 @@ help:
 build:
 	go build -o mesh-server .
 
-test:
-	go test ./...
+test-unit:
+	go test $(shell go list ./... | grep -v /tests/e2e)
 
 test-e2e:
 	@echo "Running e2e tests..."
