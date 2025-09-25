@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -41,7 +40,7 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 // NetworkStatus returns the current network status
 func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -119,7 +118,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 // NetworkOptions returns network options and capabilities
 func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}

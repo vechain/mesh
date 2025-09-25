@@ -47,12 +47,18 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 				return
 			}
 
-			r.Body = io.NopCloser(strings.NewReader(string(body)))
 			endpoint := r.URL.Path
 
 			if !validationMiddleware.ValidateEndpoint(w, r, body, endpoint) {
 				return
 			}
+
+			// Store the body in context for services to use
+			ctx := context.WithValue(r.Context(), meshutils.RequestBodyKey, body)
+			r = r.WithContext(ctx)
+
+			// Restore the body for the next handler (in case some service still needs it)
+			r.Body = io.NopCloser(strings.NewReader(string(body)))
 
 			next.ServeHTTP(w, r)
 		})

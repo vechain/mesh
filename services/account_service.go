@@ -1,9 +1,7 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -26,14 +24,9 @@ func NewAccountService(vechainClient meshthor.VeChainClientInterface) *AccountSe
 
 // AccountBalance returns the balance of an account
 func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
 	var request types.AccountBalanceRequest
-	if err := json.Unmarshal(body, &request); err != nil {
+	err := meshutils.ParseJSONFromRequestContext(r, &request)
+	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}

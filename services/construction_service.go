@@ -3,7 +3,6 @@ package services
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -38,7 +37,7 @@ func NewConstructionService(vechainClient meshthor.VeChainClientInterface, confi
 // ConstructionDerive derives an address from a public key
 func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionDeriveRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -76,7 +75,7 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 // ConstructionPreprocess preprocesses a transaction
 func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionPreprocessRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -116,7 +115,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 // ConstructionMetadata gets metadata for construction
 func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionMetadataRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -171,7 +170,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 // ConstructionPayloads creates payloads for construction
 func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionPayloadsRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -282,7 +281,7 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 // ConstructionParse parses a transaction
 func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionParseRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -380,7 +379,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 // ConstructionCombine combines signed transactions
 func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionCombineRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -434,7 +433,7 @@ func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http
 // ConstructionHash gets the hash of a transaction
 func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionHashRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -463,7 +462,7 @@ func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Re
 // ConstructionSubmit submits a transaction to the network
 func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
 	var request types.ConstructionSubmitRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}

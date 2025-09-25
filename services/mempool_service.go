@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -26,7 +25,7 @@ func NewMempoolService(vechainClient meshthor.VeChainClientInterface) *MempoolSe
 func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 	// Parse request body to get metadata (origin filter)
 	var requestBody map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &requestBody); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
@@ -68,7 +67,7 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 // MempoolTransaction gets a specific transaction from the mempool
 func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	var request types.MempoolTransactionRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}

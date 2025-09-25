@@ -15,31 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// Operation types for VeChain
-const (
-	OperationTypeNone          = "None"
-	OperationTypeTransfer      = "Transfer"
-	OperationTypeFee           = "Fee"
-	OperationTypeFeeDelegation = "FeeDelegation"
-)
-
-var (
-	// VETCurrency represents the native VeChain token
-	VETCurrency = &types.Currency{
-		Symbol:   "VET",
-		Decimals: 18,
-	}
-
-	// VTHOCurrency represents the VeChain Thor Energy token
-	VTHOCurrency = &types.Currency{
-		Symbol:   "VTHO",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x0000000000000000000000000000456E65726779",
-		},
-	}
-)
-
 // WriteJSONResponse writes a JSON response with proper error handling
 func WriteJSONResponse(w http.ResponseWriter, response any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -195,4 +170,13 @@ func DecodeHexStringWithPrefix(hexStr string) ([]byte, error) {
 	cleanHex := RemoveHexPrefix(hexStr)
 
 	return hex.DecodeString(cleanHex)
+}
+
+// ParseJSONFromRequestContext parses JSON from the request context into the target struct
+func ParseJSONFromRequestContext(r *http.Request, target any) error {
+	body, ok := r.Context().Value(RequestBodyKey).([]byte)
+	if !ok {
+		return fmt.Errorf("request body not found in context - middleware may not be properly configured")
+	}
+	return json.Unmarshal(body, target)
 }
