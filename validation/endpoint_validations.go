@@ -27,6 +27,9 @@ var EndpointValidationSets = map[string][]ValidationType{
 	// Mempool API endpoints
 	"/mempool":             NetworkValidations,
 	"/mempool/transaction": NetworkValidations,
+
+	// Events API endpoints
+	"/events/blocks": NetworkValidations,
 }
 
 // GetValidationsForEndpoint returns the validation set for a specific endpoint

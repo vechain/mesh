@@ -179,9 +179,8 @@ type Peer struct {
 	BestBlockID string
 }
 
-// getTransactions is the unified method that matches the reference implementation
+// getTransactions call the endpoint node/txpool
 func (c *VeChainClient) getTransactions(origin *thor.Address, expanded bool) (any, error) {
-	// This matches the reference implementation's getTransactions method
 	return c.client.TxPool(expanded, origin)
 }
 
@@ -194,7 +193,6 @@ func (c *VeChainClient) GetMempoolTransactions(origin *thor.Address) ([]*thor.By
 	}
 
 	// Convert the result to []*thor.Bytes32
-	// The TxPool method returns 'any', so we need to type assert it
 	if txIDs, ok := txPool.([]*thor.Bytes32); ok {
 		return txIDs, nil
 	}
