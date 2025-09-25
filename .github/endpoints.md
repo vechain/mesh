@@ -71,8 +71,8 @@ This table shows the endpoint coverage of the Mesh API implementation for VeChai
 ## Coverage Summary
 
 - **Total standard endpoints**: 20
-- **Implemented**: 15 (75%)
-- **Not implemented**: 5 (25%)
+- **Implemented**: 17 (85%)
+- **Not implemented**: 3 (15%)
 
 ### Pending endpoints to implement:
 - `/account/coins`
