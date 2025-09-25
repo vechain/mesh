@@ -39,7 +39,7 @@ This table shows the endpoint coverage of the Mesh API implementation for VeChai
 
 | Method | Endpoint        | Implemented | Description                         | Mode    |
 |--------|-----------------|--------------|-------------------------------------|---------|
-| POST   | /events/blocks  | ❌ No        | Get range of block events | - |
+| POST   | /events/blocks  | ✅ Yes        | Get range of block events | online |
 
 ## Mempool
 
@@ -77,11 +77,10 @@ This table shows the endpoint coverage of the Mesh API implementation for VeChai
 ### Pending endpoints to implement:
 - `/account/coins`
 - `/call`
-- `/events/blocks`
 - `/search/transactions`
 
 ### Notes:
 - **Construction** endpoints are fully implemented and support both online and offline modes
 - **Network** endpoints are fully implemented
-- **Block** and **Mempool** endpoints are implemented for online mode
-- **Events** and **Search** endpoints will be added in future versions
+- **Block**, **Mempool** and **Events** endpoints are implemented for online mode
+- **Search** endpoints will be added in future versions
