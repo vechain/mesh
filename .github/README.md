@@ -7,6 +7,7 @@
 > - Implement events endpoints
 > - Codecov integration (GHA)
 > - Use mesh-cli to validate endpoints
+> - Publish docker image on release
 >
 > Expect more changes and improvements in upcoming releases.
 
