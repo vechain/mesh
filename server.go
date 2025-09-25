@@ -28,6 +28,7 @@ type VeChainMeshServer struct {
 	constructionService  *services.ConstructionService
 	blockService         *services.BlockService
 	mempoolService       *services.MempoolService
+	eventsService        *services.EventsService
 }
 
 // NewVeChainMeshServer creates a new server instance
@@ -71,6 +72,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	constructionService := services.NewConstructionService(vechainClient, cfg)
 	blockService := services.NewBlockService(vechainClient)
 	mempoolService := services.NewMempoolService(vechainClient)
+	eventsService := services.NewEventsService(vechainClient)
 
 	meshServer := &VeChainMeshServer{
 		router: router,
@@ -84,6 +86,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 		constructionService:  constructionService,
 		blockService:         blockService,
 		mempoolService:       mempoolService,
+		eventsService:        eventsService,
 	}
 
 	meshServer.setupRoutes()
@@ -125,6 +128,9 @@ func (v *VeChainMeshServer) setupRoutes() {
 	// Mempool API endpoints
 	apiRouter.HandleFunc("/mempool", v.mempoolService.Mempool).Methods("POST")
 	apiRouter.HandleFunc("/mempool/transaction", v.mempoolService.MempoolTransaction).Methods("POST")
+
+	// Events API endpoints
+	apiRouter.HandleFunc("/events/blocks", v.eventsService.EventsBlocks).Methods("POST")
 }
 
 // healthCheck endpoint to verify server status

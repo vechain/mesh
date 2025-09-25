@@ -25,6 +25,7 @@ type MockVeChainClient struct {
 	MockMempoolTx     *transactions.Transaction
 	MockMempoolStatus *api.Status
 	MockCallResult    string
+	MockBlockByNumber *api.JSONExpandedBlock
 
 	// Simulated errors
 	MockError error
@@ -246,6 +247,17 @@ func (m *MockVeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, e
 	if m.MockError != nil {
 		return nil, m.MockError
 	}
+
+	// Handle "best" revision
+	if revision == "best" {
+		return m.MockBlock, nil
+	}
+
+	// Handle numeric revision
+	if m.MockBlockByNumber != nil {
+		return m.MockBlockByNumber, nil
+	}
+
 	return m.MockBlock, nil
 }
 
@@ -344,4 +356,9 @@ func (m *MockVeChainClient) SetMockMempoolTx(tx *transactions.Transaction) {
 
 func (m *MockVeChainClient) SetMockCallResult(result string) {
 	m.MockCallResult = result
+}
+
+// SetBlockByNumber configures the simulated block by number
+func (m *MockVeChainClient) SetBlockByNumber(block *api.JSONExpandedBlock) {
+	m.MockBlockByNumber = block
 }
