@@ -1,8 +1,11 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -44,14 +47,14 @@ func TestEventsService_EventsBlocks_Success(t *testing.T) {
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusOK)
+	assertStatusCode(t, w, http.StatusOK)
 
 	var response types.EventsBlocksResponse
-	meshtests.UnmarshalResponse(t, w, &response)
+	unmarshalResponse(t, w, &response)
 
 	if response.MaxSequence != 100 {
 		t.Errorf("Expected max_sequence 100, got %d", response.MaxSequence)
@@ -101,14 +104,14 @@ func TestEventsService_EventsBlocks_DefaultValues(t *testing.T) {
 	request := types.EventsBlocksRequest{}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusOK)
+	assertStatusCode(t, w, http.StatusOK)
 
 	var response types.EventsBlocksResponse
-	meshtests.UnmarshalResponse(t, w, &response)
+	unmarshalResponse(t, w, &response)
 
 	if response.MaxSequence != 49 {
 		t.Errorf("Expected max_sequence 49, got %d", response.MaxSequence)
@@ -140,14 +143,14 @@ func TestEventsService_EventsBlocks_OffsetBeyondBestBlock(t *testing.T) {
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusOK)
+	assertStatusCode(t, w, http.StatusOK)
 
 	var response types.EventsBlocksResponse
-	meshtests.UnmarshalResponse(t, w, &response)
+	unmarshalResponse(t, w, &response)
 
 	if response.MaxSequence != 10 {
 		t.Errorf("Expected max_sequence 10, got %d", response.MaxSequence)
@@ -168,11 +171,11 @@ func TestEventsService_EventsBlocks_InvalidOffset(t *testing.T) {
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusBadRequest)
+	assertStatusCode(t, w, http.StatusBadRequest)
 }
 
 func TestEventsService_EventsBlocks_InvalidLimit(t *testing.T) {
@@ -185,11 +188,11 @@ func TestEventsService_EventsBlocks_InvalidLimit(t *testing.T) {
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusBadRequest)
+	assertStatusCode(t, w, http.StatusBadRequest)
 }
 
 func TestEventsService_EventsBlocks_InvalidLimitTooHigh(t *testing.T) {
@@ -202,23 +205,23 @@ func TestEventsService_EventsBlocks_InvalidLimitTooHigh(t *testing.T) {
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusBadRequest)
+	assertStatusCode(t, w, http.StatusBadRequest)
 }
 
 func TestEventsService_EventsBlocks_InvalidRequestBody(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewEventsService(mockClient)
 
-	req := meshtests.CreateInvalidJSONRequest(meshtests.POSTMethod, "/events/blocks")
-	w := meshtests.CreateResponseRecorder()
+	req := createInvalidJSONRequest(meshtests.POSTMethod, "/events/blocks")
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusBadRequest)
+	assertStatusCode(t, w, http.StatusBadRequest)
 }
 
 func TestEventsService_EventsBlocks_ThorClientError(t *testing.T) {
@@ -234,14 +237,42 @@ func TestEventsService_EventsBlocks_ThorClientError(t *testing.T) {
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
-	w := meshtests.CreateResponseRecorder()
+	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
 
-	meshtests.AssertStatusCode(t, w, http.StatusInternalServerError)
+	assertStatusCode(t, w, http.StatusInternalServerError)
 }
 
 // Helper function to create int64 pointer
 func int64Ptr(v int64) *int64 {
 	return &v
+}
+
+// createInvalidJSONRequest creates a request with invalid JSON body
+func createInvalidJSONRequest(method, url string) *http.Request {
+	req := httptest.NewRequest(method, url, bytes.NewBufferString("invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+// createResponseRecorder creates a new ResponseRecorder
+func createResponseRecorder() *httptest.ResponseRecorder {
+	return httptest.NewRecorder()
+}
+
+// unmarshalResponse unmarshals the response body into the target struct
+func unmarshalResponse(t *testing.T, recorder *httptest.ResponseRecorder, target any) {
+	t.Helper()
+	if err := json.Unmarshal(recorder.Body.Bytes(), target); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+}
+
+// assertStatusCode asserts that the response has the expected status code
+func assertStatusCode(t *testing.T, recorder *httptest.ResponseRecorder, expected int) {
+	t.Helper()
+	if recorder.Code != expected {
+		t.Errorf("Expected status %d, got %d", expected, recorder.Code)
+	}
 }

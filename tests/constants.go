@@ -9,12 +9,7 @@ const (
 	JSONContentType = "application/json"
 
 	// Common Test Data
-	InvalidJSON = "invalid json"
-	EmptyJSON   = "{}"
-
-	// Common Error Messages
-	FailedToUnmarshalResponse = "Failed to unmarshal response"
-	ExpectedStatus            = "Expected status"
+	EmptyJSON = "{}"
 
 	// Endpoints
 	AccountBalanceEndpoint       = "/account/balance"
