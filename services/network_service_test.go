@@ -9,6 +9,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshconfig "github.com/vechain/mesh/config"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -86,9 +87,7 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/network/options", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/network/options", request)
 	w := httptest.NewRecorder()
 
 	// Call NetworkOptions
@@ -147,9 +146,7 @@ func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/network/status", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/network/status", request)
 	w := httptest.NewRecorder()
 
 	// Call NetworkStatus

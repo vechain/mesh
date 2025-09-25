@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -59,9 +60,7 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -101,9 +100,7 @@ func TestAccountService_AccountBalance_WithSpecificCurrencies(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -143,9 +140,7 @@ func TestAccountService_AccountBalance_InvalidCurrencies(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -264,9 +259,7 @@ func TestAccountService_AccountBalance_WithBlockIdentifier(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -306,9 +299,7 @@ func TestAccountService_AccountBalance_WithVTHOCurrency(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -349,9 +340,7 @@ func TestAccountService_AccountBalance_WithBothCurrencies(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
