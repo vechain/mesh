@@ -78,7 +78,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	} else {
-		block, err = a.vechainClient.GetBestBlock()
+		block, err = a.vechainClient.GetBlock("best")
 		if err != nil {
 			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetBestBlock, map[string]any{
 				"error": err.Error(),
@@ -122,9 +122,9 @@ func (a *AccountService) validateCurrencies(currencies []*types.Currency) error 
 // getBlockFromIdentifier gets a block by its identifier
 func (a *AccountService) getBlockFromIdentifier(blockIdentifier types.PartialBlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
-		return a.vechainClient.GetBlockByHash(*blockIdentifier.Hash)
+		return a.vechainClient.GetBlock(*blockIdentifier.Hash)
 	} else if blockIdentifier.Index != nil {
-		return a.vechainClient.GetBlockByNumber(*blockIdentifier.Index)
+		return a.vechainClient.GetBlock(fmt.Sprintf("%x", *blockIdentifier.Index))
 	}
 	return nil, fmt.Errorf("invalid block identifier")
 }

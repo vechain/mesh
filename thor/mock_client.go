@@ -242,21 +242,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 
 // Implement the VeChainClient interface
 
-func (m *MockVeChainClient) GetBestBlock() (*api.JSONExpandedBlock, error) {
-	if m.MockError != nil {
-		return nil, m.MockError
-	}
-	return m.MockBestBlock, nil
-}
-
-func (m *MockVeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error) {
-	if m.MockError != nil {
-		return nil, m.MockError
-	}
-	return m.MockBlock, nil
-}
-
-func (m *MockVeChainClient) GetBlockByHash(blockHash string) (*api.JSONExpandedBlock, error) {
+func (m *MockVeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, error) {
 	if m.MockError != nil {
 		return nil, m.MockError
 	}

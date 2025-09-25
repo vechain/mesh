@@ -47,14 +47,14 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get real VeChain data
-	bestBlock, err := n.vechainClient.GetBestBlock()
+	bestBlock, err := n.vechainClient.GetBlock("best")
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetBestBlock), http.StatusInternalServerError)
 		return
 	}
 
-	// Get genesis block (block 0)
-	genesisBlock, err := n.vechainClient.GetBlockByNumber(0)
+	// Get genesis block
+	genesisBlock, err := n.vechainClient.GetBlock("0")
 	if err != nil {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetGenesisBlock), http.StatusInternalServerError)
 		return

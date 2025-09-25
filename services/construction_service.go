@@ -502,7 +502,7 @@ func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.
 
 // getBasicTransactionInfo gets basic transaction information from the network
 func (c *ConstructionService) getBasicTransactionInfo() (*api.JSONExpandedBlock, int, error) {
-	bestBlock, err := c.vechainClient.GetBestBlock()
+	bestBlock, err := c.vechainClient.GetBlock("best")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get best block: %w", err)
 	}

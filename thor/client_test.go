@@ -1,6 +1,7 @@
 package thor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/vechain/thor/v2/thor"
@@ -21,7 +22,7 @@ func TestVeChainClient_GetBestBlock(t *testing.T) {
 
 	// This will fail because we don't have a real Thor node running
 	// but we can test that the method exists and handles errors properly
-	_, err := client.GetBestBlock()
+	_, err := client.GetBlock("best")
 	if err == nil {
 		t.Errorf("GetBestBlock() should return error when no Thor node is available")
 	}
@@ -31,7 +32,7 @@ func TestVeChainClient_GetBlockByNumber(t *testing.T) {
 	client := NewVeChainClient("http://localhost:8669")
 
 	// Test with a valid block number
-	_, err := client.GetBlockByNumber(100)
+	_, err := client.GetBlock(fmt.Sprintf("%x", 100))
 	if err == nil {
 		t.Errorf("GetBlockByNumber() should return error when no Thor node is available")
 	}
@@ -42,7 +43,7 @@ func TestVeChainClient_GetBlockByHash(t *testing.T) {
 
 	// Test with a valid block hash
 	blockHash := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-	_, err := client.GetBlockByHash(blockHash)
+	_, err := client.GetBlock(blockHash)
 	if err == nil {
 		t.Errorf("GetBlockByHash() should return error when no Thor node is available")
 	}
