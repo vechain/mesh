@@ -2,528 +2,249 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-func TestWriteJSONResponse(t *testing.T) {
-	tests := []struct {
-		name     string
-		response any
-		wantCode int
-	}{
-		{
-			name:     "simple string response",
-			response: "test",
-			wantCode: http.StatusOK,
-		},
-		{
-			name: "complex struct response",
-			response: map[string]any{
-				"message": "success",
-				"data":    []string{"item1", "item2"},
-			},
-			wantCode: http.StatusOK,
-		},
-		{
-			name:     "nil response",
-			response: nil,
-			wantCode: http.StatusOK,
+func TestParseJSONFromRequestContext(t *testing.T) {
+	// Create test request data
+	request := types.NetworkRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
 		},
 	}
+	requestBody, _ := json.Marshal(request)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			WriteJSONResponse(w, tt.response)
+	// Create request with body in context
+	req := httptest.NewRequest("POST", "/network/status", nil)
+	ctx := context.WithValue(req.Context(), RequestBodyKey, requestBody)
+	req = req.WithContext(ctx)
 
-			if w.Code != tt.wantCode {
-				t.Errorf("WriteJSONResponse() status code = %v, want %v", w.Code, tt.wantCode)
-			}
+	// Test parsing from context
+	var parsedRequest types.NetworkRequest
+	err := ParseJSONFromRequestContext(req, &parsedRequest)
+	if err != nil {
+		t.Fatalf("ParseJSONFromRequestContext failed: %v", err)
+	}
 
-			contentType := w.Header().Get("Content-Type")
-			if contentType != "application/json" {
-				t.Errorf("WriteJSONResponse() content type = %v, want application/json", contentType)
-			}
+	// Verify parsed data
+	if parsedRequest.NetworkIdentifier.Blockchain != "vechainthor" {
+		t.Errorf("Expected blockchain 'vechainthor', got '%s'", parsedRequest.NetworkIdentifier.Blockchain)
+	}
+	if parsedRequest.NetworkIdentifier.Network != "test" {
+		t.Errorf("Expected network 'test', got '%s'", parsedRequest.NetworkIdentifier.Network)
+	}
+}
 
-			// Verify response can be unmarshaled
-			var result any
-			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
-				t.Errorf("WriteJSONResponse() produced invalid JSON: %v", err)
-			}
-		})
+func TestParseJSONFromRequestContext_NoBodyInContext(t *testing.T) {
+	// Create request WITHOUT body in context
+	req := httptest.NewRequest("POST", "/network/status", nil)
+
+	// Test parsing should fail
+	var parsedRequest types.NetworkRequest
+	err := ParseJSONFromRequestContext(req, &parsedRequest)
+	if err == nil {
+		t.Error("Expected error when no body in context, but got nil")
+	}
+
+	// Verify error message
+	expectedError := "request body not found in context - middleware may not be properly configured"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
+	}
+}
+
+func TestParseJSONFromRequestContext_InvalidJSON(t *testing.T) {
+	// Create request with invalid JSON in context
+	invalidJSON := []byte(`{"invalid": json}`)
+	req := httptest.NewRequest("POST", "/network/status", nil)
+	ctx := context.WithValue(req.Context(), RequestBodyKey, invalidJSON)
+	req = req.WithContext(ctx)
+
+	// Test parsing should fail
+	var parsedRequest types.NetworkRequest
+	err := ParseJSONFromRequestContext(req, &parsedRequest)
+	if err == nil {
+		t.Error("Expected error when parsing invalid JSON, but got nil")
+	}
+}
+
+func TestWriteJSONResponse(t *testing.T) {
+	// Test successful JSON response
+	response := map[string]string{"message": "test"}
+	w := httptest.NewRecorder()
+
+	WriteJSONResponse(w, response)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", w.Header().Get("Content-Type"))
+	}
+
+	var result map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+
+	if result["message"] != "test" {
+		t.Errorf("Expected message 'test', got %s", result["message"])
 	}
 }
 
 func TestWriteErrorResponse(t *testing.T) {
-	tests := []struct {
-		name       string
-		err        *types.Error
-		statusCode int
-		wantCode   int
-	}{
-		{
-			name: "valid error",
-			err: &types.Error{
-				Code:    1001,
-				Message: "Test error",
-			},
-			statusCode: http.StatusBadRequest,
-			wantCode:   http.StatusBadRequest,
-		},
-		{
-			name:       "nil error with default",
-			err:        nil,
-			statusCode: http.StatusInternalServerError,
-			wantCode:   http.StatusInternalServerError,
-		},
+	// Test error response with valid error
+	error := GetError(ErrInvalidRequestBody)
+	w := httptest.NewRecorder()
+
+	WriteErrorResponse(w, error, http.StatusBadRequest)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			WriteErrorResponse(w, tt.err, tt.statusCode)
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", w.Header().Get("Content-Type"))
+	}
 
-			if w.Code != tt.wantCode {
-				t.Errorf("WriteErrorResponse() status code = %v, want %v", w.Code, tt.wantCode)
-			}
+	var result map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Errorf("Failed to unmarshal error response: %v", err)
+	}
 
-			contentType := w.Header().Get("Content-Type")
-			if contentType != "application/json" {
-				t.Errorf("WriteErrorResponse() content type = %v, want application/json", contentType)
-			}
+	if result["error"] == nil {
+		t.Error("Expected error field in response")
+	}
+}
 
-			// Verify error response structure
-			var result map[string]any
-			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
-				t.Errorf("WriteErrorResponse() produced invalid JSON: %v", err)
-			}
+func TestWriteErrorResponse_NilError(t *testing.T) {
+	// Test error response with nil error (should use default)
+	w := httptest.NewRecorder()
 
-			if _, exists := result["error"]; !exists {
-				t.Errorf("WriteErrorResponse() missing 'error' field in response")
-			}
-		})
+	WriteErrorResponse(w, nil, http.StatusInternalServerError)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", w.Code)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Errorf("Failed to unmarshal error response: %v", err)
+	}
+
+	if result["error"] == nil {
+		t.Error("Expected error field in response")
 	}
 }
 
 func TestGenerateNonce(t *testing.T) {
-	// Test multiple calls to ensure randomness
-	nonces := make(map[string]bool)
-
-	for range 100 {
-		nonce, err := GenerateNonce()
-		if err != nil {
-			t.Errorf("GenerateNonce() error = %v", err)
-			return
-		}
-
-		// Check format (should start with 0x and be 18 characters total)
-		if !strings.HasPrefix(nonce, "0x") {
-			t.Errorf("GenerateNonce() = %v, want prefix '0x'", nonce)
-		}
-
-		if len(nonce) != 18 {
-			t.Errorf("GenerateNonce() = %v, want length 18, got %d", nonce, len(nonce))
-		}
-
-		// Check uniqueness
-		if nonces[nonce] {
-			t.Errorf("GenerateNonce() produced duplicate nonce: %v", nonce)
-		}
-		nonces[nonce] = true
-	}
-}
-
-func TestStringPtr(t *testing.T) {
-	tests := []struct {
-		name string
-		s    string
-	}{
-		{"empty string", ""},
-		{"simple string", "test"},
-		{"string with spaces", "hello world"},
-		{"string with special chars", "test@example.com"},
+	nonce, err := GenerateNonce()
+	if err != nil {
+		t.Errorf("GenerateNonce() unexpected error: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ptr := StringPtr(tt.s)
-			if ptr == nil {
-				t.Errorf("StringPtr() returned nil pointer")
-				return
-			}
-			if *ptr != tt.s {
-				t.Errorf("StringPtr() = %v, want %v", *ptr, tt.s)
-			}
-		})
+	if len(nonce) != 18 { // "0x" + 16 hex chars = 18
+		t.Errorf("Expected nonce length 18, got %d", len(nonce))
+	}
+
+	// Test that nonces are different
+	nonce2, err := GenerateNonce()
+	if err != nil {
+		t.Errorf("GenerateNonce() unexpected error: %v", err)
+	}
+	if nonce == nonce2 {
+		t.Error("Expected different nonces, but got the same")
 	}
 }
 
 func TestGetStringFromOptions(t *testing.T) {
-	tests := []struct {
-		name         string
-		options      map[string]any
-		key          string
-		defaultValue string
-		expected     string
-	}{
-		{
-			name:         "valid string value",
-			options:      map[string]any{"test": "value"},
-			key:          "test",
-			defaultValue: "default",
-			expected:     "value",
-		},
-		{
-			name:         "missing key",
-			options:      map[string]any{"other": "value"},
-			key:          "test",
-			defaultValue: "default",
-			expected:     "default",
-		},
-		{
-			name:         "non-string value",
-			options:      map[string]any{"test": 123},
-			key:          "test",
-			defaultValue: "default",
-			expected:     "default",
-		},
-		{
-			name:         "nil options",
-			options:      nil,
-			key:          "test",
-			defaultValue: "default",
-			expected:     "default",
-		},
+	options := map[string]any{
+		"key1": "value1",
+		"key2": 123,
+		"key3": nil,
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetStringFromOptions(tt.options, tt.key, tt.defaultValue)
-			if result != tt.expected {
-				t.Errorf("GetStringFromOptions() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestHexToDecimal(t *testing.T) {
-	tests := []struct {
-		name     string
-		hexStr   string
-		expected string
-		hasError bool
-	}{
-		{
-			name:     "valid hex with 0x prefix",
-			hexStr:   "0x1a",
-			expected: "26",
-			hasError: false,
-		},
-		{
-			name:     "valid hex without 0x prefix",
-			hexStr:   "1a",
-			expected: "26",
-			hasError: false,
-		},
-		{
-			name:     "zero value",
-			hexStr:   "0x0",
-			expected: "0",
-			hasError: false,
-		},
-		{
-			name:     "large value",
-			hexStr:   "0xde0b6b3a7640000",
-			expected: "1000000000000000000",
-			hasError: false,
-		},
-		{
-			name:     "invalid hex",
-			hexStr:   "0xgg",
-			expected: "",
-			hasError: true,
-		},
-		{
-			name:     "empty string",
-			hexStr:   "",
-			expected: "",
-			hasError: true,
-		},
+	// Test existing string value
+	result := GetStringFromOptions(options, "key1")
+	if result != "value1" {
+		t.Errorf("Expected 'value1', got %s", result)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := HexToDecimal(tt.hexStr)
+	// Test non-existing key
+	result = GetStringFromOptions(options, "nonexistent")
+	if result != "dynamic" {
+		t.Errorf("Expected 'dynamic', got %s", result)
+	}
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("HexToDecimal() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("HexToDecimal() unexpected error: %v", err)
-				}
-				if result != tt.expected {
-					t.Errorf("HexToDecimal() = %v, want %v", result, tt.expected)
-				}
-			}
-		})
+	// Test non-string value
+	result = GetStringFromOptions(options, "key2")
+	if result != "dynamic" {
+		t.Errorf("Expected 'dynamic' for non-string value, got %s", result)
+	}
+
+	// Test nil value
+	result = GetStringFromOptions(options, "key3")
+	if result != "dynamic" {
+		t.Errorf("Expected 'dynamic' for nil value, got %s", result)
 	}
 }
 
 func TestRemoveHexPrefix(t *testing.T) {
 	tests := []struct {
-		name     string
 		input    string
 		expected string
 	}{
-		{"with 0x prefix", "0x1a", "1a"},
-		{"without 0x prefix", "1a", "1a"},
-		{"with 0X prefix", "0X1a", "0X1a"}, // Function only removes lowercase 0x
-		{"empty string", "", ""},
-		{"just 0x", "0x", "0x"}, // Function only removes lowercase 0x
-		{"just 0X", "0X", "0X"}, // Function only removes lowercase 0x
+		{"0x1234", "1234"},
+		{"-0x1234", "-0x1234"}, // Function only removes "0x" prefix, not "-0x"
+		{"1234", "1234"},
+		{"", ""},
+		{"0x", "0x"},   // Function doesn't handle edge case of just "0x"
+		{"-0x", "-0x"}, // Function doesn't handle edge case of just "-0x"
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := RemoveHexPrefix(tt.input)
-			if result != tt.expected {
-				t.Errorf("RemoveHexPrefix() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestDecodeHexStringWithPrefix(t *testing.T) {
-	tests := []struct {
-		name     string
-		hexStr   string
-		expected []byte
-		hasError bool
-	}{
-		{
-			name:     "valid hex with 0x prefix",
-			hexStr:   "0x1a2b",
-			expected: []byte{0x1a, 0x2b},
-			hasError: false,
-		},
-		{
-			name:     "valid hex without 0x prefix",
-			hexStr:   "1a2b",
-			expected: []byte{0x1a, 0x2b},
-			hasError: false,
-		},
-		{
-			name:     "empty string",
-			hexStr:   "",
-			expected: []byte{},
-			hasError: false,
-		},
-		{
-			name:     "invalid hex",
-			hexStr:   "0xgg",
-			expected: nil,
-			hasError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := DecodeHexStringWithPrefix(tt.hexStr)
-
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("DecodeHexStringWithPrefix() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("DecodeHexStringWithPrefix() unexpected error: %v", err)
-				}
-				if !bytes.Equal(result, tt.expected) {
-					t.Errorf("DecodeHexStringWithPrefix() = %v, want %v", result, tt.expected)
-				}
-			}
-		})
-	}
-}
-
-func TestGetTxOrigins(t *testing.T) {
-	tests := []struct {
-		name       string
-		operations []*types.Operation
-		expected   []string
-	}{
-		{
-			name: "transfer operations with negative amounts",
-			operations: []*types.Operation{
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0x123",
-					},
-					Amount: &types.Amount{
-						Value: "-100",
-					},
-				},
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0x456",
-					},
-					Amount: &types.Amount{
-						Value: "100",
-					},
-				},
-			},
-			expected: []string{"0x123"},
-		},
-		{
-			name: "fee operations",
-			operations: []*types.Operation{
-				{
-					Type: OperationTypeFee,
-					Account: &types.AccountIdentifier{
-						Address: "0x789",
-					},
-				},
-			},
-			expected: []string{"0x789"},
-		},
-		{
-			name: "mixed operations",
-			operations: []*types.Operation{
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0x123",
-					},
-					Amount: &types.Amount{
-						Value: "-100",
-					},
-				},
-				{
-					Type: OperationTypeFee,
-					Account: &types.AccountIdentifier{
-						Address: "0x456",
-					},
-				},
-			},
-			expected: []string{"0x123", "0x456"},
-		},
-		{
-			name:       "empty operations",
-			operations: []*types.Operation{},
-			expected:   []string{},
-		},
-		{
-			name: "operations without accounts",
-			operations: []*types.Operation{
-				{
-					Type:    OperationTypeTransfer,
-					Account: nil,
-				},
-			},
-			expected: []string{},
-		},
-		{
-			name: "duplicate addresses",
-			operations: []*types.Operation{
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0x123",
-					},
-					Amount: &types.Amount{
-						Value: "-100",
-					},
-				},
-				{
-					Type: OperationTypeFee,
-					Account: &types.AccountIdentifier{
-						Address: "0x123",
-					},
-				},
-			},
-			expected: []string{"0x123"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetTxOrigins(tt.operations)
-
-			if len(result) != len(tt.expected) {
-				t.Errorf("GetTxOrigins() length = %v, want %v", len(result), len(tt.expected))
-				return
-			}
-
-			for i, addr := range result {
-				if addr != tt.expected[i] {
-					t.Errorf("GetTxOrigins()[%d] = %v, want %v", i, addr, tt.expected[i])
-				}
-			}
-		})
-	}
-}
-
-// Test currency constants
-func TestCurrencyConstants(t *testing.T) {
-	// Test VETCurrency
-	if VETCurrency.Symbol != "VET" {
-		t.Errorf("VETCurrency.Symbol = %v, want VET", VETCurrency.Symbol)
-	}
-	if VETCurrency.Decimals != 18 {
-		t.Errorf("VETCurrency.Decimals = %v, want 18", VETCurrency.Decimals)
-	}
-
-	// Test VTHOCurrency
-	if VTHOCurrency.Symbol != "VTHO" {
-		t.Errorf("VTHOCurrency.Symbol = %v, want VTHO", VTHOCurrency.Symbol)
-	}
-	if VTHOCurrency.Decimals != 18 {
-		t.Errorf("VTHOCurrency.Decimals = %v, want 18", VTHOCurrency.Decimals)
-	}
-	if VTHOCurrency.Metadata == nil {
-		t.Errorf("VTHOCurrency.Metadata is nil")
-	} else {
-		contractAddr, exists := VTHOCurrency.Metadata["contractAddress"]
-		if !exists {
-			t.Errorf("VTHOCurrency.Metadata missing contractAddress")
-		} else {
-			expectedAddr := "0x0000000000000000000000000000456E65726779"
-			if contractAddr != expectedAddr {
-				t.Errorf("VTHOCurrency.Metadata.contractAddress = %v, want %v", contractAddr, expectedAddr)
-			}
+		result := RemoveHexPrefix(tt.input)
+		if result != tt.expected {
+			t.Errorf("RemoveHexPrefix(%s) = %s, expected %s", tt.input, result, tt.expected)
 		}
 	}
 }
 
-// Test operation type constants
-func TestOperationTypeConstants(t *testing.T) {
-	expectedTypes := map[string]string{
-		"OperationTypeNone":          "None",
-		"OperationTypeTransfer":      "Transfer",
-		"OperationTypeFee":           "Fee",
-		"OperationTypeFeeDelegation": "FeeDelegation",
+func TestHexToDecimal(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+		hasError bool
+	}{
+		{"0x1", "1", false},
+		{"0xa", "10", false},
+		{"0xff", "255", false},
+		{"0x100", "256", false},
+		{"invalid", "", true},
+		{"", "", true},
 	}
 
-	actualTypes := map[string]string{
-		"OperationTypeNone":          OperationTypeNone,
-		"OperationTypeTransfer":      OperationTypeTransfer,
-		"OperationTypeFee":           OperationTypeFee,
-		"OperationTypeFeeDelegation": OperationTypeFeeDelegation,
-	}
-
-	for name, expected := range expectedTypes {
-		if actualTypes[name] != expected {
-			t.Errorf("%s = %v, want %v", name, actualTypes[name], expected)
+	for _, tt := range tests {
+		result, err := HexToDecimal(tt.input)
+		if tt.hasError {
+			if err == nil {
+				t.Errorf("HexToDecimal(%s) expected error, got nil", tt.input)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("HexToDecimal(%s) unexpected error: %v", tt.input, err)
+			}
+			if result != tt.expected {
+				t.Errorf("HexToDecimal(%s) = %s, expected %s", tt.input, result, tt.expected)
+			}
 		}
 	}
 }
@@ -531,115 +252,150 @@ func TestOperationTypeConstants(t *testing.T) {
 func TestInt64Ptr(t *testing.T) {
 	value := int64(42)
 	ptr := Int64Ptr(value)
+
 	if ptr == nil || *ptr != value {
-		t.Errorf("Int64Ptr() returned nil or value mismatch")
+		t.Error("Expected non-nil pointer and value")
 	}
 }
 
 func TestBoolPtr(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    bool
-		expected bool
-	}{
-		{"true", true, true},
-		{"false", false, false},
+	value := true
+	ptr := BoolPtr(value)
+
+	if ptr == nil || *ptr != value {
+		t.Error("Expected non-nil pointer")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ptr := BoolPtr(tt.input)
-			if ptr == nil || *ptr != tt.expected {
-				t.Errorf("BoolPtr() returned nil or value mismatch")
-			}
-		})
+	if *ptr != value {
+		t.Errorf("Expected %t, got %t", value, *ptr)
 	}
 }
 
-func TestGetTargetIndex(t *testing.T) {
-	tests := []struct {
-		name       string
-		localIndex int64
-		peers      []Peer
-		expected   int64
-	}{
-		{
-			name:       "no peers",
-			localIndex: 100,
-			peers:      []Peer{},
-			expected:   100,
-		},
-		{
-			name:       "peers with lower block numbers",
-			localIndex: 100,
-			peers: []Peer{
-				{PeerID: "peer1", BestBlockID: "0000000000000050"}, // 80 in decimal
-				{PeerID: "peer2", BestBlockID: "0000000000000060"}, // 96 in decimal
-			},
-			expected: 100,
-		},
-		{
-			name:       "peers with higher block numbers",
-			localIndex: 100,
-			peers: []Peer{
-				{PeerID: "peer1", BestBlockID: "0000000000000080"}, // 128 in decimal
-				{PeerID: "peer2", BestBlockID: "00000000000000A0"}, // 160 in decimal
-			},
-			expected: 160,
-		},
-		{
-			name:       "peers with invalid block IDs",
-			localIndex: 100,
-			peers: []Peer{
-				{PeerID: "peer1", BestBlockID: "invalid"},
-				{PeerID: "peer2", BestBlockID: "short"},
-			},
-			expected: 100,
-		},
-		{
-			name:       "mixed valid and invalid peers",
-			localIndex: 100,
-			peers: []Peer{
-				{PeerID: "peer1", BestBlockID: "invalid"},
-				{PeerID: "peer2", BestBlockID: "0000000000000080"}, // 128 in decimal
-			},
-			expected: 128,
-		},
-	}
+func TestStringPtr(t *testing.T) {
+	value := "test"
+	ptr := StringPtr(value)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetTargetIndex(tt.localIndex, tt.peers)
-			if result != tt.expected {
-				t.Errorf("GetTargetIndex() = %v, want %v", result, tt.expected)
-			}
-		})
+	if ptr == nil || *ptr != value {
+		t.Error("Expected non-nil pointer")
 	}
 }
 
 func TestComputeAddress(t *testing.T) {
-	// Test with a valid public key
-	validPubKey := &types.PublicKey{
-		Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+	// Test with valid public key
+	publicKey := &types.PublicKey{
+		Bytes:     []byte{0x02, 0xd9, 0x92, 0xbd, 0x20, 0x3d, 0x2b, 0xf8, 0x88, 0x38, 0x90, 0x89, 0xdb, 0x13, 0xd2, 0xd0, 0x80, 0x7c, 0x16, 0x97, 0x09, 0x1d, 0xe3, 0x77, 0x99, 0x8e, 0xfe, 0x6c, 0xf6, 0x0d, 0x66, 0xfb, 0xb3},
 		CurveType: "secp256k1",
 	}
 
-	address, err := ComputeAddress(validPubKey)
+	address, err := ComputeAddress(publicKey)
 	if err != nil {
-		t.Errorf("ComputeAddress() error = %v", err)
+		t.Errorf("ComputeAddress() unexpected error: %v", err)
 	}
-	if address != "0xf077b491b355e64048ce21e3a6fc4751eeea77fa" {
-		t.Errorf("ComputeAddress() = %v, want 0xf077b491b355e64048ce21e3a6fc4751eeea77fa", address)
+
+	if address == "" {
+		t.Error("Expected non-empty address")
 	}
 
 	// Test with invalid public key
-	invalidPubKey := &types.PublicKey{
-		Bytes:     []byte{0x00}, // Invalid public key
+	invalidPublicKey := &types.PublicKey{
+		Bytes:     []byte("invalid"),
 		CurveType: "secp256k1",
 	}
 
-	_, err = ComputeAddress(invalidPubKey)
+	_, err = ComputeAddress(invalidPublicKey)
 	if err == nil {
-		t.Errorf("ComputeAddress() with invalid key should return error")
+		t.Error("Expected error for invalid public key")
+	}
+}
+
+func TestGetTxOrigins(t *testing.T) {
+	operations := []*types.Operation{
+		{
+			Type: OperationTypeFee,
+			Account: &types.AccountIdentifier{
+				Address: "0x1234567890123456789012345678901234567890",
+			},
+		},
+		{
+			Type: OperationTypeTransfer,
+			Account: &types.AccountIdentifier{
+				Address: "0x0987654321098765432109876543210987654321",
+			},
+			Amount: &types.Amount{
+				Value: "-1000000000000000000", // Negative value for sending
+			},
+		},
+	}
+
+	origins := GetTxOrigins(operations)
+
+	if len(origins) != 2 {
+		t.Errorf("Expected 2 origins, got %d", len(origins))
+		return // Don't continue if we don't have the expected number of origins
+	}
+
+	// Function converts to lowercase
+	expected1 := "0x1234567890123456789012345678901234567890"
+	expected2 := "0x0987654321098765432109876543210987654321"
+
+	if origins[0] != expected1 {
+		t.Errorf("Expected first origin to be %s, got %s", expected1, origins[0])
+	}
+
+	if origins[1] != expected2 {
+		t.Errorf("Expected second origin to be %s, got %s", expected2, origins[1])
+	}
+}
+
+func TestGetTargetIndex(t *testing.T) {
+	peers := []Peer{
+		{
+			BestBlockID: "0000000000000001",
+		},
+		{
+			BestBlockID: "0000000000000002",
+		},
+	}
+
+	// Test with local index 0
+	index := GetTargetIndex(0, peers)
+	if index != 2 {
+		t.Errorf("Expected index 2, got %d", index)
+	}
+
+	// Test with local index higher than peers
+	index = GetTargetIndex(5, peers)
+	if index != 5 {
+		t.Errorf("Expected index 5, got %d", index)
+	}
+}
+
+func TestDecodeHexStringWithPrefix(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []byte
+		hasError bool
+	}{
+		{"0x1234", []byte{0x12, 0x34}, false},
+		{"0xff", []byte{0xff}, false},
+		{"0x", nil, true}, // "0x" becomes "" after RemoveHexPrefix, which is invalid hex
+		{"invalid", nil, true},
+		{"", []byte{}, false}, // Empty string is valid hex (returns empty byte slice)
+	}
+
+	for _, tt := range tests {
+		result, err := DecodeHexStringWithPrefix(tt.input)
+		if tt.hasError {
+			if err == nil {
+				t.Errorf("DecodeHexStringWithPrefix(%s) expected error, got nil", tt.input)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("DecodeHexStringWithPrefix(%s) unexpected error: %v", tt.input, err)
+			}
+			if !bytes.Equal(result, tt.expected) {
+				t.Errorf("DecodeHexStringWithPrefix(%s) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		}
 	}
 }

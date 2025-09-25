@@ -2,12 +2,12 @@ package services
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -55,9 +55,7 @@ func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/mempool", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/mempool", request)
 	w := httptest.NewRecorder()
 
 	// Call Mempool
@@ -85,9 +83,7 @@ func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/mempool", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/mempool", request)
 	w := httptest.NewRecorder()
 
 	// Call Mempool
@@ -131,9 +127,7 @@ func TestMempoolService_MempoolTransaction_MissingTransactionIdentifier(t *testi
 		// TransactionIdentifier is nil
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/mempool/transaction", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction
@@ -160,9 +154,7 @@ func TestMempoolService_MempoolTransaction_EmptyTransactionHash(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/mempool/transaction", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction
@@ -189,9 +181,7 @@ func TestMempoolService_MempoolTransaction_InvalidTransactionHash(t *testing.T) 
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/mempool/transaction", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction
@@ -218,9 +208,7 @@ func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/mempool/transaction", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction

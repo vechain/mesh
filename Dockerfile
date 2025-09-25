@@ -25,9 +25,8 @@ FROM golang:1.24-bullseye AS mesh-builder
 # Set working directory
 WORKDIR /app
 
-# Install git, ca-certificates and build dependencies
+# Install ca-certificates, gcc and build dependencies
 RUN apt-get update && apt-get install -y \
-    git \
     ca-certificates \
     gcc \
     && rm -rf /var/lib/apt/lists/*
@@ -47,13 +46,10 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o mesh-server .
 # Final stage
 FROM ubuntu:24.04
 
-# Install ca-certificates, wget for health checks, git, make, and build tools
+# Install ca-certificates and wget for health checks
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
-    git \
-    make \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

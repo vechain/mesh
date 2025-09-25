@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -53,9 +54,7 @@ func TestBlockService_Block_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/block", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/block", request)
 	w := httptest.NewRecorder()
 
 	// Call Block
@@ -113,9 +112,7 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/block/transaction", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/block/transaction", request)
 	w := httptest.NewRecorder()
 
 	// Call BlockTransaction
@@ -152,9 +149,7 @@ func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/block", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/block", request)
 	w := httptest.NewRecorder()
 
 	// Call Block
@@ -192,9 +187,7 @@ func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/block", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/block", request)
 	w := httptest.NewRecorder()
 
 	// Call Block
@@ -234,9 +227,7 @@ func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/block/transaction", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/block/transaction", request)
 	w := httptest.NewRecorder()
 
 	// Call BlockTransaction

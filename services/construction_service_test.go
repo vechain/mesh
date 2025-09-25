@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"math/big"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshconfig "github.com/vechain/mesh/config"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
@@ -58,6 +60,11 @@ func createTestOperation(accountAddress, amount string) *types.Operation {
 func makeHTTPRequest(method, url string, body []byte) (*httptest.ResponseRecorder, *http.Request) {
 	req := httptest.NewRequest(method, url, bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
+
+	// Simulate middleware by adding request body to context
+	ctx := context.WithValue(req.Context(), meshutils.RequestBodyKey, body)
+	req = req.WithContext(ctx)
+
 	w := httptest.NewRecorder()
 	return w, req
 }
@@ -220,9 +227,7 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/metadata", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/metadata", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionMetadata
@@ -262,9 +267,7 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/metadata", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/metadata", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionMetadata
@@ -345,9 +348,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -408,9 +409,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -460,9 +459,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -517,9 +514,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -560,9 +555,7 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 		Transaction: "0xf85db84551f84281f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac08094f077b491b355e64048ce21e3a6fc4751eeea77fa80",
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/parse", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/parse", request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionParse(w, req)
@@ -615,9 +608,7 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -665,9 +656,7 @@ func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *t
 		},
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -690,9 +679,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 		Signatures:          []*types.Signature{}, // No signatures
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -750,9 +737,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 		},
 	}
 
-	requestBody, _ = json.Marshal(request)
-	req = httptest.NewRequest("POST", "/construction/combine", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req = meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
 	w = httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -790,9 +775,7 @@ func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
 		SignedTransaction: "0x51f88481f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac0b8411bc4aff0c0d425ecd1a931ad435156a48b3e74b9a76b79fcc6e866337a73f05a7e05773a5fcbd4cf1251cf026e70c5cc5b3524866446de93a7d49897c0bac57900",
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/hash", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/hash", request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionHash(w, req)
@@ -831,9 +814,7 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 		SignedTransaction: "0x51f88481f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac0b8411bc4aff0c0d425ecd1a931ad435156a48b3e74b9a76b79fcc6e866337a73f05a7e05773a5fcbd4cf1251cf026e70c5cc5b3524866446de93a7d49897c0bac57900",
 	}
 
-	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/construction/submit", bytes.NewBuffer(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req := meshtests.CreateRequestWithContext("POST", "/construction/submit", request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionSubmit

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -83,7 +82,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 // parseBlockRequest parses and validates a block request
 func (b *BlockService) parseBlockRequest(r *http.Request) (*types.BlockRequest, error) {
 	var request types.BlockRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		return nil, fmt.Errorf("invalid request body")
 	}
 
@@ -105,7 +104,7 @@ func (b *BlockService) parseBlockRequest(r *http.Request) (*types.BlockRequest, 
 // parseBlockTransactionRequest parses and validates a block transaction request
 func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.BlockTransactionRequest, error) {
 	var request types.BlockTransactionRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
 		return nil, fmt.Errorf("invalid request body")
 	}
 

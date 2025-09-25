@@ -1,8 +1,12 @@
 package config
 
 import (
+	"bytes"
+	"io"
+	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -441,5 +445,146 @@ func TestNewConfigWithInvalidJSON(t *testing.T) {
 	_, err = NewConfig()
 	if err == nil {
 		t.Errorf("NewConfig() expected error for invalid JSON, got nil")
+	}
+}
+
+func TestPrintConfig(t *testing.T) {
+	config := &Config{
+		ServiceName: "Test Service",
+		Port:        8080,
+		MeshVersion: "1.0.0",
+		Mode:        "online",
+		NodeAPI:     "http://localhost:8669",
+		NodeVersion: "1.0.0",
+		Network:     "main",
+		ChainTag:    0x27,
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	config.PrintConfig()
+
+	// Restore stdout
+	err := w.Close()
+	if err != nil {
+		t.Fatalf("Failed to close pipe: %v", err)
+	}
+	os.Stdout = old
+
+	// Read captured output
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, r)
+	if err != nil {
+		t.Fatalf("Failed to copy from pipe: %v", err)
+	}
+	output := buf.String()
+
+	// Check that the output contains expected fields
+	expectedFields := []string{
+		"Test Service",
+		"8080",
+		"1.0.0",
+		"online",
+		"http://localhost:8669",
+		"main",
+		"0x27",
+	}
+
+	for _, field := range expectedFields {
+		if !strings.Contains(output, field) {
+			t.Errorf("PrintConfig() output should contain %s, got: %s", field, output)
+		}
+	}
+}
+
+func TestGetBaseGasPrice(t *testing.T) {
+	tests := []struct {
+		name           string
+		baseGasPrice   string
+		expectedResult *big.Int
+	}{
+		{
+			name:           "valid gas price",
+			baseGasPrice:   "1000000000000000000",
+			expectedResult: big.NewInt(1000000000000000000),
+		},
+		{
+			name:           "empty gas price",
+			baseGasPrice:   "",
+			expectedResult: nil,
+		},
+		{
+			name:           "invalid gas price",
+			baseGasPrice:   "invalid",
+			expectedResult: nil,
+		},
+		{
+			name:           "zero gas price",
+			baseGasPrice:   "0",
+			expectedResult: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Config{
+				BaseGasPrice: tt.baseGasPrice,
+			}
+
+			result := config.GetBaseGasPrice()
+
+			if tt.expectedResult == nil {
+				if result != nil {
+					t.Errorf("GetBaseGasPrice() expected nil, got %v", result)
+				}
+			} else {
+				if result == nil {
+					t.Errorf("GetBaseGasPrice() expected %v, got nil", tt.expectedResult)
+				} else if result.Cmp(tt.expectedResult) != 0 {
+					t.Errorf("GetBaseGasPrice() expected %v, got %v", tt.expectedResult, result)
+				}
+			}
+		})
+	}
+}
+
+func TestGetExpiration(t *testing.T) {
+	tests := []struct {
+		name       string
+		expiration uint32
+		expected   uint32
+	}{
+		{
+			name:       "default expiration",
+			expiration: 720,
+			expected:   720,
+		},
+		{
+			name:       "zero expiration",
+			expiration: 0,
+			expected:   0,
+		},
+		{
+			name:       "high expiration",
+			expiration: 10000,
+			expected:   10000,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Config{
+				Expiration: tt.expiration,
+			}
+
+			result := config.GetExpiration()
+
+			if result != tt.expected {
+				t.Errorf("GetExpiration() expected %d, got %d", tt.expected, result)
+			}
+		})
 	}
 }
