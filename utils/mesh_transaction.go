@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -329,16 +328,9 @@ func ParseTransactionFromBytes(txBytes []byte, signed bool, encoder *MeshTransac
 		// For signed transactions, try to decode as Mesh transaction first
 		meshTx, err = encoder.DecodeSignedTransaction(txBytes)
 		if err != nil {
-			// Fallback to native Thor decoding
-			var nativeTx thorTx.Transaction
-			stream := rlp.NewStream(bytes.NewReader(txBytes), 0)
-			if err := nativeTx.DecodeRLP(stream); err != nil {
-				return nil, nil, nil, fmt.Errorf("failed to decode transaction: %w", err)
-			}
-			vechainTx = &nativeTx
-		} else {
-			vechainTx = meshTx.Transaction
+			return nil, nil, nil, fmt.Errorf("failed to decode signed transaction: %w", err)
 		}
+		vechainTx = meshTx.Transaction
 	} else {
 		// For unsigned transactions, decode as Mesh transaction
 		meshTx, err = encoder.DecodeUnsignedTransaction(txBytes)
