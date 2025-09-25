@@ -91,16 +91,3 @@ jobs:
 
       - name: Run full E2E test cycle
         run: make test-e2e-full
-        env:
-          # Increase timeout for E2E tests
-          TEST_TIMEOUT: 300
-
-      - name: Upload E2E test logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-logs
-          path: |
-            *.log
-            logs/
-          retention-days: 7

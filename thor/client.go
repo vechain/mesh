@@ -15,9 +15,7 @@ import (
 
 // VeChainClientInterface defines a common interface
 type VeChainClientInterface interface {
-	GetBestBlock() (*api.JSONExpandedBlock, error)
-	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
-	GetBlockByHash(blockHash string) (*api.JSONExpandedBlock, error)
+	GetBlock(revision string) (*api.JSONExpandedBlock, error)
 	GetAccount(address string) (*api.Account, error)
 	GetChainID() (int, error)
 	SubmitTransaction(vechainTx *tx.Transaction) (string, error)
@@ -41,30 +39,11 @@ func NewVeChainClient(baseURL string) *VeChainClient {
 	}
 }
 
-// GetBestBlock fetches the latest block from VeChain
-func (c *VeChainClient) GetBestBlock() (*api.JSONExpandedBlock, error) {
-	block, err := c.client.ExpandedBlock("best")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get best block: %w", err)
-	}
-	return block, nil
-}
-
-// GetBlockByNumber fetches a block by its number
-func (c *VeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error) {
-	revision := fmt.Sprintf("%x", blockNumber)
+// GetBlock fetches a block by its revision
+func (c *VeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, error) {
 	block, err := c.client.ExpandedBlock(revision)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get block by number: %w", err)
-	}
-	return block, nil
-}
-
-// GetBlockByHash fetches a block by its hash
-func (c *VeChainClient) GetBlockByHash(blockHash string) (*api.JSONExpandedBlock, error) {
-	block, err := c.client.ExpandedBlock(blockHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get block by hash: %w", err)
+		return nil, fmt.Errorf("failed to get block by revision: %w", err)
 	}
 	return block, nil
 }
@@ -146,13 +125,13 @@ func (c *VeChainClient) GetDynamicGasPrice() (*DynamicGasPrice, error) {
 // GetSyncProgress returns the current sync progress (0.0 to 1.0)
 func (c *VeChainClient) GetSyncProgress() (float64, error) {
 	// Get best block (head)
-	bestBlock, err := c.GetBestBlock()
+	bestBlock, err := c.GetBlock("best")
 	if err != nil {
 		return 0, err
 	}
 
 	// Get genesis block
-	genesisBlock, err := c.GetBlockByNumber(0)
+	genesisBlock, err := c.GetBlock("0")
 	if err != nil {
 		return 0, err
 	}

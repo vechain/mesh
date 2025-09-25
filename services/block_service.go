@@ -133,10 +133,10 @@ func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.Blo
 func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != "" {
 		// Get block by hash
-		return b.vechainClient.GetBlockByHash(blockIdentifier.Hash)
+		return b.vechainClient.GetBlock(blockIdentifier.Hash)
 	} else if blockIdentifier.Index != 0 {
 		// Get block by number
-		return b.vechainClient.GetBlockByNumber(blockIdentifier.Index)
+		return b.vechainClient.GetBlock(fmt.Sprintf("%x", blockIdentifier.Index))
 	}
 	return nil, fmt.Errorf("invalid block identifier")
 }
@@ -145,10 +145,10 @@ func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifie
 func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.PartialBlockIdentifier) (*api.JSONExpandedBlock, error) {
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
 		// Get block by hash
-		return b.vechainClient.GetBlockByHash(*blockIdentifier.Hash)
+		return b.vechainClient.GetBlock(*blockIdentifier.Hash)
 	} else if blockIdentifier.Index != nil {
 		// Get block by number
-		return b.vechainClient.GetBlockByNumber(*blockIdentifier.Index)
+		return b.vechainClient.GetBlock(fmt.Sprintf("%x", *blockIdentifier.Index))
 	}
 	return nil, fmt.Errorf("invalid block identifier")
 }
@@ -159,7 +159,7 @@ func (b *BlockService) getParentBlock(block *api.JSONExpandedBlock) (*api.JSONEx
 		// For genesis block, parent is itself
 		return block, nil
 	}
-	return b.vechainClient.GetBlockByHash(block.ParentID.String())
+	return b.vechainClient.GetBlock(block.ParentID.String())
 }
 
 // findTransactionInBlock finds a specific transaction in a block
