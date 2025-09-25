@@ -36,11 +36,11 @@ build:
 	go build -o mesh-server .
 
 test-unit:
-	go test $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
+	go test $(shell go list ./... | grep -v /tests | grep -v /scripts)
 
 test-unit-coverage:
 	@echo "Generating coverage report..."
-	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts); then \
+	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi
@@ -55,7 +55,7 @@ test-unit-coverage-threshold-custom:
 		echo "❌ Please specify THRESHOLD (e.g., make test-unit-coverage-threshold-custom THRESHOLD=75)"; \
 		exit 1; \
 	fi; \
-	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts); then \
+	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi; \
@@ -73,7 +73,7 @@ test-unit-coverage-threshold-custom:
 
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
-	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts); then \
+	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi
