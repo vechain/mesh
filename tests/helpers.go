@@ -12,7 +12,7 @@ import (
 
 // CreateRequestWithContext simulates the middleware by adding request body to context
 // This is needed for tests because they don't go through the actual middleware
-func CreateRequestWithContext(method, url string, body interface{}) *http.Request {
+func CreateRequestWithContext(method, url string, body any) *http.Request {
 	requestBody, _ := json.Marshal(body)
 	req := httptest.NewRequest(method, url, bytes.NewBuffer(requestBody))
 	req.Header.Set("Content-Type", "application/json")

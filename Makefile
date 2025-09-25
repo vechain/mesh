@@ -40,14 +40,14 @@ test-unit:
 
 test-unit-coverage:
 	@echo "Generating coverage report..."
-	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
+	@if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi
-	go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
+	@go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=76
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=76.8
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."
@@ -73,13 +73,13 @@ test-unit-coverage-threshold-custom:
 
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
-	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
+	@if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi
 	@echo "Filtering out files not required from coverage report..."
-	grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out
-	go tool cover -html=coverage_filtered.out -o coverage.html
+	@grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out
+	@go tool cover -html=coverage_filtered.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 	@echo "Open coverage.html in your browser to view detailed coverage"
 

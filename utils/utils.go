@@ -54,11 +54,11 @@ func GenerateNonce() (string, error) {
 }
 
 // GetStringFromOptions gets a string value from options map
-func GetStringFromOptions(options map[string]any, key string, defaultValue string) string {
+func GetStringFromOptions(options map[string]any, key string) string {
 	if value, ok := options[key].(string); ok {
 		return value
 	}
-	return defaultValue
+	return "dynamic"
 }
 
 // RemoveHexPrefix removes the "0x" prefix from a hex string if present

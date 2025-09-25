@@ -130,7 +130,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	}
 
 	// Determine transaction type
-	transactionType := meshutils.GetStringFromOptions(request.Options, "transactionType", "dynamic")
+	transactionType := meshutils.GetStringFromOptions(request.Options, "transactionType")
 
 	// Calculate gas and create blockRef
 	gas := c.calculateGas(request.Options)
