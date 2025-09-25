@@ -40,7 +40,10 @@ test-unit:
 
 test-unit-coverage:
 	@echo "Generating coverage report..."
-	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
+	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts); then \
+		echo "❌ Tests failed! Cannot generate coverage report."; \
+		exit 1; \
+	fi
 	go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
 
 test-unit-coverage-threshold:
@@ -52,7 +55,10 @@ test-unit-coverage-threshold-custom:
 		echo "❌ Please specify THRESHOLD (e.g., make test-unit-coverage-threshold-custom THRESHOLD=75)"; \
 		exit 1; \
 	fi; \
-	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts) > /dev/null 2>&1; \
+	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts); then \
+		echo "❌ Tests failed! Cannot generate coverage report."; \
+		exit 1; \
+	fi; \
 	grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out; \
 	coverage=$$(go tool cover -func=coverage_filtered.out | tail -1 | grep -o '[0-9]*\.[0-9]*%' | sed 's/%//'); \
 	threshold=$(THRESHOLD); \
@@ -67,7 +73,10 @@ test-unit-coverage-threshold-custom:
 
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
-	go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts)
+	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests/e2e | grep -v /scripts); then \
+		echo "❌ Tests failed! Cannot generate coverage report."; \
+		exit 1; \
+	fi
 	@echo "Filtering out files not required from coverage report..."
 	grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out
 	go tool cover -html=coverage_filtered.out -o coverage.html
