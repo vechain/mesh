@@ -585,3 +585,70 @@ func ValidateDynamicMetadataFields(metadata map[string]any) error {
 
 	return nil
 }
+
+// ValidateBlockResponse validates a block response
+func ValidateBlockResponse(response *types.BlockResponse) error {
+	if response.Block == nil {
+		return fmt.Errorf("block is nil")
+	}
+
+	if response.Block.BlockIdentifier == nil {
+		return fmt.Errorf("block identifier is nil")
+	}
+
+	if response.Block.BlockIdentifier.Hash == "" {
+		return fmt.Errorf("block hash is empty")
+	}
+
+	return nil
+}
+
+// ValidateBlockTransactionResponse validates a block transaction response
+func ValidateBlockTransactionResponse(response *types.BlockTransactionResponse) error {
+	if response.Transaction == nil {
+		return fmt.Errorf("transaction is nil")
+	}
+
+	if response.Transaction.TransactionIdentifier == nil {
+		return fmt.Errorf("transaction identifier is nil")
+	}
+
+	if response.Transaction.TransactionIdentifier.Hash == "" {
+		return fmt.Errorf("transaction hash is empty")
+	}
+
+	return nil
+}
+
+// ValidateEventsBlocksResponse validates an events blocks response
+func ValidateEventsBlocksResponse(response *types.EventsBlocksResponse) error {
+	if response.Events == nil {
+		return fmt.Errorf("events is nil")
+	}
+
+	// Check that events are in ascending order by sequence
+	for i := 1; i < len(response.Events); i++ {
+		if response.Events[i].Sequence <= response.Events[i-1].Sequence {
+			return fmt.Errorf("events are not in ascending order by sequence")
+		}
+	}
+
+	return nil
+}
+
+// ValidateSearchTransactionsResponse validates a search transactions response
+func ValidateSearchTransactionsResponse(response *types.SearchTransactionsResponse) error {
+	if response.Transactions == nil {
+		return fmt.Errorf("transactions is nil")
+	}
+
+	if response.TotalCount < 0 {
+		return fmt.Errorf("total count is negative")
+	}
+
+	if len(response.Transactions) != int(response.TotalCount) {
+		return fmt.Errorf("transactions length (%d) does not match total count (%d)", len(response.Transactions), response.TotalCount)
+	}
+
+	return nil
+}

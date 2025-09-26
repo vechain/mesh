@@ -3,151 +3,10 @@ package e2e
 import (
 	"encoding/hex"
 	"fmt"
-	"testing"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshutils "github.com/vechain/mesh/utils"
 )
-
-// TestConstructionMempoolSolo tests the complete construction flow in solo mode
-// It tests both legacy and dynamic transaction types in the same flow
-func TestConstructionMempoolSolo(t *testing.T) {
-	t.Log("Starting construction endpoints and then mempool test sequence...")
-
-	// Get test configuration
-	config := GetTestConfig()
-	client := NewHTTPClient(config.BaseURL, config.TimeoutSeconds)
-	networkIdentifier := CreateTestNetworkIdentifier(config.Network)
-
-	// Test both transaction types in the same flow
-	transactionTypes := []string{TransactionTypeLegacy, TransactionTypeDynamic}
-
-	for _, transactionType := range transactionTypes {
-		t.Run(transactionType+"Transaction", func(t *testing.T) {
-			t.Logf("Testing %s transaction flow...", transactionType)
-			testTransactionFlow(t, client, networkIdentifier, config, transactionType)
-		})
-	}
-
-	t.Log("✅ All test steps completed successfully!")
-}
-
-// testTransactionFlow tests the complete transaction flow for a specific transaction type
-func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *types.NetworkIdentifier, config *TestConfig, transactionType string) {
-	// Step 1: Network List
-	t.Log("Step 1: Testing /network/list")
-	networkListResp, err := testNetworkList(client)
-	if err != nil {
-		t.Fatalf("Network list test failed: %v", err)
-	}
-	t.Logf("Network list response: %+v", networkListResp)
-
-	// Step 2: Network Options
-	t.Log("Step 2: Testing /network/options")
-	networkOptionsResp, err := testNetworkOptions(client, networkIdentifier)
-	if err != nil {
-		t.Fatalf("Network options test failed: %v", err)
-	}
-	t.Logf("Network options response: %+v", networkOptionsResp)
-
-	// Step 3: Network Status
-	t.Log("Step 3: Testing /network/status")
-	networkStatusResp, err := testNetworkStatus(client, networkIdentifier)
-	if err != nil {
-		t.Fatalf("Network status test failed: %v", err)
-	}
-	t.Logf("Network status response: %+v", networkStatusResp)
-
-	// Step 4: Construction Preprocess
-	t.Logf("Step 4: Testing /construction/preprocess for %s transaction", transactionType)
-	preprocessResp, err := testConstructionPreprocess(client, networkIdentifier, config, transactionType)
-	if err != nil {
-		t.Fatalf("Construction preprocess test failed: %v", err)
-	}
-	t.Logf("Preprocess response: %+v", preprocessResp)
-
-	// Step 5: Construction Metadata
-	t.Logf("Step 5: Testing /construction/metadata for %s transaction", transactionType)
-	metadataResp, err := testConstructionMetadata(client, networkIdentifier, preprocessResp, transactionType)
-	if err != nil {
-		t.Fatalf("Construction metadata test failed: %v", err)
-	}
-	t.Logf("Metadata response: %+v", metadataResp)
-
-	// Validate transaction type in metadata
-	if err := ValidateTransactionTypeInMetadata(metadataResp.Metadata, transactionType); err != nil {
-		t.Fatalf("Metadata validation failed: %v", err)
-	}
-
-	// Step 6: Construction Payloads
-	t.Logf("Step 6: Testing /construction/payloads for %s transaction", transactionType)
-	payloadsResp, err := testConstructionPayloads(client, networkIdentifier, metadataResp, config, transactionType)
-	if err != nil {
-		t.Fatalf("Construction payloads test failed: %v", err)
-	}
-	t.Logf("Payloads response: %+v", payloadsResp)
-
-	// Step 7: Sign the payload
-	t.Log("Step 7: Signing payload")
-	payloadHex := fmt.Sprintf("%x", payloadsResp.Payloads[0].Bytes)
-	signature, err := meshutils.SignPayload(config.SenderPrivateKey, payloadHex)
-	if err != nil {
-		t.Fatalf("Failed to sign payload: %v", err)
-	}
-	t.Logf("Generated signature: %s", signature)
-
-	// Step 8: Construction Combine
-	t.Log("Step 8: Testing /construction/combine")
-	combineResp, err := testConstructionCombine(client, networkIdentifier, payloadsResp, signature)
-	if err != nil {
-		t.Fatalf("Construction combine test failed: %v", err)
-	}
-	t.Logf("Combine response: signed transaction = %s", combineResp.SignedTransaction)
-
-	// Step 9: Construction Hash
-	t.Log("Step 9: Testing /construction/hash")
-	hashResp, err := testConstructionHash(client, networkIdentifier, combineResp)
-	if err != nil {
-		t.Fatalf("Construction hash test failed: %v", err)
-	}
-	t.Logf("Hash response: transaction hash = %s", hashResp.TransactionIdentifier.Hash)
-
-	// Step 10: Construction Submit
-	t.Log("Step 10: Testing /construction/submit")
-	submitResp, err := testConstructionSubmit(client, networkIdentifier, combineResp)
-	if err != nil {
-		t.Fatalf("Construction submit test failed: %v", err)
-	}
-	t.Logf("Submit response: transaction hash = %s", submitResp.TransactionIdentifier.Hash)
-
-	// Step 11: Mempool
-	t.Log("Step 11: Testing /mempool")
-	mempoolResp, err := testMempool(client, networkIdentifier)
-	if err != nil {
-		t.Fatalf("Mempool test failed: %v", err)
-	}
-	t.Logf("Mempool response: %d transactions", len(mempoolResp.TransactionIdentifiers))
-	for i, txID := range mempoolResp.TransactionIdentifiers {
-		t.Logf("  [%d] %s", i, txID.Hash)
-	}
-
-	// Step 12: Mempool Transaction
-	t.Log("Step 12: Testing /mempool/transaction")
-	mempoolTxResp, err := testMempoolTransaction(client, networkIdentifier, submitResp.TransactionIdentifier)
-	if err != nil {
-		t.Fatalf("Mempool transaction test failed: %v", err)
-	}
-	t.Logf("Mempool transaction response: transaction hash = %s, operations count = %d",
-		mempoolTxResp.Transaction.TransactionIdentifier.Hash,
-		len(mempoolTxResp.Transaction.Operations))
-
-	for i, op := range mempoolTxResp.Transaction.Operations {
-		t.Logf("  Operation [%d]: type=%s, account=%s, amount=%s %s",
-			i, op.Type, op.Account.Address, op.Amount.Value, op.Amount.Currency.Symbol)
-	}
-
-	t.Logf("✅ All construction steps completed successfully for %s transaction!", transactionType)
-}
 
 // testNetworkList tests the /network/list endpoint
 func testNetworkList(client *HTTPClient) (*types.NetworkListResponse, error) {
@@ -455,4 +314,106 @@ func testMempoolTransaction(client *HTTPClient, networkIdentifier *types.Network
 	}
 
 	return &response, nil
+}
+
+// testBlock tests the /block endpoint
+func testBlock(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, blockIdentifier *types.PartialBlockIdentifier) (*types.BlockResponse, error) {
+	request := types.BlockRequest{
+		NetworkIdentifier: networkIdentifier,
+		BlockIdentifier:   blockIdentifier,
+	}
+
+	resp, err := client.Post("/block", request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make block request: %v", err)
+	}
+
+	var response types.BlockResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse block response: %v", err)
+	}
+
+	return &response, nil
+}
+
+// testBlockTransaction tests the /block/transaction endpoint
+func testBlockTransaction(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, blockIdentifier *types.BlockIdentifier, transactionIdentifier *types.TransactionIdentifier) (*types.BlockTransactionResponse, error) {
+	request := types.BlockTransactionRequest{
+		NetworkIdentifier:     networkIdentifier,
+		BlockIdentifier:       blockIdentifier,
+		TransactionIdentifier: transactionIdentifier,
+	}
+
+	resp, err := client.Post("/block/transaction", request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make block transaction request: %v", err)
+	}
+
+	var response types.BlockTransactionResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse block transaction response: %v", err)
+	}
+
+	return &response, nil
+}
+
+// testEventsBlocks tests the /events/blocks endpoint
+func testEventsBlocks(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, offset *int64, limit *int64) (*types.EventsBlocksResponse, error) {
+	request := types.EventsBlocksRequest{
+		NetworkIdentifier: networkIdentifier,
+		Offset:            offset,
+		Limit:             limit,
+	}
+
+	resp, err := client.Post("/events/blocks", request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make events blocks request: %v", err)
+	}
+
+	var response types.EventsBlocksResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse events blocks response: %v", err)
+	}
+
+	return &response, nil
+}
+
+// testSearchTransactions tests the /search/transactions endpoint
+func testSearchTransactions(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, transactionIdentifier *types.TransactionIdentifier) (*types.SearchTransactionsResponse, error) {
+	request := types.SearchTransactionsRequest{
+		NetworkIdentifier:     networkIdentifier,
+		TransactionIdentifier: transactionIdentifier,
+	}
+
+	resp, err := client.Post("/search/transactions", request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make search transactions request: %v", err)
+	}
+
+	var response types.SearchTransactionsResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse search transactions response: %v", err)
+	}
+
+	return &response, nil
+}
+
+// testSearchTransactionsWithRetry tests the /search/transactions endpoint with retry logic
+func testSearchTransactionsWithRetry(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, transactionIdentifier *types.TransactionIdentifier, maxRetries int, delaySeconds int) (*types.SearchTransactionsResponse, error) {
+	var lastErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		response, err := testSearchTransactions(client, networkIdentifier, transactionIdentifier)
+		if err == nil {
+			return response, nil
+		}
+
+		lastErr = err
+
+		if attempt < maxRetries {
+			time.Sleep(time.Duration(delaySeconds) * time.Second)
+		}
+	}
+
+	return nil, fmt.Errorf("search transactions failed after %d attempts, last error: %v", maxRetries, lastErr)
 }

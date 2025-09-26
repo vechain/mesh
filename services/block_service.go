@@ -119,7 +119,7 @@ func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.Blo
 	}
 
 	// Validate that transaction identifier is provided
-	if request.TransactionIdentifier.Hash == "" {
+	if request.TransactionIdentifier == nil || request.TransactionIdentifier.Hash == "" {
 		return nil, fmt.Errorf("transaction identifier is required")
 	}
 
