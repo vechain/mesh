@@ -41,9 +41,11 @@ func TestEventsService_EventsBlocks_Success(t *testing.T) {
 		},
 	})
 
+	offset := int64(10)
+	limit := int64(5)
 	request := types.EventsBlocksRequest{
-		Offset: int64Ptr(10),
-		Limit:  int64Ptr(5),
+		Offset: &offset,
+		Limit:  &limit,
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
@@ -137,9 +139,11 @@ func TestEventsService_EventsBlocks_OffsetBeyondBestBlock(t *testing.T) {
 		},
 	})
 
+	offset := int64(20)
+	limit := int64(5)
 	request := types.EventsBlocksRequest{
-		Offset: int64Ptr(20), // Beyond best block
-		Limit:  int64Ptr(5),
+		Offset: &offset, // Beyond best block
+		Limit:  &limit,
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
@@ -165,9 +169,11 @@ func TestEventsService_EventsBlocks_InvalidOffset(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewEventsService(mockClient)
 
+	offset := int64(-1)
+	limit := int64(5)
 	request := types.EventsBlocksRequest{
-		Offset: int64Ptr(-1), // Invalid negative offset
-		Limit:  int64Ptr(5),
+		Offset: &offset, // Invalid negative offset
+		Limit:  &limit,
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
@@ -182,9 +188,11 @@ func TestEventsService_EventsBlocks_InvalidLimit(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewEventsService(mockClient)
 
+	offset := int64(0)
+	limit := int64(0)
 	request := types.EventsBlocksRequest{
-		Offset: int64Ptr(0),
-		Limit:  int64Ptr(0), // Invalid limit
+		Offset: &offset,
+		Limit:  &limit, // Invalid limit
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
@@ -199,9 +207,11 @@ func TestEventsService_EventsBlocks_InvalidLimitTooHigh(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewEventsService(mockClient)
 
+	offset := int64(0)
+	limit := int64(101)
 	request := types.EventsBlocksRequest{
-		Offset: int64Ptr(0),
-		Limit:  int64Ptr(101), // Invalid limit too high
+		Offset: &offset,
+		Limit:  &limit, // Invalid limit too high
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
@@ -231,9 +241,11 @@ func TestEventsService_EventsBlocks_ThorClientError(t *testing.T) {
 	// Set mock error to simulate client error
 	mockClient.SetMockError(fmt.Errorf("client error"))
 
+	offset := int64(0)
+	limit := int64(5)
 	request := types.EventsBlocksRequest{
-		Offset: int64Ptr(0),
-		Limit:  int64Ptr(5),
+		Offset: &offset,
+		Limit:  &limit,
 	}
 
 	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
@@ -242,11 +254,6 @@ func TestEventsService_EventsBlocks_ThorClientError(t *testing.T) {
 	service.EventsBlocks(w, req)
 
 	assertStatusCode(t, w, http.StatusInternalServerError)
-}
-
-// Helper function to create int64 pointer
-func int64Ptr(v int64) *int64 {
-	return &v
 }
 
 // createInvalidJSONRequest creates a request with invalid JSON body

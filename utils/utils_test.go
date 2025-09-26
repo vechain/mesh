@@ -249,37 +249,6 @@ func TestHexToDecimal(t *testing.T) {
 	}
 }
 
-func TestInt64Ptr(t *testing.T) {
-	value := int64(42)
-	ptr := Int64Ptr(value)
-
-	if ptr == nil || *ptr != value {
-		t.Error("Expected non-nil pointer and value")
-	}
-}
-
-func TestBoolPtr(t *testing.T) {
-	value := true
-	ptr := BoolPtr(value)
-
-	if ptr == nil || *ptr != value {
-		t.Error("Expected non-nil pointer")
-	}
-
-	if *ptr != value {
-		t.Errorf("Expected %t, got %t", value, *ptr)
-	}
-}
-
-func TestStringPtr(t *testing.T) {
-	value := "test"
-	ptr := StringPtr(value)
-
-	if ptr == nil || *ptr != value {
-		t.Error("Expected non-nil pointer")
-	}
-}
-
 func TestComputeAddress(t *testing.T) {
 	// Test with valid public key
 	publicKey := &types.PublicKey{

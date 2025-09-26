@@ -278,27 +278,3 @@ func TestErrorsMap(t *testing.T) {
 		}
 	}
 }
-
-func TestAllErrorsSlice(t *testing.T) {
-	// Test that AllErrors slice is properly initialized
-	if AllErrors == nil {
-		t.Errorf("AllErrors slice is nil")
-		return
-	}
-
-	if len(AllErrors) != len(Errors) {
-		t.Errorf("AllErrors length = %d, want %d", len(AllErrors), len(Errors))
-	}
-
-	// Test that all errors in AllErrors are also in Errors map
-	errorCodes := make(map[int32]bool)
-	for _, err := range AllErrors {
-		errorCodes[err.Code] = true
-	}
-
-	for code := range Errors {
-		if !errorCodes[int32(code)] {
-			t.Errorf("AllErrors missing error code %d", code)
-		}
-	}
-}

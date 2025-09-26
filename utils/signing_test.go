@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"strings"
 	"testing"
 )
 
@@ -89,7 +90,7 @@ func TestSignPayload(t *testing.T) {
 					t.Errorf("SignPayload() expected error, got nil")
 					return
 				}
-				if tt.errorMessage != "" && !contains(err.Error(), tt.errorMessage) {
+				if tt.errorMessage != "" && !strings.Contains(err.Error(), tt.errorMessage) {
 					t.Errorf("SignPayload() error = %v, want error containing %v", err, tt.errorMessage)
 				}
 			} else {
@@ -174,7 +175,7 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 					t.Errorf("GetAddressFromPrivateKey() expected error, got nil")
 					return
 				}
-				if tt.errorMessage != "" && !contains(err.Error(), tt.errorMessage) {
+				if tt.errorMessage != "" && !strings.Contains(err.Error(), tt.errorMessage) {
 					t.Errorf("GetAddressFromPrivateKey() error = %v, want error containing %v", err, tt.errorMessage)
 				}
 			} else {
@@ -242,7 +243,7 @@ func TestSignPayloadWithAddress(t *testing.T) {
 					t.Errorf("SignPayloadWithAddress() expected error, got nil")
 					return
 				}
-				if tt.errorMessage != "" && !contains(err.Error(), tt.errorMessage) {
+				if tt.errorMessage != "" && !strings.Contains(err.Error(), tt.errorMessage) {
 					t.Errorf("SignPayloadWithAddress() error = %v, want error containing %v", err, tt.errorMessage)
 				}
 			} else {
@@ -378,21 +379,4 @@ func TestSignPayloadWithDifferentPayloads(t *testing.T) {
 	if signature1 == signature2 {
 		t.Errorf("SignPayload() with different payloads produced same signature")
 	}
-}
-
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > len(substr) && (s[:len(substr)] == substr ||
-			s[len(s)-len(substr):] == substr ||
-			containsSubstring(s, substr))))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

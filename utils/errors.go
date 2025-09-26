@@ -136,20 +136,20 @@ func GetError(code int) *types.Error {
 	return nil
 }
 
-// AllErrors is a pre-computed slice of all errors for efficiency
-var AllErrors []*types.Error
+// allErrors is a pre-computed slice of all errors for efficiency
+var allErrors []*types.Error
 
 // init initializes the AllErrors slice once at package load time
 func init() {
-	AllErrors = make([]*types.Error, 0, len(Errors))
+	allErrors = make([]*types.Error, 0, len(Errors))
 	for _, err := range Errors {
-		AllErrors = append(AllErrors, err)
+		allErrors = append(allErrors, err)
 	}
 }
 
 // GetAllErrors returns all errors as a slice (now just returns the pre-computed slice)
 func GetAllErrors() []*types.Error {
-	return AllErrors
+	return allErrors
 }
 
 // GetErrorWithMetadata returns an error by code with optional metadata

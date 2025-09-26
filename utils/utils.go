@@ -82,21 +82,6 @@ func HexToDecimal(hexStr string) (string, error) {
 	return bigInt.String(), nil
 }
 
-// StringPtr creates a string pointer
-func StringPtr(s string) *string {
-	return &s
-}
-
-// Helper functions to create pointers
-func Int64Ptr(i int64) *int64 {
-	return &i
-}
-
-// BoolPtr creates a bool pointer
-func BoolPtr(b bool) *bool {
-	return &b
-}
-
 // GetTargetIndex calculates the target index based on local index and peers
 func GetTargetIndex(localIndex int64, peers []Peer) int64 {
 	result := localIndex

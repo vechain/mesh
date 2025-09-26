@@ -93,6 +93,11 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+
+	currentIndex := int64(bestBlock.Number)
+	stage := "block sync"
+	synced := progress == 1.0
+
 	status := &types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
 			Index: int64(bestBlock.Number),
@@ -104,10 +109,10 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 			Hash:  genesisBlock.ID.String(),
 		},
 		SyncStatus: &types.SyncStatus{
-			CurrentIndex: meshutils.Int64Ptr(int64(bestBlock.Number)),
-			TargetIndex:  meshutils.Int64Ptr(targetIndex),
-			Stage:        meshutils.StringPtr("block sync"),
-			Synced:       meshutils.BoolPtr(progress == 1.0),
+			CurrentIndex: &currentIndex,
+			TargetIndex:  &targetIndex,
+			Stage:        &stage,
+			Synced:       &synced,
 		},
 		Peers: meshPeers,
 	}

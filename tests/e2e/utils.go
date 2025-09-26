@@ -110,13 +110,14 @@ func CreateVTHOCurrency() *types.Currency {
 
 // CreateTransferOperations creates transfer operations for testing
 func CreateTransferOperations(senderAddress, recipientAddress, amount string) []*types.Operation {
+	status := meshutils.OperationStatusNone
 	return []*types.Operation{
 		{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
 			Type:   meshutils.OperationTypeTransfer,
-			Status: meshutils.StringPtr(meshutils.OperationStatusNone),
+			Status: &status,
 			Account: &types.AccountIdentifier{
 				Address: recipientAddress,
 			},
@@ -130,7 +131,7 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 				Index: 1,
 			},
 			Type:   meshutils.OperationTypeTransfer,
-			Status: meshutils.StringPtr(meshutils.OperationStatusNone),
+			Status: &status,
 			Account: &types.AccountIdentifier{
 				Address: senderAddress,
 			},
