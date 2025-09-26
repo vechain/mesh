@@ -60,27 +60,20 @@ This table shows the endpoint coverage of the Mesh API implementation for VeChai
 
 | Method | Endpoint               | Implemented | Description                         | Mode    |
 |--------|------------------------|--------------|-------------------------------------|---------|
-| POST   | /search/transactions   | ❌ No        | Search transactions       | -       |
+| POST   | /search/transactions   | ✅ Yes       | Search transactions       | online       |
 
 ## Health Check
 
 | Method | Endpoint | Implemented | Description | Mode |
 |--------|----------|--------------|-------------|------|
-| GET    | /health  | ✅ Yes       | Check server status | - |
+| GET    | /health  | ✅ Yes       | Check server status | online & offline |
 
 ## Coverage Summary
 
 - **Total standard endpoints**: 20
-- **Implemented**: 17 (85%)
-- **Not implemented**: 3 (15%)
+- **Implemented**: 18 (90%)
+- **Not implemented**: 2 (10%)
 
 ### Pending endpoints to implement:
 - `/account/coins`
 - `/call`
-- `/search/transactions`
-
-### Notes:
-- **Construction** endpoints are fully implemented and support both online and offline modes
-- **Network** endpoints are fully implemented
-- **Block**, **Mempool** and **Events** endpoints are implemented for online mode
-- **Search** endpoints will be added in future versions
