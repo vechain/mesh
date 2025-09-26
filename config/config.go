@@ -76,19 +76,13 @@ func (c *Config) setDerivedFields() {
 	switch c.Network {
 	case "main", "mainnet":
 		networkName = "main"
-		if c.ChainTag == 0 {
-			c.ChainTag = 0x4a // Mainnet chain tag
-		}
+		c.ChainTag = 0x4a // Mainnet chain tag
 	case "test", "testnet":
 		networkName = "test"
-		if c.ChainTag == 0 {
-			c.ChainTag = 0x27 // Testnet chain tag
-		}
+		c.ChainTag = 0x27 // Testnet chain tag
 	case "solo":
 		networkName = "solo"
-		if c.ChainTag == 0 {
-			c.ChainTag = 0xf6 // Solo chain tag
-		}
+		c.ChainTag = 0xf6 // Solo chain tag
 	default:
 		networkName = "custom"
 	}

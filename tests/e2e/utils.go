@@ -116,7 +116,7 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 				Index: 0,
 			},
 			Type:   meshutils.OperationTypeTransfer,
-			Status: meshutils.StringPtr("None"),
+			Status: meshutils.StringPtr(meshutils.OperationStatusNone),
 			Account: &types.AccountIdentifier{
 				Address: recipientAddress,
 			},
@@ -130,7 +130,7 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 				Index: 1,
 			},
 			Type:   meshutils.OperationTypeTransfer,
-			Status: meshutils.StringPtr("None"),
+			Status: meshutils.StringPtr(meshutils.OperationStatusNone),
 			Account: &types.AccountIdentifier{
 				Address: senderAddress,
 			},

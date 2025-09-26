@@ -86,7 +86,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 
 	for _, op := range request.Operations {
 		switch op.Type {
-		case "Transfer":
+		case meshutils.OperationTypeTransfer:
 			requiredPublicKeys = append(requiredPublicKeys, op.Account)
 
 			// Extract clause information
@@ -96,7 +96,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 				"data":  "0x00",
 			}
 			clauses = append(clauses, clause)
-		case "FeeDelegation":
+		case meshutils.OperationTypeFeeDelegation:
 			// For VIP191 fee delegation, we need the delegator's public key
 			requiredPublicKeys = append(requiredPublicKeys, op.Account)
 		}
@@ -323,7 +323,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: int64(len(operations)),
 			},
-			Type: "FeeDelegation",
+			Type: meshutils.OperationTypeFeeDelegation,
 			Account: &types.AccountIdentifier{
 				Address: thor.BytesToAddress(meshTx.Delegator).String(),
 			},
@@ -339,7 +339,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: int64(len(operations)),
 			},
-			Type: "Fee",
+			Type: meshutils.OperationTypeFee,
 			Account: &types.AccountIdentifier{
 				Address: thor.BytesToAddress(meshTx.Origin).String(),
 			},

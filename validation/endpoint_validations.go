@@ -30,6 +30,9 @@ var EndpointValidationSets = map[string][]ValidationType{
 
 	// Events API endpoints
 	"/events/blocks": NetworkValidations,
+
+	// Search API endpoints
+	"/search/transactions": NetworkValidations,
 }
 
 // GetValidationsForEndpoint returns the validation set for a specific endpoint

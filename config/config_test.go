@@ -197,8 +197,8 @@ func TestSetDerivedFields(t *testing.T) {
 		{
 			name:            "network with existing chain tag",
 			network:         "solo",
-			chainTag:        0x123,
-			expectedTag:     0x123,
+			chainTag:        0xf6,
+			expectedTag:     0xf6,
 			expectedNetwork: "solo",
 		},
 	}

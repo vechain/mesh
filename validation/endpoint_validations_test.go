@@ -96,6 +96,11 @@ func TestGetValidationsForEndpoint(t *testing.T) {
 			expected: NetworkValidations,
 		},
 		{
+			name:     "search transactions endpoint",
+			endpoint: "/search/transactions",
+			expected: NetworkValidations,
+		},
+		{
 			name:     "unknown endpoint",
 			endpoint: "/unknown/endpoint",
 			expected: NetworkValidations, // Default fallback
@@ -138,6 +143,7 @@ func TestEndpointValidationSets(t *testing.T) {
 		"/mempool",
 		"/mempool/transaction",
 		"/events/blocks",
+		"/search/transactions",
 	}
 
 	for _, endpoint := range expectedEndpoints {

@@ -97,8 +97,9 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Parse operations directly from transactions.Transaction
-	operations := meshutils.ParseTransactionOperationsFromTransactions(tx)
-	meshTx := meshutils.BuildMeshTransactionFromTransactions(tx, operations)
+	status := meshutils.OperationStatusPending
+	operations := meshutils.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	meshTx := meshutils.BuildMeshTransactionFromTransaction(tx, operations)
 
 	// Build the response
 	response := &types.MempoolTransactionResponse{

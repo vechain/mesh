@@ -46,8 +46,7 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := b.buildBlockResponse(block, parent)
-	b.writeJSONResponse(w, response)
+	meshutils.WriteJSONResponse(w, b.buildBlockResponse(block, parent))
 }
 
 // BlockTransaction gets a specific transaction from a block
@@ -75,8 +74,7 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response := b.buildBlockTransactionResponse(foundTx)
-	b.writeJSONResponse(w, response)
+	meshutils.WriteJSONResponse(w, b.buildBlockTransactionResponse(foundTx))
 }
 
 // parseBlockRequest parses and validates a block request
@@ -226,9 +224,4 @@ func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *ty
 	return &types.BlockTransactionResponse{
 		Transaction: meshTx,
 	}
-}
-
-// writeJSONResponse writes a JSON response
-func (b *BlockService) writeJSONResponse(w http.ResponseWriter, response any) {
-	meshutils.WriteJSONResponse(w, response)
 }

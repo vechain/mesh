@@ -3,7 +3,6 @@
 > **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
 >
 > **📋 TODO List:**
-> - Implement search endpoints
 > - Codecov integration (GHA)
 > - Use mesh-cli to validate endpoints
 > - Publish docker image on release

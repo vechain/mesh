@@ -29,6 +29,7 @@ type VeChainMeshServer struct {
 	blockService         *services.BlockService
 	mempoolService       *services.MempoolService
 	eventsService        *services.EventsService
+	searchService        *services.SearchService
 }
 
 // NewVeChainMeshServer creates a new server instance
@@ -73,6 +74,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	blockService := services.NewBlockService(vechainClient)
 	mempoolService := services.NewMempoolService(vechainClient)
 	eventsService := services.NewEventsService(vechainClient)
+	searchService := services.NewSearchService(vechainClient)
 
 	meshServer := &VeChainMeshServer{
 		router: router,
@@ -87,6 +89,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 		blockService:         blockService,
 		mempoolService:       mempoolService,
 		eventsService:        eventsService,
+		searchService:        searchService,
 	}
 
 	meshServer.setupRoutes()
@@ -131,6 +134,9 @@ func (v *VeChainMeshServer) setupRoutes() {
 
 	// Events API endpoints
 	apiRouter.HandleFunc("/events/blocks", v.eventsService.EventsBlocks).Methods("POST")
+
+	// Search API endpoints
+	apiRouter.HandleFunc("/search/transactions", v.searchService.SearchTransactions).Methods("POST")
 }
 
 // healthCheck endpoint to verify server status
@@ -154,4 +160,32 @@ func (v *VeChainMeshServer) Start() error {
 func (v *VeChainMeshServer) Stop(ctx context.Context) error {
 	log.Println("Stopping VeChain Mesh API server...")
 	return v.server.Shutdown(ctx)
+}
+
+// GetEndpoints returns a list of all registered endpoints
+func (v *VeChainMeshServer) GetEndpoints() ([]string, error) {
+	var endpoints []string
+	err := v.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		pathTemplate, err := route.GetPathTemplate()
+		if err != nil {
+			return err
+		}
+
+		methods, err := route.GetMethods()
+		if err != nil {
+			return nil
+		}
+
+		for _, method := range methods {
+			endpoints = append(endpoints, fmt.Sprintf("%s %s", method, pathTemplate))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return endpoints, nil
 }

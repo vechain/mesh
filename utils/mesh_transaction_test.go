@@ -628,7 +628,8 @@ func TestParseTransactionOperationsFromTransactions(t *testing.T) {
 		}(),
 	}
 
-	operations := ParseTransactionOperationsFromTransactions(tx)
+	status := OperationStatusSucceeded
+	operations := ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
 	if len(operations) == 0 {
 		t.Errorf("ParseTransactionOperationsFromTransactions() returned no operations")
 	}
@@ -668,8 +669,9 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 		}(),
 	}
 
-	operations := ParseTransactionOperationsFromTransactions(tx)
-	meshTx := BuildMeshTransactionFromTransactions(tx, operations)
+	status := OperationStatusSucceeded
+	operations := ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	meshTx := BuildMeshTransactionFromTransaction(tx, operations)
 
 	if meshTx.TransactionIdentifier == nil {
 		t.Errorf("BuildMeshTransactionFromTransactions() returned nil TransactionIdentifier")

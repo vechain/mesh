@@ -126,22 +126,21 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 	// Define operation statuses
 	operationStatuses := []*types.OperationStatus{
 		{
-			Status:     "None",
+			Status:     meshutils.OperationStatusNone,
 			Successful: true,
 		},
 		{
-			Status:     "Succeeded",
+			Status:     meshutils.OperationStatusSucceeded,
 			Successful: true,
 		},
 		{
-			Status:     "Reverted",
+			Status:     meshutils.OperationStatusReverted,
 			Successful: false,
 		},
 	}
 
 	// Define operation types
 	operationTypes := []string{
-		meshutils.OperationTypeNone,
 		meshutils.OperationTypeTransfer,
 		meshutils.OperationTypeFee,
 		meshutils.OperationTypeFeeDelegation,

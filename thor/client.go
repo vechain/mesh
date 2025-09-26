@@ -26,6 +26,8 @@ type VeChainClientInterface interface {
 	GetMempoolTransaction(txID *thor.Bytes32) (*transactions.Transaction, error)
 	GetMempoolStatus() (*api.Status, error)
 	CallContract(contractAddress, callData string) (string, error)
+	GetTransaction(txID string) (*transactions.Transaction, error)
+	GetTransactionReceipt(txID string) (*api.Receipt, error)
 }
 type VeChainClient struct {
 	client *thorclient.Client
@@ -192,12 +194,6 @@ func (c *VeChainClient) GetMempoolTransactions(origin *thor.Address) ([]*thor.By
 		return nil, err
 	}
 
-	// Convert the result to []*thor.Bytes32
-	if txIDs, ok := txPool.([]*thor.Bytes32); ok {
-		return txIDs, nil
-	}
-
-	// If the type assertion fails, try to convert from []thor.Bytes32
 	if txIDs, ok := txPool.([]thor.Bytes32); ok {
 		var result []*thor.Bytes32
 		for _, txID := range txIDs {
@@ -206,7 +202,6 @@ func (c *VeChainClient) GetMempoolTransactions(origin *thor.Address) ([]*thor.By
 		return result, nil
 	}
 
-	// If neither type assertion works, return empty slice
 	return []*thor.Bytes32{}, nil
 }
 
@@ -219,9 +214,7 @@ func (c *VeChainClient) GetMempoolTransaction(txID *thor.Bytes32) (*transactions
 	}
 
 	var txs []*transactions.Transaction
-	if txList, ok := txPool.([]*transactions.Transaction); ok {
-		txs = txList
-	} else if txList, ok := txPool.([]transactions.Transaction); ok {
+	if txList, ok := txPool.([]transactions.Transaction); ok {
 		for i := range txList {
 			txs = append(txs, &txList[i])
 		}
@@ -274,4 +267,32 @@ func (c *VeChainClient) CallContract(contractAddress, callData string) (string, 
 
 	// Return the result data from the first clause
 	return results[0].Data, nil
+}
+
+// GetTransaction fetches a transaction by its ID
+func (c *VeChainClient) GetTransaction(txID string) (*transactions.Transaction, error) {
+	txHash, err := thor.ParseBytes32(txID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction ID format: %w", err)
+	}
+
+	tx, err := c.client.Transaction(&txHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get transaction: %w", err)
+	}
+	return tx, nil
+}
+
+// GetTransactionReceipt fetches a transaction receipt by transaction ID
+func (c *VeChainClient) GetTransactionReceipt(txID string) (*api.Receipt, error) {
+	txHash, err := thor.ParseBytes32(txID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction ID format: %w", err)
+	}
+
+	receipt, err := c.client.TransactionReceipt(&txHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+	return receipt, nil
 }

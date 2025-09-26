@@ -24,7 +24,7 @@ func main() {
 
 	meshServer := createMeshServer(cfg)
 	startServer(meshServer)
-	printEndpoints()
+	printEndpoints(meshServer)
 	waitForShutdown(meshServer)
 }
 
@@ -114,20 +114,15 @@ func startServer(meshServer *VeChainMeshServer) {
 }
 
 // printEndpoints prints available API endpoints
-func printEndpoints() {
+func printEndpoints(server *VeChainMeshServer) {
+	endpoints, err := server.GetEndpoints()
+	if err != nil {
+		log.Printf("Failed to get endpoints: %v", err)
+	}
 	log.Println("Available endpoints:")
-	log.Println("  GET  /health")
-	log.Println("  POST /network/list")
-	log.Println("  POST /network/status")
-	log.Println("  POST /account/balance")
-	log.Println("  POST /construction/derive")
-	log.Println("  POST /construction/preprocess")
-	log.Println("  POST /construction/metadata")
-	log.Println("  POST /construction/payloads")
-	log.Println("  POST /construction/parse")
-	log.Println("  POST /construction/combine")
-	log.Println("  POST /construction/hash")
-	log.Println("  POST /construction/submit")
+	for _, endpoint := range endpoints {
+		log.Printf("  %s", endpoint)
+	}
 }
 
 // waitForShutdown handles graceful shutdown of the application

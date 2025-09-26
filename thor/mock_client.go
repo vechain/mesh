@@ -26,6 +26,8 @@ type MockVeChainClient struct {
 	MockMempoolStatus *api.Status
 	MockCallResult    string
 	MockBlockByNumber *api.JSONExpandedBlock
+	MockTransaction   *transactions.Transaction
+	MockReceipt       *api.Receipt
 
 	// Simulated errors
 	MockError error
@@ -361,4 +363,30 @@ func (m *MockVeChainClient) SetMockCallResult(result string) {
 // SetBlockByNumber configures the simulated block by number
 func (m *MockVeChainClient) SetBlockByNumber(block *api.JSONExpandedBlock) {
 	m.MockBlockByNumber = block
+}
+
+// GetTransaction simulates getting a transaction by ID
+func (m *MockVeChainClient) GetTransaction(txID string) (*transactions.Transaction, error) {
+	if m.MockError != nil {
+		return nil, m.MockError
+	}
+	return m.MockTransaction, nil
+}
+
+// GetTransactionReceipt simulates getting a transaction receipt by ID
+func (m *MockVeChainClient) GetTransactionReceipt(txID string) (*api.Receipt, error) {
+	if m.MockError != nil {
+		return nil, m.MockError
+	}
+	return m.MockReceipt, nil
+}
+
+// SetTransaction configures the simulated transaction
+func (m *MockVeChainClient) SetTransaction(tx *transactions.Transaction) {
+	m.MockTransaction = tx
+}
+
+// SetReceipt configures the simulated receipt
+func (m *MockVeChainClient) SetReceipt(receipt *api.Receipt) {
+	m.MockReceipt = receipt
 }

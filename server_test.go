@@ -206,3 +206,69 @@ func TestVeChainMeshServer_ConstructionEndpoints(t *testing.T) {
 		t.Errorf("ConstructionEndpoints() status code = %v, want %v", w.Code, http.StatusBadRequest)
 	}
 }
+
+func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
+	config := &meshconfig.Config{
+		NodeAPI: "http://localhost:8669",
+		Network: "test",
+		Mode:    "online",
+	}
+
+	server, err := NewVeChainMeshServer(config)
+	if err != nil {
+		t.Fatalf("NewVeChainMeshServer() error = %v", err)
+	}
+
+	endpoints, err := server.GetEndpoints()
+	if err != nil {
+		t.Fatalf("GetEndpoints() error = %v", err)
+	}
+
+	// Check that we have endpoints
+	if len(endpoints) == 0 {
+		t.Errorf("GetEndpoints() returned empty slice")
+	}
+
+	// Check for specific expected endpoints
+	expectedEndpoints := map[string]bool{
+		"GET /health":                   false,
+		"POST /network/list":            false,
+		"POST /network/status":          false,
+		"POST /network/options":         false,
+		"POST /account/balance":         false,
+		"POST /construction/derive":     false,
+		"POST /construction/preprocess": false,
+		"POST /construction/metadata":   false,
+		"POST /construction/payloads":   false,
+		"POST /construction/parse":      false,
+		"POST /construction/combine":    false,
+		"POST /construction/hash":       false,
+		"POST /construction/submit":     false,
+		"POST /block":                   false,
+		"POST /block/transaction":       false,
+		"POST /mempool":                 false,
+		"POST /mempool/transaction":     false,
+		"POST /events/blocks":           false,
+		"POST /search/transactions":     false,
+	}
+
+	// Mark found endpoints
+	for _, endpoint := range endpoints {
+		if _, exists := expectedEndpoints[endpoint]; exists {
+			expectedEndpoints[endpoint] = true
+		}
+	}
+
+	// Check that all expected endpoints are present
+	for endpoint, found := range expectedEndpoints {
+		if !found {
+			t.Errorf("Expected endpoint not found: %s", endpoint)
+		}
+	}
+
+	// Check that we have the expected number of endpoints
+	expectedCount := len(expectedEndpoints)
+	if len(endpoints) != expectedCount {
+		t.Errorf("GetEndpoints() returned %d endpoints, expected %d", len(endpoints), expectedCount)
+	}
+}
