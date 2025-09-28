@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
@@ -569,39 +568,15 @@ func TestGetVETOperations(t *testing.T) {
 }
 
 func TestGetTokensOperations(t *testing.T) {
-	// Create a mock config with some tokens
-	mockConfig := &config.Config{
-		TokenList: []types.Currency{
-			{
-				Symbol:   "VTHO",
-				Decimals: 18,
-				Metadata: map[string]any{
-					"contractAddress": "0x0000000000000000000000000000456e65726779",
-				},
-			},
-			{
-				Symbol:   "TOKEN",
-				Decimals: 18,
-				Metadata: map[string]any{
-					"contractAddress": "0x1234567890123456789012345678901234567890",
-				},
-			},
-		},
-	}
-
 	tests := []struct {
-		name                 string
-		operations           []*types.Operation
-		config               *config.Config
-		expectedRegistered   []map[string]string
-		expectedUnregistered []string
+		name               string
+		operations         []*types.Operation
+		expectedRegistered []map[string]string
 	}{
 		{
-			name:                 "empty operations",
-			operations:           []*types.Operation{},
-			config:               mockConfig,
-			expectedRegistered:   []map[string]string{},
-			expectedUnregistered: []string{},
+			name:               "empty operations",
+			operations:         []*types.Operation{},
+			expectedRegistered: []map[string]string{},
 		},
 		{
 			name: "registered token operation",
@@ -623,7 +598,6 @@ func TestGetTokensOperations(t *testing.T) {
 					},
 				},
 			},
-			config: mockConfig,
 			expectedRegistered: []map[string]string{
 				{
 					"token": "0x0000000000000000000000000000456e65726779",
@@ -631,31 +605,6 @@ func TestGetTokensOperations(t *testing.T) {
 					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
 				},
 			},
-			expectedUnregistered: []string{},
-		},
-		{
-			name: "unregistered token operation",
-			operations: []*types.Operation{
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
-					},
-					Amount: &types.Amount{
-						Value: "1000000000000000000",
-						Currency: &types.Currency{
-							Symbol:   "UNKNOWN",
-							Decimals: 18,
-							Metadata: map[string]any{
-								"contractAddress": "0x9999999999999999999999999999999999999999",
-							},
-						},
-					},
-				},
-			},
-			config:               mockConfig,
-			expectedRegistered:   []map[string]string{},
-			expectedUnregistered: []string{"0x9999999999999999999999999999999999999999"},
 		},
 		{
 			name: "negative token operation (should be ignored)",
@@ -677,9 +626,7 @@ func TestGetTokensOperations(t *testing.T) {
 					},
 				},
 			},
-			config:               mockConfig,
-			expectedRegistered:   []map[string]string{},
-			expectedUnregistered: []string{},
+			expectedRegistered: []map[string]string{},
 		},
 		{
 			name: "non-transfer operation (should be ignored)",
@@ -701,9 +648,6 @@ func TestGetTokensOperations(t *testing.T) {
 					},
 				},
 			},
-			config:               mockConfig,
-			expectedRegistered:   []map[string]string{},
-			expectedUnregistered: []string{},
 		},
 		{
 			name: "no config (assume all registered)",
@@ -725,7 +669,6 @@ func TestGetTokensOperations(t *testing.T) {
 					},
 				},
 			},
-			config: nil,
 			expectedRegistered: []map[string]string{
 				{
 					"token": "0x9999999999999999999999999999999999999999",
@@ -733,67 +676,15 @@ func TestGetTokensOperations(t *testing.T) {
 					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
 				},
 			},
-			expectedUnregistered: []string{},
-		},
-		{
-			name: "mixed registered and unregistered tokens",
-			operations: []*types.Operation{
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
-					},
-					Amount: &types.Amount{
-						Value: "1000000000000000000",
-						Currency: &types.Currency{
-							Symbol:   "VTHO",
-							Decimals: 18,
-							Metadata: map[string]any{
-								"contractAddress": "0x0000000000000000000000000000456e65726779",
-							},
-						},
-					},
-				},
-				{
-					Type: OperationTypeTransfer,
-					Account: &types.AccountIdentifier{
-						Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
-					},
-					Amount: &types.Amount{
-						Value: "2000000000000000000",
-						Currency: &types.Currency{
-							Symbol:   "UNKNOWN",
-							Decimals: 18,
-							Metadata: map[string]any{
-								"contractAddress": "0x9999999999999999999999999999999999999999",
-							},
-						},
-					},
-				},
-			},
-			config: mockConfig,
-			expectedRegistered: []map[string]string{
-				{
-					"token": "0x0000000000000000000000000000456e65726779",
-					"value": "1000000000000000000",
-					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
-				},
-			},
-			expectedUnregistered: []string{"0x9999999999999999999999999999999999999999"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registered, unregistered := GetTokensOperations(tt.operations, tt.config)
+			registered := GetTokensOperations(tt.operations)
 
 			if len(registered) != len(tt.expectedRegistered) {
 				t.Errorf("GetTokensOperations() registered length = %v, want %v", len(registered), len(tt.expectedRegistered))
-				return
-			}
-
-			if len(unregistered) != len(tt.expectedUnregistered) {
-				t.Errorf("GetTokensOperations() unregistered length = %v, want %v", len(unregistered), len(tt.expectedUnregistered))
 				return
 			}
 
@@ -808,13 +699,6 @@ func TestGetTokensOperations(t *testing.T) {
 				}
 				if reg["to"] != expected["to"] {
 					t.Errorf("GetTokensOperations() registered[%d] to = %v, want %v", i, reg["to"], expected["to"])
-				}
-			}
-
-			// Check unregistered tokens
-			for i, unreg := range unregistered {
-				if unreg != tt.expectedUnregistered[i] {
-					t.Errorf("GetTokensOperations() unregistered[%d] = %v, want %v", i, unreg, tt.expectedUnregistered[i])
 				}
 			}
 		})

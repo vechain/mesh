@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -23,7 +22,6 @@ type Config struct {
 	APIVersion        string                   `json:"apiVersion"`
 	NodeVersion       string                   `json:"nodeVersion"`
 	ServiceName       string                   `json:"serviceName"`
-	TokenList         []types.Currency         `json:"tokenlist"`
 	BaseGasPrice      string                   `json:"baseGasPrice"`
 	InitialBaseFee    string                   `json:"initialBaseFee"`
 	Expiration        uint32                   `json:"expiration"`
@@ -175,41 +173,4 @@ func (c *Config) GetBaseGasPrice() *big.Int {
 // GetExpiration returns the transaction expiration in blocks
 func (c *Config) GetExpiration() uint32 {
 	return c.Expiration
-}
-
-// GetTokenList returns the token list
-func (c *Config) GetTokenList() []types.Currency {
-	return c.TokenList
-}
-
-// IsTokenRegistered checks if a token contract address is registered in the token list
-func (c *Config) IsTokenRegistered(contractAddress string) bool {
-	for _, token := range c.TokenList {
-		if token.Metadata != nil {
-			if contractAddr, exists := token.Metadata["contractAddress"]; exists {
-				if addr, ok := contractAddr.(string); ok {
-					if strings.EqualFold(addr, contractAddress) {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
-// GetTokenFromList returns the token configuration for a given contract address
-func (c *Config) GetTokenFromList(contractAddress string) (*types.Currency, bool) {
-	for _, token := range c.TokenList {
-		if token.Metadata != nil {
-			if contractAddr, exists := token.Metadata["contractAddress"]; exists {
-				if addr, ok := contractAddr.(string); ok {
-					if strings.EqualFold(addr, contractAddress) {
-						return &token, true
-					}
-				}
-			}
-		}
-	}
-	return nil, false
 }

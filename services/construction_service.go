@@ -96,19 +96,11 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 
 	// Get VET and token operations
 	vetOpers := meshutils.GetVETOperations(request.Operations)
-	tokensOpers, unregisteredTokens := meshutils.GetTokensOperations(request.Operations, c.config)
+	tokensOpers := meshutils.GetTokensOperations(request.Operations)
 
 	// Validate operations
 	if len(vetOpers) == 0 && len(tokensOpers) == 0 {
 		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrNoTransferOperation), http.StatusBadRequest)
-		return
-	}
-
-	// Check for unregistered tokens
-	if len(unregisteredTokens) > 0 {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrUnregisteredTokenOperations, map[string]any{
-			"unregisteredToken": unregisteredTokens,
-		}), http.StatusBadRequest)
 		return
 	}
 

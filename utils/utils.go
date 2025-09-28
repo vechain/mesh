@@ -13,7 +13,6 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/thor"
 	"github.com/vechain/mesh/utils/vip180"
 )
@@ -215,7 +214,7 @@ func GetVETOperations(operations []*types.Operation) []map[string]string {
 }
 
 // GetTokensOperations extracts VIP180 token operations from a list of operations
-func GetTokensOperations(operations []*types.Operation, config *config.Config) (registered []map[string]string, unregistered []string) {
+func GetTokensOperations(operations []*types.Operation) (registered []map[string]string) {
 	for _, op := range operations {
 		if op.Type == OperationTypeTransfer && op.Amount != nil && op.Amount.Currency != nil {
 			// Check if it's a token operation (positive amount and has contract address)
@@ -224,30 +223,16 @@ func GetTokensOperations(operations []*types.Operation, config *config.Config) (
 					if addr, ok := contractAddr.(string); ok {
 						amount, ok := new(big.Int).SetString(op.Amount.Value, 10)
 						if ok && amount.Cmp(big.NewInt(0)) > 0 {
-							// Check if token is registered
-							if config != nil {
-								if config.IsTokenRegistered(addr) {
-									registered = append(registered, map[string]string{
-										"token": addr,
-										"value": op.Amount.Value,
-										"to":    op.Account.Address,
-									})
-								} else {
-									unregistered = append(unregistered, addr)
-								}
-							} else {
-								// If no config, assume all tokens are registered
-								registered = append(registered, map[string]string{
-									"token": addr,
-									"value": op.Amount.Value,
-									"to":    op.Account.Address,
-								})
-							}
+							registered = append(registered, map[string]string{
+								"token": addr,
+								"value": op.Amount.Value,
+								"to":    op.Account.Address,
+							})
 						}
 					}
 				}
 			}
 		}
 	}
-	return registered, unregistered
+	return registered
 }
