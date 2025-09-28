@@ -8,6 +8,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/vechain/mesh/config"
+	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
@@ -83,7 +84,7 @@ func createTestConfig() *config.Config {
 
 // Tests for NewMeshTransactionEncoder
 func TestNewMeshTransactionEncoder(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	if encoder == nil {
 		t.Errorf("NewMeshTransactionEncoder() returned nil")
 	}
@@ -91,7 +92,7 @@ func TestNewMeshTransactionEncoder(t *testing.T) {
 
 // Tests for EncodeUnsignedTransaction
 func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Legacy(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	vechainTx := createTestVeChainTransaction()
 	origin := []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f}
 	delegator := []byte{}
@@ -110,7 +111,7 @@ func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Legacy(t *testing.T) {
 }
 
 func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Dynamic(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	vechainTx := createTestVeChainDynamicTransaction()
 	origin := []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f}
@@ -131,7 +132,7 @@ func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Dynamic(t *testing.T) 
 
 // Tests for DecodeUnsignedTransaction
 func TestMeshTransactionEncoder_DecodeUnsignedTransaction_ValidData(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// First encode a transaction
 	vechainTx := createTestVeChainTransaction()
@@ -183,7 +184,7 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_ValidData(t *testing.T
 }
 
 func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// First encode a dynamic transaction
 	vechainTx := createTestVeChainDynamicTransaction()
@@ -240,7 +241,7 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) 
 }
 
 func TestMeshTransactionEncoder_DecodeUnsignedTransaction_InvalidData(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	invalidData := []byte{0x01, 0x02, 0x03} // Invalid RLP data
 
@@ -252,7 +253,7 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_InvalidData(t *testing
 
 // Tests for DecodeSignedTransaction
 func TestMeshTransactionEncoder_DecodeSignedTransaction_ValidData(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// First encode a signed transaction
 	meshTx := createTestMeshTransaction()
@@ -300,7 +301,7 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_ValidData(t *testing.T) 
 }
 
 func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// Create a dynamic mesh transaction
 	vechainTx := createTestVeChainDynamicTransaction()
@@ -367,7 +368,7 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
 }
 
 func TestMeshTransactionEncoder_DecodeSignedTransaction_InvalidData(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	invalidData := []byte{0x01, 0x02, 0x03} // Invalid RLP data
 
@@ -379,7 +380,7 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_InvalidData(t *testing.T
 
 // Tests for EncodeSignedTransaction
 func TestMeshTransactionEncoder_EncodeSignedTransaction_Legacy(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	meshTx := createTestMeshTransaction()
 
 	encoded, err := encoder.EncodeTransaction(meshTx)
@@ -418,7 +419,8 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 		}(),
 	}
 
-	operations := ParseTransactionOperationsFromAPI(tx)
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
+	operations := encoder.ParseTransactionOperationsFromAPI(tx)
 	if len(operations) == 0 {
 		t.Errorf("ParseTransactionOperationsFromAPI() returned no operations")
 	}
@@ -457,7 +459,8 @@ func TestBuildMeshTransactionFromAPI(t *testing.T) {
 		}(),
 	}
 
-	operations := ParseTransactionOperationsFromAPI(tx)
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
+	operations := encoder.ParseTransactionOperationsFromAPI(tx)
 	meshTx := BuildMeshTransactionFromAPI(tx, operations)
 
 	if meshTx.TransactionIdentifier == nil {
@@ -467,7 +470,7 @@ func TestBuildMeshTransactionFromAPI(t *testing.T) {
 
 // Tests for ParseTransactionFromBytes
 func TestParseTransactionFromBytes(t *testing.T) {
-	encoder := NewMeshTransactionEncoder()
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// Create and encode a transaction
 	vechainTx := createTestVeChainTransaction()
@@ -484,7 +487,7 @@ func TestParseTransactionFromBytes(t *testing.T) {
 	}
 
 	// Parse unsigned transaction
-	meshTx, operations, signers, err := ParseTransactionFromBytes(encoded, false, encoder)
+	meshTx, operations, signers, err := encoder.ParseTransactionFromBytes(encoded, false)
 	if err != nil {
 		t.Errorf("ParseTransactionFromBytes() error = %v", err)
 	}
@@ -536,46 +539,6 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 	}
 }
 
-// Tests for createTransactionBuilder
-func TestCreateTransactionBuilder_Legacy(t *testing.T) {
-	metadata := map[string]any{
-		"transactionType": "legacy",
-		"blockRef":        "0x0000000000000000",
-		"chainTag":        float64(1),
-		"gas":             float64(21000),
-		"nonce":           "0x1",
-		"gasPriceCoef":    uint8(128),
-	}
-
-	builder, err := createTransactionBuilder("legacy", metadata)
-	if err != nil {
-		t.Errorf("createTransactionBuilder() error = %v", err)
-	}
-	if builder == nil {
-		t.Errorf("createTransactionBuilder() returned nil builder")
-	}
-}
-
-func TestCreateTransactionBuilder_Dynamic(t *testing.T) {
-	metadata := map[string]any{
-		"transactionType":      "dynamic",
-		"blockRef":             "0x0000000000000000",
-		"chainTag":             float64(1),
-		"gas":                  float64(21000),
-		"nonce":                "0x1",
-		"maxFeePerGas":         "1000000000000000000",
-		"maxPriorityFeePerGas": "1000000000000000000",
-	}
-
-	builder, err := createTransactionBuilder("dynamic", metadata)
-	if err != nil {
-		t.Errorf("createTransactionBuilder() error = %v", err)
-	}
-	if builder == nil {
-		t.Errorf("createTransactionBuilder() returned nil builder")
-	}
-}
-
 // Tests for addClausesToBuilder
 func TestAddClausesToBuilder(t *testing.T) {
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
@@ -597,47 +560,6 @@ func TestAddClausesToBuilder(t *testing.T) {
 	err := addClausesToBuilder(builder, operations)
 	if err != nil {
 		t.Errorf("addClausesToBuilder() error = %v", err)
-	}
-}
-
-// Tests for ParseTransactionOperationsFromTransactions
-func TestParseTransactionOperationsFromTransactions(t *testing.T) {
-	// Create test transaction
-	tx := &transactions.Transaction{
-		ID: func() thor.Bytes32 {
-			hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
-			return hash
-		}(),
-		Clauses: api.Clauses{
-			{
-				To: func() *thor.Address {
-					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
-					return &addr
-				}(),
-				Value: func() *math.HexOrDecimal256 {
-					val, _ := new(big.Int).SetString("0xde0b6b3a7640000", 0)
-					hexVal := math.HexOrDecimal256(*val)
-					return &hexVal
-				}(),
-				Data: "0x",
-			},
-		},
-		Origin: func() thor.Address {
-			addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
-			return addr
-		}(),
-	}
-
-	status := OperationStatusSucceeded
-	operations := ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
-	if len(operations) == 0 {
-		t.Errorf("ParseTransactionOperationsFromTransactions() returned no operations")
-	}
-
-	// Check first operation
-	op := operations[0]
-	if op.Type != OperationTypeTransfer && op.Type != "ContractCall" {
-		t.Errorf("ParseTransactionOperationsFromTransactions() operation type = %v, want %v or ContractCall", op.Type, OperationTypeTransfer)
 	}
 }
 
@@ -669,8 +591,9 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 		}(),
 	}
 
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	status := OperationStatusSucceeded
-	operations := ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	operations := encoder.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
 	meshTx := BuildMeshTransactionFromTransaction(tx, operations)
 
 	if meshTx.TransactionIdentifier == nil {

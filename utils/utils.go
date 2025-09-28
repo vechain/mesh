@@ -13,6 +13,9 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/vechain/mesh/config"
+	"github.com/vechain/mesh/thor"
+	"github.com/vechain/mesh/utils/vip180"
 )
 
 // WriteJSONResponse writes a JSON response with proper error handling
@@ -61,17 +64,9 @@ func GetStringFromOptions(options map[string]any, key string) string {
 	return "dynamic"
 }
 
-// RemoveHexPrefix removes the "0x" prefix from a hex string if present
-func RemoveHexPrefix(hexStr string) string {
-	if len(hexStr) > 2 && hexStr[:2] == "0x" {
-		return hexStr[2:]
-	}
-	return hexStr
-}
-
 // HexToDecimal converts hex string to decimal string
 func HexToDecimal(hexStr string) (string, error) {
-	cleanHex := RemoveHexPrefix(hexStr)
+	cleanHex := strings.TrimPrefix(hexStr, "0x")
 
 	bigInt := new(big.Int)
 	bigInt, ok := bigInt.SetString(cleanHex, 16)
@@ -152,7 +147,7 @@ func GetTxOrigins(operations []*types.Operation) []string {
 
 // DecodeHexStringWithPrefix removes the "0x" prefix (if present) and decodes the hex string to bytes
 func DecodeHexStringWithPrefix(hexStr string) ([]byte, error) {
-	cleanHex := RemoveHexPrefix(hexStr)
+	cleanHex := strings.TrimPrefix(hexStr, "0x")
 
 	return hex.DecodeString(cleanHex)
 }
@@ -164,4 +159,95 @@ func ParseJSONFromRequestContext(r *http.Request, target any) error {
 		return fmt.Errorf("request body not found in context - middleware may not be properly configured")
 	}
 	return json.Unmarshal(body, target)
+}
+
+// GetTokenCurrencyFromContractAddress returns the currency definition for a token contract
+func GetTokenCurrencyFromContractAddress(contractAddress string, client thor.VeChainClientInterface) (*types.Currency, error) {
+	if strings.EqualFold(contractAddress, VTHOCurrency.Metadata["contractAddress"].(string)) {
+		return VTHOCurrency, nil
+	}
+
+	// For other tokens, fetch metadata from the contract using the wrapper
+	contract, err := vip180.NewVIP180Contract(contractAddress, client)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get symbol
+	symbol, err := contract.Symbol()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get decimals
+	decimals, err := contract.Decimals()
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Currency{
+		Symbol:   symbol,
+		Decimals: decimals,
+		Metadata: map[string]any{
+			"contractAddress": strings.ToLower(contractAddress),
+		},
+	}, nil
+}
+
+// GetVETOperations extracts VET transfer operations from a list of operations
+func GetVETOperations(operations []*types.Operation) []map[string]string {
+	var result []map[string]string
+	for _, op := range operations {
+		if op.Type == OperationTypeTransfer && op.Amount != nil && op.Amount.Currency != nil {
+			// Check if it's a VET operation (positive amount and VET currency)
+			if op.Amount.Currency.Symbol == VETCurrency.Symbol {
+				amount, ok := new(big.Int).SetString(op.Amount.Value, 10)
+				if ok && amount.Cmp(big.NewInt(0)) > 0 {
+					result = append(result, map[string]string{
+						"value": op.Amount.Value,
+						"to":    op.Account.Address,
+					})
+				}
+			}
+		}
+	}
+	return result
+}
+
+// GetTokensOperations extracts VIP180 token operations from a list of operations
+func GetTokensOperations(operations []*types.Operation, config *config.Config) (registered []map[string]string, unregistered []string) {
+	for _, op := range operations {
+		if op.Type == OperationTypeTransfer && op.Amount != nil && op.Amount.Currency != nil {
+			// Check if it's a token operation (positive amount and has contract address)
+			if op.Amount.Currency.Metadata != nil {
+				if contractAddr, exists := op.Amount.Currency.Metadata["contractAddress"]; exists {
+					if addr, ok := contractAddr.(string); ok {
+						amount, ok := new(big.Int).SetString(op.Amount.Value, 10)
+						if ok && amount.Cmp(big.NewInt(0)) > 0 {
+							// Check if token is registered
+							if config != nil {
+								if config.IsTokenRegistered(addr) {
+									registered = append(registered, map[string]string{
+										"token": addr,
+										"value": op.Amount.Value,
+										"to":    op.Account.Address,
+									})
+								} else {
+									unregistered = append(unregistered, addr)
+								}
+							} else {
+								// If no config, assume all tokens are registered
+								registered = append(registered, map[string]string{
+									"token": addr,
+									"value": op.Amount.Value,
+									"to":    op.Account.Address,
+								})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return registered, unregistered
 }

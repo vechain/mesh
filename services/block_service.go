@@ -13,12 +13,14 @@ import (
 // BlockService handles block API endpoints
 type BlockService struct {
 	vechainClient meshthor.VeChainClientInterface
+	encoder       *meshutils.MeshTransactionEncoder
 }
 
 // NewBlockService creates a new block service
 func NewBlockService(vechainClient meshthor.VeChainClientInterface) *BlockService {
 	return &BlockService{
 		vechainClient: vechainClient,
+		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
 	}
 }
 
@@ -186,7 +188,7 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 	var otherTransactions []*types.TransactionIdentifier
 
 	for _, tx := range block.Transactions {
-		operations := meshutils.ParseTransactionOperationsFromAPI(tx)
+		operations := b.encoder.ParseTransactionOperationsFromAPI(tx)
 
 		if len(operations) > 0 {
 			transaction := meshutils.BuildMeshTransactionFromAPI(tx, operations)
@@ -218,7 +220,7 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 
 // buildBlockTransactionResponse builds the response for a block transaction request
 func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *types.BlockTransactionResponse {
-	operations := meshutils.ParseTransactionOperationsFromAPI(tx)
+	operations := b.encoder.ParseTransactionOperationsFromAPI(tx)
 	meshTx := meshutils.BuildMeshTransactionFromAPI(tx, operations)
 
 	return &types.BlockTransactionResponse{

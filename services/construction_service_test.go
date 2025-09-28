@@ -43,20 +43,6 @@ func createTestNetworkIdentifier(network string) *types.NetworkIdentifier {
 	}
 }
 
-func createTestOperation(accountAddress, amount string) *types.Operation {
-	return &types.Operation{
-		OperationIdentifier: &types.OperationIdentifier{Index: 0},
-		Type:                meshutils.OperationTypeTransfer,
-		Account: &types.AccountIdentifier{
-			Address: accountAddress,
-		},
-		Amount: &types.Amount{
-			Value:    amount,
-			Currency: meshutils.VETCurrency,
-		},
-	}
-}
-
 func makeHTTPRequest(method, url string, body []byte) (*httptest.ResponseRecorder, *http.Request) {
 	req := httptest.NewRequest(method, url, bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -162,11 +148,34 @@ func TestConstructionService_ConstructionPreprocess_InvalidRequestBody(t *testin
 func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create valid request
+	// Create valid request with both sender (negative) and receiver (positive) operations
 	request := types.ConstructionPreprocessRequest{
 		NetworkIdentifier: createTestNetworkIdentifier("test"),
 		Operations: []*types.Operation{
-			createTestOperation("0x16277a1ff38678291c41d1820957c78bb5da59ce", "1000000000000000000"),
+			// Sender operation (negative amount)
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshutils.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshutils.VETCurrency,
+				},
+			},
+			// Receiver operation (positive amount)
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 1},
+				Type:                meshutils.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+				},
+				Amount: &types.Amount{
+					Value:    "1000000000000000000",
+					Currency: meshutils.VETCurrency,
+				},
+			},
 		},
 		Metadata: map[string]any{
 			"transactionType": "legacy",

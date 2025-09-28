@@ -9,8 +9,11 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/ethereum/go-ethereum/common/math"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
+	"github.com/vechain/thor/v2/api"
+	"github.com/vechain/thor/v2/thor"
 )
 
 func TestNewAccountService(t *testing.T) {
@@ -362,156 +365,188 @@ func TestAccountService_AccountBalance_WithBothCurrencies(t *testing.T) {
 	}
 }
 
-func TestAccountService_getVIP180TokenBalance_Success(t *testing.T) {
+func TestAccountService_AccountBalance_WithVIP180Token_Success(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewAccountService(mockClient)
 
 	// Set up mock to return a valid balance
 	mockClient.SetMockCallResult("0x0000000000000000000000000000000000000000000000000de0b6b3a7640000") // 1000000000000000000 (1 token)
 
-	currency := &types.Currency{
-		Symbol:   "TOKEN",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x1234567890123456789012345678901234567890",
+	// Create request with VIP180 token currency
+	request := types.AccountBalanceRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: "vechainthor",
+			Network:    "test",
+		},
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+		},
+		Currencies: []*types.Currency{
+			{
+				Symbol:   "TOKEN",
+				Decimals: 18,
+				Metadata: map[string]any{
+					"contractAddress": "0x1234567890123456789012345678901234567890",
+				},
+			},
 		},
 	}
 
-	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	w := httptest.NewRecorder()
 
+	service.AccountBalance(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("AccountBalance() status = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	var response types.AccountBalanceResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
 	if err != nil {
-		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
+		t.Errorf("AccountBalance() failed to unmarshal response: %v", err)
 	}
 
-	if amount.Value != "1000000000000000000" {
-		t.Errorf("getVIP180TokenBalance() value = %v, want 1000000000000000000", amount.Value)
+	if len(response.Balances) != 1 {
+		t.Errorf("AccountBalance() balances count = %v, want 1", len(response.Balances))
 	}
 
-	if amount.Currency != currency {
-		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
+	if response.Balances[0].Value != "1000000000000000000" {
+		t.Errorf("AccountBalance() value = %v, want 1000000000000000000", response.Balances[0].Value)
+	}
+
+	if response.Balances[0].Currency.Symbol != "TOKEN" {
+		t.Errorf("AccountBalance() currency symbol = %v, want TOKEN", response.Balances[0].Currency.Symbol)
 	}
 }
 
-func TestAccountService_getVIP180TokenBalance_ContractCallError(t *testing.T) {
+func TestAccountService_getVETBalance(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewAccountService(mockClient)
 
-	// Set up mock to return an error
-	mockClient.SetMockError(fmt.Errorf("contract call failed"))
+	t.Run("Successful VET balance retrieval", func(t *testing.T) {
+		// Set up mock account with VET balance
+		balance := math.HexOrDecimal256{}
+		err := balance.UnmarshalText([]byte("1000000000000000000")) // 1 VET
+		if err != nil {
+			t.Errorf("getVETBalance() error = %v, want nil", err)
+		}
+		energy := math.HexOrDecimal256{}
+		err = energy.UnmarshalText([]byte("1000000"))
+		if err != nil {
+			t.Errorf("getVETBalance() error = %v, want nil", err)
+		}
 
-	currency := &types.Currency{
-		Symbol:   "TOKEN",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x1234567890123456789012345678901234567890",
-		},
-	}
+		mockAccount := &api.Account{
+			Balance: &balance,
+			Energy:  &energy,
+		}
+		mockClient.SetMockAccount(mockAccount)
 
-	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+		// Test getting VET balance
+		amount, err := service.getVETBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+		if err != nil {
+			t.Errorf("getVETBalance() error = %v, want nil", err)
+		}
+		if amount == nil || amount.Currency.Symbol != "VET" {
+			t.Errorf("getVETBalance() currency symbol = %v, want VET", amount.Currency.Symbol)
+		}
+	})
 
-	if err != nil {
-		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
-	}
+	t.Run("Error case - account not found", func(t *testing.T) {
+		// Set up mock error
+		mockClient.SetMockError(fmt.Errorf("account not found"))
 
-	// Should return 0 balance when contract call fails
-	if amount.Value != "0" {
-		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
-	}
-
-	if amount.Currency != currency {
-		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
-	}
+		// Test error case
+		amount, err := service.getVETBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+		if err == nil {
+			t.Errorf("getVETBalance() should return error when account not found")
+		}
+		if amount != nil {
+			t.Errorf("getVETBalance() should return nil amount when error occurs")
+		}
+	})
 }
 
-func TestAccountService_getVIP180TokenBalance_InvalidResult(t *testing.T) {
+func TestAccountService_getBlockFromIdentifier(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewAccountService(mockClient)
 
-	// Set up mock to return invalid result (no 0x prefix)
-	mockClient.SetMockCallResult("invalid_result")
+	t.Run("Get block by number", func(t *testing.T) {
+		// Set up mock block
+		mockBlock := &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Number: 100,
+				ID:     thor.Bytes32{},
+			},
+		}
+		mockClient.SetMockBlock(mockBlock)
 
-	currency := &types.Currency{
-		Symbol:   "TOKEN",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x1234567890123456789012345678901234567890",
-		},
-	}
+		// Test getting block by number
+		index := int64(100)
+		blockIdentifier := types.PartialBlockIdentifier{
+			Index: &index,
+		}
+		block, err := service.getBlockFromIdentifier(blockIdentifier)
+		if err != nil {
+			t.Errorf("getBlockFromIdentifier() error = %v, want nil", err)
+		}
+		if block == nil {
+			t.Errorf("getBlockFromIdentifier() returned nil block")
+		}
+	})
 
-	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
+	t.Run("Get block by hash", func(t *testing.T) {
+		// Set up mock block
+		mockBlock := &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Number: 100,
+				ID:     thor.Bytes32{},
+			},
+		}
+		mockClient.SetMockBlock(mockBlock)
 
-	if err != nil {
-		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
-	}
+		// Test getting block by hash
+		hash := "0x1234567890abcdef"
+		blockIdentifier := types.PartialBlockIdentifier{
+			Hash: &hash,
+		}
+		block, err := service.getBlockFromIdentifier(blockIdentifier)
+		if err != nil {
+			t.Errorf("getBlockFromIdentifier() error = %v, want nil", err)
+		}
+		if block == nil {
+			t.Errorf("getBlockFromIdentifier() returned nil block")
+		}
+	})
 
-	// Should return 0 balance when result is invalid
-	if amount.Value != "0" {
-		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
-	}
+	t.Run("Error case - invalid identifier", func(t *testing.T) {
+		// Test with empty identifier
+		blockIdentifier := types.PartialBlockIdentifier{}
+		block, err := service.getBlockFromIdentifier(blockIdentifier)
+		if err == nil {
+			t.Errorf("getBlockFromIdentifier() should return error for invalid identifier")
+		}
+		if block != nil {
+			t.Errorf("getBlockFromIdentifier() should return nil block for invalid identifier")
+		}
+	})
 
-	if amount.Currency != currency {
-		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
-	}
-}
+	t.Run("Error case - block not found", func(t *testing.T) {
+		// Set up mock error
+		mockClient.SetMockError(fmt.Errorf("block not found"))
 
-func TestAccountService_getVIP180TokenBalance_EmptyResult(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewAccountService(mockClient)
-
-	// Set up mock to return empty result
-	mockClient.SetMockCallResult("")
-
-	currency := &types.Currency{
-		Symbol:   "TOKEN",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x1234567890123456789012345678901234567890",
-		},
-	}
-
-	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
-
-	if err != nil {
-		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
-	}
-
-	// Should return 0 balance when result is empty
-	if amount.Value != "0" {
-		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
-	}
-
-	if amount.Currency != currency {
-		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
-	}
-}
-
-func TestAccountService_getVIP180TokenBalance_HexConversionError(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewAccountService(mockClient)
-
-	// Set up mock to return invalid hex
-	mockClient.SetMockCallResult("0xinvalid_hex")
-
-	currency := &types.Currency{
-		Symbol:   "TOKEN",
-		Decimals: 18,
-		Metadata: map[string]any{
-			"contractAddress": "0x1234567890123456789012345678901234567890",
-		},
-	}
-
-	amount, err := service.getVIP180TokenBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa", "0x1234567890123456789012345678901234567890", currency)
-
-	if err != nil {
-		t.Errorf("getVIP180TokenBalance() unexpected error: %v", err)
-	}
-
-	// Should return 0 balance when hex conversion fails
-	if amount.Value != "0" {
-		t.Errorf("getVIP180TokenBalance() value = %v, want 0", amount.Value)
-	}
-
-	if amount.Currency != currency {
-		t.Errorf("getVIP180TokenBalance() currency = %v, want %v", amount.Currency, currency)
-	}
+		// Test error case
+		index := int64(999999)
+		blockIdentifier := types.PartialBlockIdentifier{
+			Index: &index,
+		}
+		block, err := service.getBlockFromIdentifier(blockIdentifier)
+		if err == nil {
+			t.Errorf("getBlockFromIdentifier() should return error when block not found")
+		}
+		if block != nil {
+			t.Errorf("getBlockFromIdentifier() should return nil block when error occurs")
+		}
+	})
 }

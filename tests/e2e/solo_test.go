@@ -33,40 +33,40 @@ func TestSolo(t *testing.T) {
 
 // testTransactionFlow tests the complete transaction flow for a specific transaction type
 func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *types.NetworkIdentifier, config *TestConfig, transactionType string) {
-	// Step 1: Network List
-	t.Log("Step 1: Testing /network/list")
+	// Network List
+	t.Log("Testing /network/list")
 	networkListResp, err := testNetworkList(client)
 	if err != nil {
 		t.Fatalf("Network list test failed: %v", err)
 	}
 	t.Logf("Network list response: %+v", networkListResp)
 
-	// Step 2: Network Options
-	t.Log("Step 2: Testing /network/options")
+	// Network Options
+	t.Log("Testing /network/options")
 	networkOptionsResp, err := testNetworkOptions(client, networkIdentifier)
 	if err != nil {
 		t.Fatalf("Network options test failed: %v", err)
 	}
 	t.Logf("Network options response: %+v", networkOptionsResp)
 
-	// Step 3: Network Status
-	t.Log("Step 3: Testing /network/status")
+	// Network Status
+	t.Log("Testing /network/status")
 	networkStatusResp, err := testNetworkStatus(client, networkIdentifier)
 	if err != nil {
 		t.Fatalf("Network status test failed: %v", err)
 	}
 	t.Logf("Network status response: %+v", networkStatusResp)
 
-	// Step 4: Construction Preprocess
-	t.Logf("Step 4: Testing /construction/preprocess for %s transaction", transactionType)
+	// Construction Preprocess
+	t.Logf("Testing /construction/preprocess for %s transaction", transactionType)
 	preprocessResp, err := testConstructionPreprocess(client, networkIdentifier, config, transactionType)
 	if err != nil {
 		t.Fatalf("Construction preprocess test failed: %v", err)
 	}
 	t.Logf("Preprocess response: %+v", preprocessResp)
 
-	// Step 5: Construction Metadata
-	t.Logf("Step 5: Testing /construction/metadata for %s transaction", transactionType)
+	// Construction Metadata
+	t.Logf("Testing /construction/metadata for %s transaction", transactionType)
 	metadataResp, err := testConstructionMetadata(client, networkIdentifier, preprocessResp, transactionType)
 	if err != nil {
 		t.Fatalf("Construction metadata test failed: %v", err)
@@ -78,16 +78,25 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 		t.Fatalf("Metadata validation failed: %v", err)
 	}
 
-	// Step 6: Construction Payloads
-	t.Logf("Step 6: Testing /construction/payloads for %s transaction", transactionType)
+	// Construction Payloads
+	t.Logf("Testing /construction/payloads for %s transaction", transactionType)
 	payloadsResp, err := testConstructionPayloads(client, networkIdentifier, metadataResp, config, transactionType)
 	if err != nil {
 		t.Fatalf("Construction payloads test failed: %v", err)
 	}
 	t.Logf("Payloads response: %+v", payloadsResp)
 
-	// Step 7: Sign the payload
-	t.Log("Step 7: Signing payload")
+	// Construction Parse (unsigned)
+	t.Logf("Testing /construction/parse (unsigned) for %s transaction", transactionType)
+	parseUnsignedResp, err := testConstructionParse(client, networkIdentifier, []byte(payloadsResp.UnsignedTransaction), false)
+	if err != nil {
+		t.Fatalf("Construction parse (unsigned) test failed: %v", err)
+	}
+	t.Logf("Parse (unsigned) response: operations count = %d, signers count = %d",
+		len(parseUnsignedResp.Operations), len(parseUnsignedResp.AccountIdentifierSigners))
+
+	// Sign the payload
+	t.Log("Signing payload")
 	payloadHex := fmt.Sprintf("%x", payloadsResp.Payloads[0].Bytes)
 	signature, err := meshutils.SignPayload(config.SenderPrivateKey, payloadHex)
 	if err != nil {
@@ -95,32 +104,48 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	}
 	t.Logf("Generated signature: %s", signature)
 
-	// Step 8: Construction Combine
-	t.Log("Step 8: Testing /construction/combine")
+	// Construction Combine
+	t.Log("Testing /construction/combine")
 	combineResp, err := testConstructionCombine(client, networkIdentifier, payloadsResp, signature)
 	if err != nil {
 		t.Fatalf("Construction combine test failed: %v", err)
 	}
 	t.Logf("Combine response: signed transaction = %s", combineResp.SignedTransaction)
 
-	// Step 9: Construction Hash
-	t.Log("Step 9: Testing /construction/hash")
+	// Construction Parse (signed)
+	t.Logf("Testing /construction/parse (signed) for %s transaction", transactionType)
+	parseSignedResp, err := testConstructionParse(client, networkIdentifier, []byte(combineResp.SignedTransaction), true)
+	if err != nil {
+		t.Fatalf("Construction parse (signed) test failed: %v", err)
+	}
+	t.Logf("Parse (signed) response: operations count = %d, signers count = %d",
+		len(parseSignedResp.Operations), len(parseSignedResp.AccountIdentifierSigners))
+
+	// Validate Parse Responses Match
+	t.Log("Validating that parse responses match")
+	if err := validateParseResponsesMatch(parseUnsignedResp, parseSignedResp); err != nil {
+		t.Fatalf("Parse responses validation failed: %v", err)
+	}
+	t.Log("✅ Parse responses validation passed - unsigned and signed responses match")
+
+	// Construction Hash
+	t.Log("Testing /construction/hash")
 	hashResp, err := testConstructionHash(client, networkIdentifier, combineResp)
 	if err != nil {
 		t.Fatalf("Construction hash test failed: %v", err)
 	}
 	t.Logf("Hash response: transaction hash = %s", hashResp.TransactionIdentifier.Hash)
 
-	// Step 10: Construction Submit
-	t.Log("Step 10: Testing /construction/submit")
+	// Construction Submit
+	t.Log("Testing /construction/submit")
 	submitResp, err := testConstructionSubmit(client, networkIdentifier, combineResp)
 	if err != nil {
 		t.Fatalf("Construction submit test failed: %v", err)
 	}
 	t.Logf("Submit response: transaction hash = %s", submitResp.TransactionIdentifier.Hash)
 
-	// Step 11: Mempool
-	t.Log("Step 11: Testing /mempool")
+	// Mempool
+	t.Log("Testing /mempool")
 	mempoolResp, err := testMempool(client, networkIdentifier)
 	if err != nil {
 		t.Fatalf("Mempool test failed: %v", err)
@@ -130,8 +155,8 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 		t.Logf("  Transaction [%d]: hash = %s", i, txID.Hash)
 	}
 
-	// Step 12: Mempool Transaction
-	t.Log("Step 12: Testing /mempool/transaction")
+	// Mempool Transaction
+	t.Log("Testing /mempool/transaction")
 	mempoolTxResp, err := testMempoolTransaction(client, networkIdentifier, submitResp.TransactionIdentifier)
 	if err != nil {
 		t.Fatalf("Mempool transaction test failed: %v", err)
@@ -145,8 +170,8 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 			i, op.Type, op.Account.Address, op.Amount.Value, op.Amount.Currency.Symbol)
 	}
 
-	// Step 13: Block (get latest block)
-	t.Log("Step 13: Testing /block (latest block)")
+	// Block (get latest block)
+	t.Log("Testing /block (latest block)")
 	latestBlockResp, err := testBlock(client, networkIdentifier, &types.PartialBlockIdentifier{
 		Hash: func() *string { h := "best"; return &h }(),
 	})
@@ -165,8 +190,8 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 			i, tx.TransactionIdentifier.Hash, len(tx.Operations))
 	}
 
-	// Step 14: Events Blocks (get recent block events)
-	t.Log("Step 14: Testing /events/blocks")
+	// Events Blocks (get recent block events)
+	t.Log("Testing /events/blocks")
 	offset := int64(0)
 	limit := int64(10)
 	eventsResp, err := testEventsBlocks(client, networkIdentifier, &offset, &limit)
@@ -183,8 +208,8 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 			i, event.Sequence, event.BlockIdentifier.Hash, event.BlockIdentifier.Index, event.Type)
 	}
 
-	// Step 15: Search Transactions (search for our submitted transaction)
-	t.Log("Step 15: Testing /search/transactions")
+	// Search Transactions (search for our submitted transaction)
+	t.Log("Testing /search/transactions")
 	retries := 3
 	delayInSeconds := 1
 	searchResp, err := testSearchTransactionsWithRetry(client, networkIdentifier, submitResp.TransactionIdentifier, retries, delayInSeconds)
@@ -202,8 +227,8 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 			tx.BlockIdentifier.Hash, tx.BlockIdentifier.Index, len(tx.Transaction.Operations))
 	}
 
-	// Step 16: Block Transaction (get our found transaction from the block)
-	t.Log("Step 16: Testing /block/transaction")
+	// Block Transaction (get our found transaction from the block)
+	t.Log("Testing /block/transaction")
 	blockTxResp, err := testBlockTransaction(client, networkIdentifier, searchResp.Transactions[0].BlockIdentifier, searchResp.Transactions[0].Transaction.TransactionIdentifier)
 	if err != nil {
 		t.Fatalf("Block transaction test failed: %v", err)

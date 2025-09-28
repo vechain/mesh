@@ -588,3 +588,256 @@ func TestGetExpiration(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTokenList(t *testing.T) {
+	tests := []struct {
+		name      string
+		tokenList []types.Currency
+		expected  []types.Currency
+	}{
+		{
+			name:      "empty token list",
+			tokenList: []types.Currency{},
+			expected:  []types.Currency{},
+		},
+		{
+			name: "token list with VTHO",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			expected: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Config{
+				TokenList: tt.tokenList,
+			}
+
+			result := config.GetTokenList()
+
+			if len(result) != len(tt.expected) {
+				t.Errorf("GetTokenList() length = %v, want %v", len(result), len(tt.expected))
+			}
+		})
+	}
+}
+
+func TestIsTokenRegistered(t *testing.T) {
+	tests := []struct {
+		name            string
+		tokenList       []types.Currency
+		contractAddress string
+		expected        bool
+	}{
+		{
+			name:            "empty token list",
+			tokenList:       []types.Currency{},
+			contractAddress: "0x0000000000000000000000000000456e65726779",
+			expected:        false,
+		},
+		{
+			name: "token registered - exact match",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			contractAddress: "0x0000000000000000000000000000456e65726779",
+			expected:        true,
+		},
+		{
+			name: "token registered - case insensitive",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			contractAddress: "0x0000000000000000000000000000456E65726779", // uppercase
+			expected:        true,
+		},
+		{
+			name: "token not registered",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			contractAddress: "0x1234567890123456789012345678901234567890",
+			expected:        false,
+		},
+		{
+			name: "multiple tokens - first match",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+				{
+					Symbol:   "TOKEN",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x1234567890123456789012345678901234567890",
+					},
+				},
+			},
+			contractAddress: "0x0000000000000000000000000000456e65726779",
+			expected:        true,
+		},
+		{
+			name: "multiple tokens - second match",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+				{
+					Symbol:   "TOKEN",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x1234567890123456789012345678901234567890",
+					},
+				},
+			},
+			contractAddress: "0x1234567890123456789012345678901234567890",
+			expected:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Config{
+				TokenList: tt.tokenList,
+			}
+
+			result := config.IsTokenRegistered(tt.contractAddress)
+
+			if result != tt.expected {
+				t.Errorf("IsTokenRegistered() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetTokenFromList(t *testing.T) {
+	tests := []struct {
+		name            string
+		tokenList       []types.Currency
+		contractAddress string
+		expectedFound   bool
+		expectedSymbol  string
+	}{
+		{
+			name:            "empty token list",
+			tokenList:       []types.Currency{},
+			contractAddress: "0x0000000000000000000000000000456e65726779",
+			expectedFound:   false,
+		},
+		{
+			name: "token found - exact match",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			contractAddress: "0x0000000000000000000000000000456e65726779",
+			expectedFound:   true,
+			expectedSymbol:  "VTHO",
+		},
+		{
+			name: "token found - case insensitive",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			contractAddress: "0x0000000000000000000000000000456E65726779", // uppercase
+			expectedFound:   true,
+			expectedSymbol:  "VTHO",
+		},
+		{
+			name: "token not found",
+			tokenList: []types.Currency{
+				{
+					Symbol:   "VTHO",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+			contractAddress: "0x1234567890123456789012345678901234567890",
+			expectedFound:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Config{
+				TokenList: tt.tokenList,
+			}
+
+			result, found := config.GetTokenFromList(tt.contractAddress)
+
+			if found != tt.expectedFound {
+				t.Errorf("GetTokenFromList() found = %v, want %v", found, tt.expectedFound)
+			}
+
+			if tt.expectedFound {
+				if result == nil {
+					t.Errorf("GetTokenFromList() returned nil when token should be found")
+					return
+				}
+
+				if result.Symbol != tt.expectedSymbol {
+					t.Errorf("GetTokenFromList() symbol = %v, want %v", result.Symbol, tt.expectedSymbol)
+				}
+			} else {
+				if result != nil {
+					t.Errorf("GetTokenFromList() returned non-nil when token should not be found")
+				}
+			}
+		})
+	}
+}

@@ -1,6 +1,7 @@
 package thor
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -25,6 +26,8 @@ type MockVeChainClient struct {
 	MockMempoolTx     *transactions.Transaction
 	MockMempoolStatus *api.Status
 	MockCallResult    string
+	MockCallResults   []string
+	MockCallIndex     int
 	MockBlockByNumber *api.JSONExpandedBlock
 	MockTransaction   *transactions.Transaction
 	MockReceipt       *api.Receipt
@@ -331,6 +334,18 @@ func (m *MockVeChainClient) CallContract(contractAddress, callData string) (stri
 	if m.MockError != nil {
 		return "", m.MockError
 	}
+
+	// If MockCallResults is set, use it for multiple responses
+	if len(m.MockCallResults) > 0 {
+		if m.MockCallIndex >= len(m.MockCallResults) {
+			return "", fmt.Errorf("no more mock call results available")
+		}
+		result := m.MockCallResults[m.MockCallIndex]
+		m.MockCallIndex++
+		return result, nil
+	}
+
+	// Fallback to single MockCallResult
 	return m.MockCallResult, nil
 }
 
@@ -358,6 +373,12 @@ func (m *MockVeChainClient) SetMockMempoolTx(tx *transactions.Transaction) {
 
 func (m *MockVeChainClient) SetMockCallResult(result string) {
 	m.MockCallResult = result
+}
+
+// SetMockCallResults configures multiple call results for consecutive calls
+func (m *MockVeChainClient) SetMockCallResults(results []string) {
+	m.MockCallResults = results
+	m.MockCallIndex = 0
 }
 
 // SetBlockByNumber configures the simulated block by number

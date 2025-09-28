@@ -12,12 +12,14 @@ import (
 // MempoolService handles mempool API endpoints
 type MempoolService struct {
 	vechainClient meshthor.VeChainClientInterface
+	encoder       *meshutils.MeshTransactionEncoder
 }
 
 // NewMempoolService creates a new mempool service
 func NewMempoolService(vechainClient meshthor.VeChainClientInterface) *MempoolService {
 	return &MempoolService{
 		vechainClient: vechainClient,
+		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
 	}
 }
 
@@ -98,7 +100,7 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 
 	// Parse operations directly from transactions.Transaction
 	status := meshutils.OperationStatusPending
-	operations := meshutils.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	operations := m.encoder.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
 	meshTx := meshutils.BuildMeshTransactionFromTransaction(tx, operations)
 
 	// Build the response

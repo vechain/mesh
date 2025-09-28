@@ -417,3 +417,29 @@ func testSearchTransactionsWithRetry(client *HTTPClient, networkIdentifier *type
 
 	return nil, fmt.Errorf("search transactions failed after %d attempts, last error: %v", maxRetries, lastErr)
 }
+
+// testConstructionParse tests the /construction/parse endpoint
+func testConstructionParse(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, transaction []byte, signed bool) (*types.ConstructionParseResponse, error) {
+	request := &types.ConstructionParseRequest{
+		NetworkIdentifier: networkIdentifier,
+		Signed:            signed,
+		Transaction:       string(transaction),
+	}
+
+	resp, err := client.Post("/construction/parse", request)
+	if err != nil {
+		return nil, err
+	}
+
+	var response types.ConstructionParseResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, err
+	}
+
+	// Validate response
+	if err := ValidateConstructionParseResponse(&response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}

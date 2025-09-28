@@ -7,8 +7,11 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/vechain/mesh/config"
+	meshthor "github.com/vechain/mesh/thor"
+	"github.com/vechain/mesh/utils/vip180"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
@@ -24,11 +27,15 @@ type MeshTransaction struct {
 }
 
 // MeshTransactionEncoder handles encoding and decoding of Mesh transactions
-type MeshTransactionEncoder struct{}
+type MeshTransactionEncoder struct {
+	vechainClient meshthor.VeChainClientInterface
+}
 
 // NewMeshTransactionEncoder creates a new Mesh transaction encoder
-func NewMeshTransactionEncoder() *MeshTransactionEncoder {
-	return &MeshTransactionEncoder{}
+func NewMeshTransactionEncoder(vechainClient meshthor.VeChainClientInterface) *MeshTransactionEncoder {
+	return &MeshTransactionEncoder{
+		vechainClient: vechainClient,
+	}
 }
 
 // EncodeTransaction encodes a transaction using Mesh RLP schema
@@ -111,50 +118,42 @@ func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTran
 	}, nil
 }
 
-// buildMeshTransaction is a helper function that builds a Mesh transaction
-func buildMeshTransaction(hash string, operations []*types.Operation, metadata map[string]any) *types.Transaction {
-	return &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{Hash: hash},
-		Operations:            operations,
-		Metadata:              metadata,
+// ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
+func (e *MeshTransactionEncoder) ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
+	status := OperationStatusSucceeded
+	if tx.Reverted {
+		status = OperationStatusReverted
 	}
-}
-
-// BuildMeshTransactionFromAPI builds a Mesh transaction directly from api.JSONEmbeddedTx
-func BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx, operations []*types.Operation) *types.Transaction {
-	return buildMeshTransaction(tx.ID.String(), operations, map[string]any{
-		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
-		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
-	})
+	return e.parseTransactionOperationsFromClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
 }
 
 // ParseTransactionFromBytes parses a transaction from bytes and returns operations and signers
-func ParseTransactionFromBytes(txBytes []byte, signed bool, encoder *MeshTransactionEncoder) (*MeshTransaction, []*types.Operation, []*types.AccountIdentifier, error) {
+func (e *MeshTransactionEncoder) ParseTransactionFromBytes(txBytes []byte, signed bool) (*MeshTransaction, []*types.Operation, []*types.AccountIdentifier, error) {
 	var meshTx *MeshTransaction
 	var err error
 
 	if signed {
 		// For signed transactions, try to decode as Mesh transaction first
-		meshTx, err = encoder.DecodeSignedTransaction(txBytes)
+		meshTx, err = e.DecodeSignedTransaction(txBytes)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to decode signed transaction: %w", err)
 		}
 	} else {
 		// For unsigned transactions, decode as Mesh transaction
-		meshTx, err = encoder.DecodeUnsignedTransaction(txBytes)
+		meshTx, err = e.DecodeUnsignedTransaction(txBytes)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to decode unsigned transaction: %w", err)
 		}
 	}
 
 	// Parse operations and signers
-	operations, signers := parseTransactionSignersAndOperations(meshTx)
+	operations, signers := e.parseTransactionSignersAndOperations(meshTx)
 
 	return meshTx, operations, signers, nil
 }
 
 // parseTransactionSignersAndOperations parses signers and operations from a transaction
-func parseTransactionSignersAndOperations(meshTx *MeshTransaction) ([]*types.Operation, []*types.AccountIdentifier) {
+func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *MeshTransaction) ([]*types.Operation, []*types.AccountIdentifier) {
 	originAddr := thor.BytesToAddress(meshTx.Origin)
 	var delegatorAddr *thor.Address
 	if len(meshTx.Delegator) > 0 {
@@ -173,50 +172,40 @@ func parseTransactionSignersAndOperations(meshTx *MeshTransaction) ([]*types.Ope
 		})
 	}
 
-	// Parse clauses as operations
+	// Parse clauses as operations using the existing clause parser
 	clauses := meshTx.Clauses()
-	operationIndex := 0
-	operations := make([]*types.Operation, 0, len(clauses))
-	for _, clause := range clauses {
-		to := clause.To()
-		if to != nil {
-			// Sender operation (negative amount)
-			senderOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type: OperationTypeTransfer,
-				Account: &types.AccountIdentifier{
-					Address: originAddr.String(),
-				},
-				Amount: &types.Amount{
-					Value:    "-" + clause.Value().String(),
-					Currency: VETCurrency,
-				},
-			}
-			operations = append(operations, senderOp)
-			operationIndex++
-
-			// Receiver operation (positive amount)
-			receiverOp := &types.Operation{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(operationIndex),
-				},
-				Type: OperationTypeTransfer,
-				Account: &types.AccountIdentifier{
-					Address: to.String(),
-				},
-				Amount: &types.Amount{
-					Value:    clause.Value().String(),
-					Currency: VETCurrency,
-				},
-			}
-			operations = append(operations, receiverOp)
-			operationIndex++
+	clauseData := make([]ClauseData, len(clauses))
+	for i, clause := range clauses {
+		// Convert tx.Clause to api.Clause for the adapter
+		apiClause := &api.Clause{
+			To:    clause.To(),
+			Value: (*math.HexOrDecimal256)(clause.Value()),
+			Data:  fmt.Sprintf("0x%x", clause.Data()),
 		}
+		clauseData[i] = ClauseAdapter{clause: apiClause}
 	}
 
+	// Use the existing parsing logic that handles both VET and token transfers
+	operations := e.parseTransactionOperationsFromClauseData(clauseData, originAddr.String(), uint64(meshTx.Gas()), nil)
+
 	return operations, signers
+}
+
+// buildMeshTransaction is a helper function that builds a Mesh transaction
+func buildMeshTransaction(hash string, operations []*types.Operation, metadata map[string]any) *types.Transaction {
+	return &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{Hash: hash},
+		Operations:            operations,
+		Metadata:              metadata,
+	}
+}
+
+// BuildMeshTransactionFromAPI builds a Mesh transaction directly from api.JSONEmbeddedTx
+func BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx, operations []*types.Operation) *types.Transaction {
+	return buildMeshTransaction(tx.ID.String(), operations, map[string]any{
+		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
+		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
+	})
 }
 
 // BuildTransactionFromRequest builds a VeChain transaction from a construction request
@@ -303,7 +292,20 @@ func createTransactionBuilder(transactionType string, metadata map[string]any) (
 
 // addClausesToBuilder adds clauses to the transaction builder
 func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation) error {
-	for _, op := range operations {
+	// Sort operations by index to maintain order
+	sortedOps := make([]*types.Operation, len(operations))
+	copy(sortedOps, operations)
+
+	// Simple sort by operation index
+	for i := 0; i < len(sortedOps)-1; i++ {
+		for j := i + 1; j < len(sortedOps); j++ {
+			if sortedOps[i].OperationIdentifier.Index > sortedOps[j].OperationIdentifier.Index {
+				sortedOps[i], sortedOps[j] = sortedOps[j], sortedOps[i]
+			}
+		}
+	}
+
+	for _, op := range sortedOps {
 		if op.Type == OperationTypeTransfer {
 			// Only process Transfer operations with positive values (recipients)
 			value := new(big.Int)
@@ -322,6 +324,39 @@ func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation)
 				return fmt.Errorf("invalid address: %w", err)
 			}
 
+			// Check if this is a VIP180 token transfer
+			if op.Amount.Currency.Metadata != nil {
+				if contractAddr, exists := op.Amount.Currency.Metadata["contractAddress"]; exists {
+					if addr, ok := contractAddr.(string); ok {
+						// This is a VIP180 token transfer
+						contractAddress, err := thor.ParseAddress(addr)
+						if err != nil {
+							return fmt.Errorf("invalid contract address: %w", err)
+						}
+
+						// Encode VIP180 transfer call data
+						transferDataHex, err := vip180.EncodeVIP180TransferCallData(op.Account.Address, op.Amount.Value)
+						if err != nil {
+							return fmt.Errorf("failed to encode VIP180 transfer: %w", err)
+						}
+
+						// Convert hex string to bytes
+						transferData, err := hex.DecodeString(strings.TrimPrefix(transferDataHex, "0x"))
+						if err != nil {
+							return fmt.Errorf("failed to decode transfer data: %w", err)
+						}
+
+						// Create clause with contract call
+						clause := thorTx.NewClause(&contractAddress)
+						clause = clause.WithValue(big.NewInt(0)) // VIP180 transfers have 0 value
+						clause = clause.WithData(transferData)
+						builder.Clause(clause)
+						continue
+					}
+				}
+			}
+
+			// Regular VET transfer
 			clause := thorTx.NewClause(&toAddr)
 			clause = clause.WithValue(value)
 			builder.Clause(clause)
@@ -329,15 +364,6 @@ func addClausesToBuilder(builder *thorTx.Builder, operations []*types.Operation)
 		// FeeDelegation operations are handled in the signing process
 	}
 	return nil
-}
-
-// ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
-func ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
-	status := OperationStatusSucceeded
-	if tx.Reverted {
-		status = OperationStatusReverted
-	}
-	return parseTransactionOperationsFromClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
 }
 
 // BuildMeshTransactionFromTransactions builds a Mesh transaction directly from transactions.Transaction

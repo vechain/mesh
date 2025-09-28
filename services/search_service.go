@@ -11,12 +11,14 @@ import (
 // SearchService handles search API endpoints
 type SearchService struct {
 	vechainClient meshthor.VeChainClientInterface
+	encoder       *meshutils.MeshTransactionEncoder
 }
 
 // NewSearchService creates a new search service
 func NewSearchService(vechainClient meshthor.VeChainClientInterface) *SearchService {
 	return &SearchService{
 		vechainClient: vechainClient,
+		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
 	}
 }
 
@@ -61,7 +63,7 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 	if txReceipt.Reverted {
 		status = meshutils.OperationStatusReverted
 	}
-	operations := meshutils.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), txReceipt.GasUsed, &status)
+	operations := s.encoder.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), txReceipt.GasUsed, &status)
 
 	// Create transaction identifier
 	transactionIdentifier := &types.TransactionIdentifier{

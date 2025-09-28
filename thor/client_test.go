@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/vechain/thor/v2/api"
+	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
 )
@@ -198,5 +201,289 @@ func TestVeChainClient_CallContract(t *testing.T) {
 	_, err := client.CallContract(contractAddress, data)
 	if err == nil {
 		t.Errorf("CallContract() should return error when no Thor node is available")
+	}
+}
+
+func TestVeChainClient_GetTransaction(t *testing.T) {
+	client := NewVeChainClient("http://localhost:8669")
+
+	// Test with invalid transaction ID
+	_, err := client.GetTransaction("invalid-tx-id")
+	if err == nil {
+		t.Errorf("GetTransaction() should return error when no Thor node is available")
+	}
+}
+
+func TestVeChainClient_GetTransactionReceipt(t *testing.T) {
+	client := NewVeChainClient("http://localhost:8669")
+
+	// Test with invalid transaction ID
+	_, err := client.GetTransactionReceipt("invalid-tx-id")
+	if err == nil {
+		t.Errorf("GetTransactionReceipt() should return error when no Thor node is available")
+	}
+}
+
+// Tests for MockVeChainClient methods with 0% coverage
+func TestMockVeChainClient_GetBlock(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test with no mock block set
+	block, err := mockClient.GetBlock("best")
+	if err != nil {
+		t.Errorf("GetBlock() error = %v, want nil", err)
+	}
+	if block == nil {
+		t.Errorf("GetBlock() returned nil block")
+	}
+}
+
+func TestMockVeChainClient_GetAccount(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test with no mock account set
+	account, err := mockClient.GetAccount("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	if err != nil {
+		t.Errorf("GetAccount() error = %v, want nil", err)
+	}
+	if account == nil {
+		t.Errorf("GetAccount() returned nil account")
+	}
+}
+
+func TestMockVeChainClient_GetChainID(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	chainID, err := mockClient.GetChainID()
+	if err != nil {
+		t.Errorf("GetChainID() error = %v, want nil", err)
+	}
+	if chainID == 0 {
+		t.Errorf("GetChainID() returned 0")
+	}
+}
+
+func TestMockVeChainClient_SubmitTransaction(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Create a mock transaction
+	mockTx := &tx.Transaction{}
+	txID, err := mockClient.SubmitTransaction(mockTx)
+	if err != nil {
+		t.Errorf("SubmitTransaction() error = %v, want nil", err)
+	}
+	if txID == "" {
+		t.Errorf("SubmitTransaction() returned empty tx ID")
+	}
+}
+
+func TestMockVeChainClient_GetPeers(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	peers, err := mockClient.GetPeers()
+	if err != nil {
+		t.Errorf("GetPeers() error = %v, want nil", err)
+	}
+	if peers == nil {
+		t.Errorf("GetPeers() returned nil peers")
+	}
+}
+
+func TestMockVeChainClient_GetMempoolStatus(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	status, err := mockClient.GetMempoolStatus()
+	if err != nil {
+		t.Errorf("GetMempoolStatus() error = %v, want nil", err)
+	}
+	if status == nil {
+		t.Errorf("GetMempoolStatus() returned nil status")
+	}
+}
+
+func TestMockVeChainClient_CallContract(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	result, err := mockClient.CallContract("0x1234567890123456789012345678901234567890", "0x1234")
+	if err != nil {
+		t.Errorf("CallContract() error = %v, want nil", err)
+	}
+	if result == "" {
+		t.Errorf("CallContract() returned empty result")
+	}
+}
+
+func TestMockVeChainClient_SetMockError(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock error
+	mockClient.SetMockError(fmt.Errorf("test error"))
+
+	// Test that error is returned
+	_, err := mockClient.GetAccount("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	if err == nil {
+		t.Errorf("GetAccount() should return error after SetMockError")
+	}
+}
+
+func TestMockVeChainClient_SetMockAccount(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock account
+	balance := math.HexOrDecimal256{}
+	err := balance.UnmarshalText([]byte("1000000000000000000"))
+	if err != nil {
+		t.Errorf("SetMockAccount() error = %v, want nil", err)
+	}
+	energy := math.HexOrDecimal256{}
+	err = energy.UnmarshalText([]byte("1000000"))
+	if err != nil {
+		t.Errorf("SetMockAccount() error = %v, want nil", err)
+	}
+
+	mockAccount := &api.Account{
+		Balance: &balance,
+		Energy:  &energy,
+	}
+	mockClient.SetMockAccount(mockAccount)
+
+	// Test that account is returned
+	account, err := mockClient.GetAccount("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	if err != nil {
+		t.Errorf("GetAccount() error = %v, want nil", err)
+	}
+	if account == nil {
+		t.Errorf("GetAccount() returned nil account")
+	}
+}
+
+func TestMockVeChainClient_SetMockBlock(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock block
+	mockBlock := &api.JSONExpandedBlock{
+		JSONBlockSummary: &api.JSONBlockSummary{
+			Number: 100,
+		},
+	}
+	mockClient.SetMockBlock(mockBlock)
+
+	// Test that block is returned
+	block, err := mockClient.GetBlock("best")
+	if err != nil {
+		t.Errorf("GetBlock() error = %v, want nil", err)
+	}
+	if block == nil {
+		t.Errorf("GetBlock() returned nil block")
+	}
+}
+
+func TestMockVeChainClient_SetMockMempoolTx(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock mempool tx
+	mockTx := &transactions.Transaction{}
+	mockClient.SetMockMempoolTx(mockTx)
+
+	// Test that mempool tx is returned
+	address := thor.Address{}
+	txs, err := mockClient.GetMempoolTransactions(&address)
+	if err != nil {
+		t.Errorf("GetMempoolTransactions() error = %v, want nil", err)
+	}
+	if len(txs) == 0 {
+		t.Errorf("GetMempoolTransactions() returned empty list")
+	}
+}
+
+func TestMockVeChainClient_SetMockCallResult(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock call result
+	mockClient.SetMockCallResult("0x1234567890abcdef")
+
+	// Test that call result is returned
+	result, err := mockClient.CallContract("0x1234567890123456789012345678901234567890", "0x1234")
+	if err != nil {
+		t.Errorf("CallContract() error = %v, want nil", err)
+	}
+	if result != "0x1234567890abcdef" {
+		t.Errorf("CallContract() result = %v, want 0x1234567890abcdef", result)
+	}
+}
+
+func TestMockVeChainClient_SetMockCallResults(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting multiple mock call results
+	results := []string{"0x1111", "0x2222", "0x3333"}
+	mockClient.SetMockCallResults(results)
+
+	// Test that results are returned sequentially
+	for i, expected := range results {
+		result, err := mockClient.CallContract("0x1234567890123456789012345678901234567890", "0x1234")
+		if err != nil {
+			t.Errorf("CallContract() [%d] error = %v, want nil", i, err)
+		}
+		if result != expected {
+			t.Errorf("CallContract() [%d] result = %v, want %v", i, result, expected)
+		}
+	}
+}
+
+func TestMockVeChainClient_SetBlockByNumber(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting block by number
+	mockBlock := &api.JSONExpandedBlock{
+		JSONBlockSummary: &api.JSONBlockSummary{
+			Number: 100,
+		},
+	}
+	mockClient.SetBlockByNumber(mockBlock)
+
+	// Test that block is returned
+	block, err := mockClient.GetBlock("100")
+	if err != nil {
+		t.Errorf("GetBlock() error = %v, want nil", err)
+	}
+	if block == nil {
+		t.Errorf("GetBlock() returned nil block")
+	}
+}
+
+func TestMockVeChainClient_SetTransaction(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock transaction
+	mockTx := &transactions.Transaction{}
+	mockClient.SetTransaction(mockTx)
+
+	// Test that transaction is returned
+	tx, err := mockClient.GetTransaction("0x1234567890abcdef")
+	if err != nil {
+		t.Errorf("GetTransaction() error = %v, want nil", err)
+	}
+	if tx == nil {
+		t.Errorf("GetTransaction() returned nil transaction")
+	}
+}
+
+func TestMockVeChainClient_SetReceipt(t *testing.T) {
+	mockClient := NewMockVeChainClient()
+
+	// Test setting mock receipt
+	mockReceipt := &api.Receipt{
+		GasUsed: 21000,
+	}
+	mockClient.SetReceipt(mockReceipt)
+
+	// Test that receipt is returned
+	receipt, err := mockClient.GetTransactionReceipt("0x1234567890abcdef")
+	if err != nil {
+		t.Errorf("GetTransactionReceipt() error = %v, want nil", err)
+	}
+	if receipt == nil {
+		t.Errorf("GetTransactionReceipt() returned nil receipt")
 	}
 }

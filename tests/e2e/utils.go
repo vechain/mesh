@@ -652,3 +652,84 @@ func ValidateSearchTransactionsResponse(response *types.SearchTransactionsRespon
 
 	return nil
 }
+
+// ValidateConstructionParseResponse validates a construction parse response
+func ValidateConstructionParseResponse(response *types.ConstructionParseResponse) error {
+	if response.Operations == nil {
+		return fmt.Errorf("operations not returned")
+	}
+
+	if len(response.Operations) == 0 {
+		return fmt.Errorf("operations list is empty")
+	}
+
+	// Validate each operation
+	for i, op := range response.Operations {
+		if op.Type == "" {
+			return fmt.Errorf("operation %d: type is empty", i)
+		}
+		if op.Account == nil {
+			return fmt.Errorf("operation %d: account is nil", i)
+		}
+		if op.Account.Address == "" {
+			return fmt.Errorf("operation %d: account address is empty", i)
+		}
+		if op.Amount == nil {
+			return fmt.Errorf("operation %d: amount is nil", i)
+		}
+		if op.Amount.Currency == nil {
+			return fmt.Errorf("operation %d: currency is nil", i)
+		}
+		if op.Amount.Currency.Symbol == "" {
+			return fmt.Errorf("operation %d: currency symbol is empty", i)
+		}
+	}
+
+	return nil
+}
+
+// validateParseResponsesMatch validates that unsigned and signed parse responses match
+func validateParseResponsesMatch(unsignedResp, signedResp *types.ConstructionParseResponse) error {
+	// Check operations count
+	if len(unsignedResp.Operations) != len(signedResp.Operations) {
+		return fmt.Errorf("operations count mismatch: unsigned=%d, signed=%d",
+			len(unsignedResp.Operations), len(signedResp.Operations))
+	}
+
+	// Check each operation matches
+	for i, unsignedOp := range unsignedResp.Operations {
+		signedOp := signedResp.Operations[i]
+
+		// Compare operation type
+		if unsignedOp.Type != signedOp.Type {
+			return fmt.Errorf("operation %d type mismatch: unsigned=%s, signed=%s",
+				i, unsignedOp.Type, signedOp.Type)
+		}
+
+		// Compare account address
+		if unsignedOp.Account.Address != signedOp.Account.Address {
+			return fmt.Errorf("operation %d account mismatch: unsigned=%s, signed=%s",
+				i, unsignedOp.Account.Address, signedOp.Account.Address)
+		}
+
+		// Compare amount value
+		if unsignedOp.Amount.Value != signedOp.Amount.Value {
+			return fmt.Errorf("operation %d amount value mismatch: unsigned=%s, signed=%s",
+				i, unsignedOp.Amount.Value, signedOp.Amount.Value)
+		}
+
+		// Compare currency symbol
+		if unsignedOp.Amount.Currency.Symbol != signedOp.Amount.Currency.Symbol {
+			return fmt.Errorf("operation %d currency symbol mismatch: unsigned=%s, signed=%s",
+				i, unsignedOp.Amount.Currency.Symbol, signedOp.Amount.Currency.Symbol)
+		}
+
+		// Compare currency decimals
+		if unsignedOp.Amount.Currency.Decimals != signedOp.Amount.Currency.Decimals {
+			return fmt.Errorf("operation %d currency decimals mismatch: unsigned=%d, signed=%d",
+				i, unsignedOp.Amount.Currency.Decimals, signedOp.Amount.Currency.Decimals)
+		}
+	}
+
+	return nil
+}

@@ -13,6 +13,7 @@ import (
 	"github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/mesh/utils/vip180"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
@@ -29,7 +30,7 @@ type ConstructionService struct {
 func NewConstructionService(vechainClient meshthor.VeChainClientInterface, config *config.Config) *ConstructionService {
 	return &ConstructionService{
 		vechainClient: vechainClient,
-		encoder:       meshutils.NewMeshTransactionEncoder(),
+		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
 		config:        config,
 	}
 }
@@ -80,33 +81,82 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 		return
 	}
 
-	// Extract operations and determine required public keys
-	var requiredPublicKeys []*types.AccountIdentifier
-	var clauses []map[string]any
-
-	for _, op := range request.Operations {
-		switch op.Type {
-		case meshutils.OperationTypeTransfer:
-			requiredPublicKeys = append(requiredPublicKeys, op.Account)
-
-			// Extract clause information
-			clause := map[string]any{
-				"to":    op.Account.Address,
-				"value": op.Amount.Value,
-				"data":  "0x00",
-			}
-			clauses = append(clauses, clause)
-		case meshutils.OperationTypeFeeDelegation:
-			// For VIP191 fee delegation, we need the delegator's public key
-			requiredPublicKeys = append(requiredPublicKeys, op.Account)
-		}
+	// Get transaction origins
+	origins := meshutils.GetTxOrigins(request.Operations)
+	if len(origins) > 1 {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrTransactionMultipleOrigins), http.StatusBadRequest)
+		return
+	} else if len(origins) == 0 {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrTransactionOriginNotExist), http.StatusBadRequest)
+		return
 	}
 
+	// Get fee delegator from metadata
+	delegator := c.getFeeDelegatorAccount(request.Metadata)
+
+	// Get VET and token operations
+	vetOpers := meshutils.GetVETOperations(request.Operations)
+	tokensOpers, unregisteredTokens := meshutils.GetTokensOperations(request.Operations, c.config)
+
+	// Validate operations
+	if len(vetOpers) == 0 && len(tokensOpers) == 0 {
+		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrNoTransferOperation), http.StatusBadRequest)
+		return
+	}
+
+	// Check for unregistered tokens
+	if len(unregisteredTokens) > 0 {
+		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrUnregisteredTokenOperations, map[string]any{
+			"unregisteredToken": unregisteredTokens,
+		}), http.StatusBadRequest)
+		return
+	}
+
+	// Build clauses
+	var clauses []map[string]any
+
+	// Add VET transfer clauses
+	for _, op := range vetOpers {
+		clauses = append(clauses, map[string]any{
+			"to":    op["to"],
+			"value": op["value"],
+			"data":  "0x",
+		})
+	}
+
+	// Add VIP180 token transfer clauses
+	for _, op := range tokensOpers {
+		// Encode VIP180 transfer call data
+		transferData, err := vip180.EncodeVIP180TransferCallData(op["to"], op["value"])
+		if err != nil {
+			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInternalServerError, map[string]any{
+				"error": err.Error(),
+			}), http.StatusInternalServerError)
+			return
+		}
+
+		clauses = append(clauses, map[string]any{
+			"to":    op["token"],
+			"value": "0",
+			"data":  transferData,
+		})
+	}
+
+	// Build response
 	response := &types.ConstructionPreprocessResponse{
 		Options: map[string]any{
 			"clauses": clauses,
 		},
-		RequiredPublicKeys: requiredPublicKeys,
+		RequiredPublicKeys: []*types.AccountIdentifier{
+			{Address: origins[0]},
+		},
+	}
+
+	// Add delegator to required public keys if present
+	if delegator != "" && delegator != origins[0] {
+		response.RequiredPublicKeys = append(response.RequiredPublicKeys, &types.AccountIdentifier{
+			Address: delegator,
+		})
 	}
 
 	meshutils.WriteJSONResponse(w, response)
@@ -294,7 +344,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	// Use common parsing function
-	meshTx, operations, signers, err := meshutils.ParseTransactionFromBytes(txBytes, request.Signed, c.encoder)
+	meshTx, operations, signers, err := c.encoder.ParseTransactionFromBytes(txBytes, request.Signed)
 	if err != nil {
 		if request.Signed {
 			meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToDecodeTransaction), http.StatusBadRequest)
@@ -307,17 +357,22 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	// Calculate gas price based on transaction type
 	var gasPrice *big.Int
 	if meshTx.Type() == tx.TypeLegacy {
-		gasPrice = big.NewInt(1000000000) // 1 Gwei for legacy
+		gasPrice = c.config.GetBaseGasPrice()
 	} else {
-		// For dynamic fee, use maxFeePerGas
-		gasPrice = meshTx.MaxFeePerGas()
+		dynamicGasPrice, err := c.vechainClient.GetDynamicGasPrice()
+		if err != nil {
+			gasPrice = c.config.GetBaseGasPrice()
+		} else {
+			gasPrice = new(big.Int).Add(dynamicGasPrice.BaseFee, dynamicGasPrice.Reward)
+		}
 	}
 
 	// Calculate fee amount
 	feeAmount := new(big.Int).Mul(big.NewInt(int64(meshTx.Gas())), gasPrice)
 
 	// Add fee operation
-	if len(meshTx.Delegator) > 0 {
+	delegatorAddr := thor.BytesToAddress(meshTx.Delegator)
+	if len(meshTx.Delegator) > 0 && !delegatorAddr.IsZero() {
 		// Fee delegation operation
 		feeDelegationOp := &types.Operation{
 			OperationIdentifier: &types.OperationIdentifier{
@@ -325,7 +380,7 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 			},
 			Type: meshutils.OperationTypeFeeDelegation,
 			Account: &types.AccountIdentifier{
-				Address: thor.BytesToAddress(meshTx.Delegator).String(),
+				Address: delegatorAddr.String(),
 			},
 			Amount: &types.Amount{
 				Value:    "-" + feeAmount.String(),

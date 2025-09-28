@@ -7,6 +7,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshthor "github.com/vechain/mesh/thor"
 	meshutils "github.com/vechain/mesh/utils"
+	"github.com/vechain/mesh/utils/vip180"
 	"github.com/vechain/thor/v2/api"
 )
 
@@ -149,7 +150,25 @@ func (a *AccountService) getBalanceForCurrency(address string, currency *types.C
 	// Handle VIP180 tokens
 	if contractAddr, exists := currency.Metadata["contractAddress"]; exists {
 		if addr, ok := contractAddr.(string); ok {
-			return a.getVIP180TokenBalance(address, addr, currency)
+			// Create VIP180 contract wrapper
+			contract, err := vip180.NewVIP180Contract(addr, a.vechainClient)
+			if err != nil {
+				// If contract creation fails, return 0 balance
+				return &types.Amount{
+					Value:    "0",
+					Currency: currency,
+				}, nil
+			}
+
+			balance, err := contract.BalanceOf(address)
+			if err != nil {
+				return nil, err
+			}
+
+			return &types.Amount{
+				Value:    balance.String(),
+				Currency: currency,
+			}, nil
 		}
 	}
 
@@ -194,51 +213,5 @@ func (a *AccountService) getVTHOBalance(address string) (*types.Amount, error) {
 	return &types.Amount{
 		Value:    vthoBalance,
 		Currency: meshutils.VTHOCurrency,
-	}, nil
-}
-
-// getVIP180TokenBalance gets the balance for a VIP180 token
-func (a *AccountService) getVIP180TokenBalance(address, contractAddress string, currency *types.Currency) (*types.Amount, error) {
-	// Prepare the function call data
-	// balanceOf(address) function selector: 0x70a08231
-	functionSelector := "0x70a08231"
-
-	// Pad the address to 32 bytes (64 hex characters)
-	paddedAddress := fmt.Sprintf("%064s", address[2:]) // Remove 0x prefix and pad
-
-	// Combine function selector with padded address
-	callData := functionSelector + paddedAddress
-
-	// Make the contract call
-	result, err := a.vechainClient.CallContract(contractAddress, callData)
-	if err != nil {
-		// If contract call fails, return 0 balance (token might not exist or be deployed)
-		return &types.Amount{
-			Value:    "0",
-			Currency: currency,
-		}, nil
-	}
-
-	// Parse the result (32-byte hex string representing uint256)
-	if len(result) < 2 || result[:2] != "0x" {
-		return &types.Amount{
-			Value:    "0",
-			Currency: currency,
-		}, nil
-	}
-
-	// Remove 0x prefix and convert to decimal
-	hexValue := result[2:]
-	balance, err := meshutils.HexToDecimal("0x" + hexValue)
-	if err != nil {
-		return &types.Amount{
-			Value:    "0",
-			Currency: currency,
-		}, nil
-	}
-
-	return &types.Amount{
-		Value:    balance,
-		Currency: currency,
 	}, nil
 }
