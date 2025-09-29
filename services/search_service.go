@@ -13,21 +13,21 @@ import (
 
 // SearchService handles search API endpoints
 type SearchService struct {
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
 	vechainClient   meshthor.VeChainClientInterface
 	encoder         *meshtx.MeshTransactionEncoder
 	clauseParser    *meshoperations.ClauseParser
-	requestHandler  *meshhttp.RequestHandler
-	responseHandler *meshhttp.ResponseHandler
 }
 
 // NewSearchService creates a new search service
 func NewSearchService(vechainClient meshthor.VeChainClientInterface) *SearchService {
 	return &SearchService{
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
 		vechainClient:   vechainClient,
 		encoder:         meshtx.NewMeshTransactionEncoder(vechainClient),
 		clauseParser:    meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
-		requestHandler:  meshhttp.NewRequestHandler(),
-		responseHandler: meshhttp.NewResponseHandler(),
 	}
 }
 

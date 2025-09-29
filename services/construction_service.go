@@ -42,9 +42,10 @@ func NewConstructionService(vechainClient meshthor.VeChainClientInterface, confi
 		responseHandler:     meshhttp.NewResponseHandler(),
 		vechainClient:       vechainClient,
 		encoder:             meshtx.NewMeshTransactionEncoder(vechainClient),
-		config:              config,
-		operationsExtractor: meshoperations.NewOperationsExtractor(),
 		builder:             meshtx.NewTransactionBuilder(),
+		config:              config,
+		bytesHandler:        meshcrypto.NewBytesHandler(),
+		operationsExtractor: meshoperations.NewOperationsExtractor(),
 	}
 }
 
@@ -61,9 +62,9 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrPublicKeyRequired), http.StatusBadRequest)
 		return
 	}
+	// Derive address from public key
+	address, err := c.bytesHandler.ComputeAddress(request.PublicKey)
 
-	// Convert public key bytes to ECDSA public key
-	pubKey, err := crypto.DecompressPubkey(request.PublicKey.Bytes)
 	if err != nil {
 		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 			"error": err.Error(),
@@ -71,12 +72,9 @@ func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Derive address from public key
-	address := crypto.PubkeyToAddress(*pubKey)
-
 	response := &types.ConstructionDeriveResponse{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: address.Hex(),
+			Address: address,
 		},
 		Metadata: map[string]any{
 			"derivation_path": "m/44'/818'/0'/0/0", // VeChain BIP44 path
