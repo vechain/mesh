@@ -5,37 +5,43 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
-	"github.com/vechain/mesh/utils/vip180"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
+	meshhttp "github.com/vechain/mesh/common/http"
+	"github.com/vechain/mesh/common/vip180"
 	"github.com/vechain/thor/v2/api"
 )
 
 // AccountService handles account-related endpoints
 type AccountService struct {
-	vechainClient meshthor.VeChainClientInterface
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
+	vechainClient   meshthor.VeChainClientInterface
 }
 
 // NewAccountService creates a new account service
 func NewAccountService(vechainClient meshthor.VeChainClientInterface) *AccountService {
 	return &AccountService{
-		vechainClient: vechainClient,
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
+		vechainClient:   vechainClient,
 	}
 }
 
 // AccountBalance returns the balance of an account
 func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) {
 	var request types.AccountBalanceRequest
-	err := meshutils.ParseJSONFromRequestContext(r, &request)
+	err := a.requestHandler.ParseJSONFromContext(r, &request)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+		a.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Validate currencies if provided
 	if request.Currencies != nil {
 		if err := a.validateCurrencies(request.Currencies); err != nil {
-			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidCurrency, map[string]any{
+			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidCurrency, map[string]any{
 				"error": err.Error(),
 			}), http.StatusBadRequest)
 			return
@@ -50,7 +56,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 	for _, currency := range currenciesToQuery {
 		balance, err := a.getBalanceForCurrency(request.AccountIdentifier.Address, currency)
 		if err != nil {
-			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetAccount, map[string]any{
+				a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetAccount, map[string]any{
 				"error":    err.Error(),
 				"currency": currency.Symbol,
 			}), http.StatusInternalServerError)
@@ -66,7 +72,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 	if request.BlockIdentifier != nil {
 		block, err = a.getBlockFromIdentifier(*request.BlockIdentifier)
 		if err != nil {
-			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 				"error": err.Error(),
 			}), http.StatusBadRequest)
 			return
@@ -74,7 +80,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 	} else {
 		block, err = a.vechainClient.GetBlock("best")
 		if err != nil {
-			meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetBestBlock, map[string]any{
+			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetBestBlock, map[string]any{
 				"error": err.Error(),
 			}), http.StatusInternalServerError)
 			return
@@ -89,7 +95,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		Balances: balances,
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	a.responseHandler.WriteJSONResponse(w, response)
 }
 
 // validateCurrencies validates the currencies array format
@@ -128,8 +134,8 @@ func (a *AccountService) getCurrenciesToQuery(requestCurrencies []*types.Currenc
 	if len(requestCurrencies) == 0 {
 		// Default: return VET and VTHO
 		return []*types.Currency{
-			meshutils.VETCurrency,
-			meshutils.VTHOCurrency,
+			meshcommon.VETCurrency,
+			meshcommon.VTHOCurrency,
 		}
 	}
 	return requestCurrencies
@@ -138,12 +144,12 @@ func (a *AccountService) getCurrenciesToQuery(requestCurrencies []*types.Currenc
 // getBalanceForCurrency gets the balance for a specific currency
 func (a *AccountService) getBalanceForCurrency(address string, currency *types.Currency) (*types.Amount, error) {
 	// Handle VET currency
-	if currency.Symbol == meshutils.VETCurrency.Symbol {
+	if currency.Symbol == meshcommon.VETCurrency.Symbol {
 		return a.getVETBalance(address)
 	}
 
 	// Handle VTHO currency
-	if currency.Symbol == meshutils.VTHOCurrency.Symbol {
+	if currency.Symbol == meshcommon.VTHOCurrency.Symbol {
 		return a.getVTHOBalance(address)
 	}
 
@@ -186,14 +192,14 @@ func (a *AccountService) getVETBalance(address string) (*types.Amount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal VET balance: %w", err)
 	}
-	vetBalance, err := meshutils.HexToDecimal(string(balanceBytes))
+	vetBalance, err := meshcrypto.NewBytesHandler().HexToDecimal(string(balanceBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VET balance: %w", err)
 	}
 
 	return &types.Amount{
 		Value:    vetBalance,
-		Currency: meshutils.VETCurrency,
+		Currency: meshcommon.VETCurrency,
 	}, nil
 }
 
@@ -205,13 +211,13 @@ func (a *AccountService) getVTHOBalance(address string) (*types.Amount, error) {
 	}
 
 	energyBytes, _ := account.Energy.MarshalText()
-	vthoBalance, err := meshutils.HexToDecimal(string(energyBytes))
+	vthoBalance, err := meshcrypto.NewBytesHandler().HexToDecimal(string(energyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VTHO balance: %w", err)
 	}
 
 	return &types.Amount{
 		Value:    vthoBalance,
-		Currency: meshutils.VTHOCurrency,
+		Currency: meshcommon.VTHOCurrency,
 	}, nil
 }

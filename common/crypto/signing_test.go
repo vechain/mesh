@@ -1,4 +1,4 @@
-package utils
+package crypto
 
 import (
 	"encoding/hex"
@@ -83,7 +83,7 @@ func TestSignPayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signature, err := SignPayload(tt.privateKey, tt.payload)
+			signature, err := NewSigningHandler(tt.privateKey).SignPayload(tt.payload)
 
 			if tt.expectError {
 				if err == nil {
@@ -168,7 +168,7 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			address, err := GetAddressFromPrivateKey(tt.privateKey)
+			address, err := NewSigningHandler(tt.privateKey).GetAddressFromPrivateKey()
 
 			if tt.expectError {
 				if err == nil {
@@ -236,7 +236,7 @@ func TestSignPayloadWithAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signature, address, err := SignPayloadWithAddress(tt.privateKey, tt.payload)
+			signature, address, err := NewSigningHandler(tt.privateKey).SignPayloadWithAddress(tt.payload)
 
 			if tt.expectError {
 				if err == nil {
@@ -276,12 +276,13 @@ func TestSignPayloadConsistency(t *testing.T) {
 	privateKeyHex := "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"
 	payloadHex := "c7c260e16e3c32a6176759a3556ff5618d7d6e7e2c9c9602d40461fcaa34cbec"
 
-	signature1, err1 := SignPayload(privateKeyHex, payloadHex)
+	handler := NewSigningHandler(privateKeyHex)
+	signature1, err1 := handler.SignPayload(payloadHex)
 	if err1 != nil {
 		t.Fatalf("First SignPayload() call failed: %v", err1)
 	}
 
-	signature2, err2 := SignPayload(privateKeyHex, payloadHex)
+	signature2, err2 := handler.SignPayload(payloadHex)
 	if err2 != nil {
 		t.Fatalf("Second SignPayload() call failed: %v", err2)
 	}
@@ -296,12 +297,14 @@ func TestAddressDerivationConsistency(t *testing.T) {
 	privateKeyHex := "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"
 	expectedAddress := "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa"
 
-	address1, err1 := GetAddressFromPrivateKey(privateKeyHex)
+	handler := NewSigningHandler(privateKeyHex)
+
+	address1, err1 := handler.GetAddressFromPrivateKey()
 	if err1 != nil {
 		t.Fatalf("First GetAddressFromPrivateKey() call failed: %v", err1)
 	}
 
-	address2, err2 := GetAddressFromPrivateKey(privateKeyHex)
+	address2, err2 := handler.GetAddressFromPrivateKey()
 	if err2 != nil {
 		t.Fatalf("Second GetAddressFromPrivateKey() call failed: %v", err2)
 	}
@@ -320,12 +323,13 @@ func TestSignPayloadWithAddressConsistency(t *testing.T) {
 	privateKeyHex := "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"
 	payloadHex := "c7c260e16e3c32a6176759a3556ff5618d7d6e7e2c9c9602d40461fcaa34cbec"
 
-	sig1, addr1, err1 := SignPayloadWithAddress(privateKeyHex, payloadHex)
+	handler := NewSigningHandler(privateKeyHex)
+	sig1, addr1, err1 := handler.SignPayloadWithAddress(payloadHex)
 	if err1 != nil {
 		t.Fatalf("First SignPayloadWithAddress() call failed: %v", err1)
 	}
 
-	sig2, addr2, err2 := SignPayloadWithAddress(privateKeyHex, payloadHex)
+	sig2, addr2, err2 := handler.SignPayloadWithAddress(payloadHex)
 	if err2 != nil {
 		t.Fatalf("Second SignPayloadWithAddress() call failed: %v", err2)
 	}
@@ -345,12 +349,12 @@ func TestSignPayloadWithDifferentKeys(t *testing.T) {
 	privateKey2 := "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	payloadHex := "c7c260e16e3c32a6176759a3556ff5618d7d6e7e2c9c9602d40461fcaa34cbec"
 
-	signature1, err1 := SignPayload(privateKey1, payloadHex)
+	signature1, err1 := NewSigningHandler(privateKey1).SignPayload(payloadHex)
 	if err1 != nil {
 		t.Fatalf("SignPayload() with first key failed: %v", err1)
 	}
 
-	signature2, err2 := SignPayload(privateKey2, payloadHex)
+	signature2, err2 := NewSigningHandler(privateKey2).SignPayload(payloadHex)
 	if err2 != nil {
 		t.Fatalf("SignPayload() with second key failed: %v", err2)
 	}
@@ -366,12 +370,13 @@ func TestSignPayloadWithDifferentPayloads(t *testing.T) {
 	payload1 := "c7c260e16e3c32a6176759a3556ff5618d7d6e7e2c9c9602d40461fcaa34cbec"
 	payload2 := "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 
-	signature1, err1 := SignPayload(privateKeyHex, payload1)
+	handler := NewSigningHandler(privateKeyHex)
+	signature1, err1 := handler.SignPayload(payload1)
 	if err1 != nil {
 		t.Fatalf("SignPayload() with first payload failed: %v", err1)
 	}
 
-	signature2, err2 := SignPayload(privateKeyHex, payload2)
+	signature2, err2 := handler.SignPayload(payload2)
 	if err2 != nil {
 		t.Fatalf("SignPayload() with second payload failed: %v", err2)
 	}

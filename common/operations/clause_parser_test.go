@@ -1,4 +1,4 @@
-package utils
+package operations
 
 import (
 	"math/big"
@@ -7,13 +7,14 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
+	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 )
 
 // Test helper functions for clause parser tests
-var testStatus = OperationStatusSucceeded
+var testStatus = meshcommon.OperationStatusSucceeded
 
 func createTestJSONClause(to *thor.Address, value *big.Int, data string) *api.JSONClause {
 	hexValue := math.HexOrDecimal256(*value)
@@ -41,7 +42,7 @@ func createTestAddress(addr string) *thor.Address {
 // Test analyzeClauses
 func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name                        string
@@ -62,7 +63,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 		{
 			name: "value transfer only",
 			clauseData: []ClauseData{
-				JSONClauseAdapter{clause: createTestJSONClause(
+				JSONClauseAdapter{Clause: createTestJSONClause(
 					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 					big.NewInt(1000000000000000000),
 					"0x",
@@ -76,7 +77,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 		{
 			name: "contract interaction only",
 			clauseData: []ClauseData{
-				JSONClauseAdapter{clause: createTestJSONClause(
+				JSONClauseAdapter{Clause: createTestJSONClause(
 					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 					big.NewInt(0),
 					"0x1234",
@@ -98,7 +99,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 		{
 			name: "all types",
 			clauseData: []ClauseData{
-				JSONClauseAdapter{clause: createTestJSONClause(
+				JSONClauseAdapter{Clause: createTestJSONClause(
 					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 					big.NewInt(1000000000000000000),
 					"0x1234",
@@ -113,7 +114,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hasValueTransfer, hasContractInteraction, hasEnergyTransfer := encoder.analyzeClauses(tt.clauseData, tt.gas)
+			hasValueTransfer, hasContractInteraction, hasEnergyTransfer := parser.analyzeClauses(tt.clauseData, tt.gas)
 
 			if hasValueTransfer != tt.expectedValueTransfer {
 				t.Errorf("analyzeClauses() hasValueTransfer = %v, want %v", hasValueTransfer, tt.expectedValueTransfer)
@@ -131,7 +132,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 // Test getClauseValue
 func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name     string
@@ -140,7 +141,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 	}{
 		{
 			name: "zero value",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(0),
 				"0x",
@@ -149,7 +150,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 		},
 		{
 			name: "positive value",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(1000000000000000000),
 				"0x",
@@ -158,7 +159,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 		},
 		{
 			name: "large value",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				func() *big.Int { val, _ := big.NewInt(0).SetString("1000000000000000000000000", 10); return val }(),
 				"0x",
@@ -169,7 +170,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := encoder.getClauseValue(tt.clause)
+			result := parser.getClauseValue(tt.clause)
 			if result.Cmp(tt.expected) != 0 {
 				t.Errorf("getClauseValue() = %v, want %v", result, tt.expected)
 			}
@@ -180,7 +181,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 // Test isVIP180Transfer
 func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name     string
@@ -190,7 +191,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 	}{
 		{
 			name: "VIP180 transfer",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(0),
 				"0xa9059cbb00000000000000000000000016277a1ff38678291c41d1820957c78bb5da59ce0000000000000000000000000000000000000000000000000de0b6b3a7640000",
@@ -200,7 +201,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 		},
 		{
 			name: "non-VIP180 with value",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(1000000000000000000),
 				"0x1234",
@@ -210,7 +211,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 		},
 		{
 			name: "no data",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(0),
 				"0x",
@@ -220,7 +221,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 		},
 		{
 			name: "nil to address",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				nil,
 				big.NewInt(0),
 				"0xa9059cbb00000000000000000000000016277a1ff38678291c41d1820957c78bb5da59ce0000000000000000000000000000000000000000000000000de0b6b3a7640000",
@@ -232,7 +233,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := encoder.isVIP180Transfer(tt.clause, tt.value)
+			result := parser.isVIP180Transfer(tt.clause, tt.value)
 			if result != tt.expected {
 				t.Errorf("isVIP180Transfer() = %v, want %v", result, tt.expected)
 			}
@@ -243,7 +244,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 // Test hasContractInteraction
 func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name     string
@@ -252,7 +253,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 	}{
 		{
 			name: "has data",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(0),
 				"0x1234",
@@ -261,7 +262,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 		},
 		{
 			name: "has to address",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(0),
 				"0x",
@@ -270,7 +271,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 		},
 		{
 			name: "no data and nil to",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				nil,
 				big.NewInt(0),
 				"",
@@ -279,7 +280,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 		},
 		{
 			name: "zero to address",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x0000000000000000000000000000000000000000"),
 				big.NewInt(0),
 				"",
@@ -290,7 +291,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := encoder.hasContractInteraction(tt.clause)
+			result := parser.hasContractInteraction(tt.clause)
 			if result != tt.expected {
 				t.Errorf("hasContractInteraction() = %v, want %v", result, tt.expected)
 			}
@@ -301,7 +302,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 // Test createTransferOperation
 func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name         string
@@ -319,7 +320,7 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 			networkIndex: nil,
 			address:      "0x16277a1ff38678291c41d1820957c78bb5da59ce",
 			amount:       "1000000000000000000",
-			currency:     VETCurrency,
+			currency:     meshcommon.VETCurrency,
 			clauseIndex:  0,
 			status:       &testStatus,
 		},
@@ -329,7 +330,7 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 			networkIndex: func() *int64 { i := int64(0); return &i }(),
 			address:      "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
 			amount:       "-500000000000000000",
-			currency:     VTHOCurrency,
+			currency:     meshcommon.VTHOCurrency,
 			clauseIndex:  1,
 			status:       &testStatus,
 		},
@@ -337,7 +338,7 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operation := encoder.createTransferOperation(tt.index, tt.networkIndex, tt.address, tt.amount, tt.currency, tt.clauseIndex, tt.status)
+			operation := parser.createTransferOperation(tt.index, tt.networkIndex, tt.address, tt.amount, tt.currency, tt.clauseIndex, tt.status)
 
 			if operation.OperationIdentifier.Index != int64(tt.index) {
 				t.Errorf("createTransferOperation() index = %v, want %v", operation.OperationIdentifier.Index, tt.index)
@@ -345,8 +346,8 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 			if operation.OperationIdentifier.NetworkIndex != tt.networkIndex {
 				t.Errorf("createTransferOperation() networkIndex = %v, want %v", operation.OperationIdentifier.NetworkIndex, tt.networkIndex)
 			}
-			if operation.Type != OperationTypeTransfer {
-				t.Errorf("createTransferOperation() type = %v, want %v", operation.Type, OperationTypeTransfer)
+			if operation.Type != meshcommon.OperationTypeTransfer {
+				t.Errorf("createTransferOperation() type = %v, want %v", operation.Type, meshcommon.OperationTypeTransfer)
 			}
 			if operation.Status != tt.status {
 				t.Errorf("createTransferOperation() status = %v, want %v", operation.Status, tt.status)
@@ -370,7 +371,7 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 // Test createContractInteractionOperation
 func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name           string
@@ -382,7 +383,7 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 	}{
 		{
 			name: "with to address and data",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(0),
 				"0x1234",
@@ -394,7 +395,7 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 		},
 		{
 			name: "nil to address",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				nil,
 				big.NewInt(0),
 				"0x5678",
@@ -408,13 +409,13 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operation := encoder.createContractInteractionOperation(tt.clause, tt.clauseIndex, tt.operationIndex, tt.originAddr, tt.status)
+			operation := parser.createContractInteractionOperation(tt.clause, tt.clauseIndex, tt.operationIndex, tt.originAddr, tt.status)
 
 			if operation.OperationIdentifier.Index != int64(tt.operationIndex) {
 				t.Errorf("createContractInteractionOperation() index = %v, want %v", operation.OperationIdentifier.Index, tt.operationIndex)
 			}
-			if operation.Type != OperationTypeContractCall {
-				t.Errorf("createContractInteractionOperation() type = %v, want %v", operation.Type, OperationTypeContractCall)
+			if operation.Type != meshcommon.OperationTypeContractCall {
+				t.Errorf("createContractInteractionOperation() type = %v, want %v", operation.Type, meshcommon.OperationTypeContractCall)
 			}
 			if operation.Status != tt.status {
 				t.Errorf("createContractInteractionOperation() status = %v, want %v", operation.Status, tt.status)
@@ -425,8 +426,8 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 			if operation.Amount.Value != "0" {
 				t.Errorf("createContractInteractionOperation() amount = %v, want 0", operation.Amount.Value)
 			}
-			if operation.Amount.Currency != VETCurrency {
-				t.Errorf("createContractInteractionOperation() currency = %v, want %v", operation.Amount.Currency, VETCurrency)
+			if operation.Amount.Currency != meshcommon.VETCurrency {
+				t.Errorf("createContractInteractionOperation() currency = %v, want %v", operation.Amount.Currency, meshcommon.VETCurrency)
 			}
 			if operation.Metadata["clauseIndex"] != tt.clauseIndex {
 				t.Errorf("createContractInteractionOperation() clauseIndex = %v, want %v", operation.Metadata["clauseIndex"], tt.clauseIndex)
@@ -438,7 +439,7 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 // Test createEnergyTransferOperation
 func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name           string
@@ -465,13 +466,13 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operation := encoder.createEnergyTransferOperation(tt.operationIndex, tt.originAddr, tt.gas, tt.status)
+			operation := parser.createEnergyTransferOperation(tt.operationIndex, tt.originAddr, tt.gas, tt.status)
 
 			if operation.OperationIdentifier.Index != int64(tt.operationIndex) {
 				t.Errorf("createEnergyTransferOperation() index = %v, want %v", operation.OperationIdentifier.Index, tt.operationIndex)
 			}
-			if operation.Type != OperationTypeFee {
-				t.Errorf("createEnergyTransferOperation() type = %v, want %v", operation.Type, OperationTypeFee)
+			if operation.Type != meshcommon.OperationTypeFee {
+				t.Errorf("createEnergyTransferOperation() type = %v, want %v", operation.Type, meshcommon.OperationTypeFee)
 			}
 			if operation.Status != tt.status {
 				t.Errorf("createEnergyTransferOperation() status = %v, want %v", operation.Status, tt.status)
@@ -483,8 +484,8 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 			if operation.Amount.Value != expectedValue {
 				t.Errorf("createEnergyTransferOperation() amount = %v, want %v", operation.Amount.Value, expectedValue)
 			}
-			if operation.Amount.Currency != VTHOCurrency {
-				t.Errorf("createEnergyTransferOperation() currency = %v, want %v", operation.Amount.Currency, VTHOCurrency)
+			if operation.Amount.Currency != meshcommon.VTHOCurrency {
+				t.Errorf("createEnergyTransferOperation() currency = %v, want %v", operation.Amount.Currency, meshcommon.VTHOCurrency)
 			}
 			if operation.Metadata["gas"] != strconv.FormatUint(tt.gas, 10) {
 				t.Errorf("createEnergyTransferOperation() gas = %v, want %v", operation.Metadata["gas"], tt.gas)
@@ -496,7 +497,7 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 // Test parseVETTransfer
 func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name              string
@@ -511,7 +512,7 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 	}{
 		{
 			name: "transfer with recipient",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
 				big.NewInt(1000000000000000000),
 				"0x",
@@ -526,7 +527,7 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 		},
 		{
 			name: "transfer without recipient",
-			clause: JSONClauseAdapter{clause: createTestJSONClause(
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
 				nil,
 				big.NewInt(500000000000000000),
 				"0x",
@@ -543,7 +544,7 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations, nextIndex := encoder.parseVETTransfer(tt.clause, tt.clauseIndex, tt.operationIndex, tt.originAddr, tt.value, tt.status)
+			operations, nextIndex := parser.parseVETTransfer(tt.clause, tt.clauseIndex, tt.operationIndex, tt.originAddr, tt.value, tt.status)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseVETTransfer() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -580,7 +581,7 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 // Test parseTransactionOperationsFromClauses
 func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name        string
@@ -630,7 +631,7 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := encoder.parseTransactionOperationsFromClauses(tt.clauses, tt.originAddr, tt.gas, tt.status)
+			operations := parser.ParseTransactionOperationsFromJSONClauses(tt.clauses, tt.originAddr, tt.gas, tt.status)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseTransactionOperationsFromClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -642,7 +643,7 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 // Test ParseTransactionOperationsFromTransactionClauses
 func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	encoder := NewMeshTransactionEncoder(mockClient)
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
 	tests := []struct {
 		name        string
@@ -678,7 +679,7 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := encoder.ParseTransactionOperationsFromTransactionClauses(tt.clauses, tt.originAddr, tt.gas, tt.status)
+			operations := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, tt.gas, tt.status)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("ParseTransactionOperationsFromTransactionClauses() operations length = %v, want %v", len(operations), tt.expectedOps)

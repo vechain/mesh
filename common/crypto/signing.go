@@ -1,27 +1,34 @@
-package utils
+package crypto
 
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-
+	"strings"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
+type SigningHandler struct {
+	privateKeyHex string
+}
+
+func NewSigningHandler(privateKeyHex string) *SigningHandler {
+	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
+	return &SigningHandler{
+		privateKeyHex: privateKeyHex,
+	}
+}
+
 // SignPayload signs a payload using secp256k1 and returns the signature in hex format
 // This function is used by both the sign_payload script and e2e tests
-func SignPayload(privateKeyHex, payloadHex string) (string, error) {
-	// Remove 0x prefix if present
-	if len(privateKeyHex) > 2 && privateKeyHex[:2] == "0x" {
-		privateKeyHex = privateKeyHex[2:]
-	}
+func (h *SigningHandler) SignPayload(payloadHex string) (string, error) {
 	if len(payloadHex) > 2 && payloadHex[:2] == "0x" {
 		payloadHex = payloadHex[2:]
 	}
 
 	// Parse private key
-	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
+	privateKeyBytes, err := hex.DecodeString(h.privateKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("error decoding private key: %v", err)
 	}
@@ -62,14 +69,9 @@ func SignPayload(privateKeyHex, payloadHex string) (string, error) {
 }
 
 // GetAddressFromPrivateKey derives the Ethereum address from a private key
-func GetAddressFromPrivateKey(privateKeyHex string) (string, error) {
-	// Remove 0x prefix if present
-	if len(privateKeyHex) > 2 && privateKeyHex[:2] == "0x" {
-		privateKeyHex = privateKeyHex[2:]
-	}
-
+func (h *SigningHandler) GetAddressFromPrivateKey() (string, error) {
 	// Parse private key
-	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
+	privateKeyBytes, err := hex.DecodeString(h.privateKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("error decoding private key: %v", err)
 	}
@@ -88,13 +90,13 @@ func GetAddressFromPrivateKey(privateKeyHex string) (string, error) {
 }
 
 // SignPayloadWithAddress signs a payload and returns both signature and derived address
-func SignPayloadWithAddress(privateKeyHex, payloadHex string) (signature, address string, err error) {
-	signature, err = SignPayload(privateKeyHex, payloadHex)
+func (h *SigningHandler) SignPayloadWithAddress(payloadHex string) (signature, address string, err error) {
+	signature, err = h.SignPayload(payloadHex)
 	if err != nil {
 		return "", "", err
 	}
 
-	address, err = GetAddressFromPrivateKey(privateKeyHex)
+	address, err = h.GetAddressFromPrivateKey()
 	if err != nil {
 		return "", "", err
 	}

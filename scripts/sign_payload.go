@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	meshutils "github.com/vechain/mesh/utils"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	payloadHex := os.Args[2]
 
 	// Use the common signing functionality
-	signature, address, err := meshutils.SignPayloadWithAddress(privateKeyHex, payloadHex)
+	signature, address, err := meshcrypto.NewSigningHandler(privateKeyHex).SignPayloadWithAddress(payloadHex)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

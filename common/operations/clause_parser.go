@@ -1,4 +1,4 @@
-package utils
+package operations
 
 import (
 	"fmt"
@@ -7,7 +7,9 @@ import (
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/vechain/mesh/utils/vip180"
+	meshcommon "github.com/vechain/mesh/common"
+	"github.com/vechain/mesh/common/vip180"
+	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 )
@@ -29,24 +31,33 @@ type ClauseData interface {
 
 // JSONClauseAdapter adapts api.JSONClause to ClauseData interface
 type JSONClauseAdapter struct {
-	clause *api.JSONClause
+	Clause *api.JSONClause
 }
 
-func (j JSONClauseAdapter) GetValue() ClauseValue { return &j.clause.Value }
-func (j JSONClauseAdapter) GetTo() *thor.Address  { return j.clause.To }
-func (j JSONClauseAdapter) GetData() string       { return j.clause.Data }
+func (j JSONClauseAdapter) GetValue() ClauseValue { return &j.Clause.Value }
+func (j JSONClauseAdapter) GetTo() *thor.Address  { return j.Clause.To }
+func (j JSONClauseAdapter) GetData() string       { return j.Clause.Data }
 
 // ClauseAdapter adapts api.Clause to ClauseData interface
 type ClauseAdapter struct {
-	clause *api.Clause
+	Clause *api.Clause
 }
 
-func (c ClauseAdapter) GetValue() ClauseValue { return c.clause.Value }
-func (c ClauseAdapter) GetTo() *thor.Address  { return c.clause.To }
-func (c ClauseAdapter) GetData() string       { return c.clause.Data }
+func (c ClauseAdapter) GetValue() ClauseValue { return c.Clause.Value }
+func (c ClauseAdapter) GetTo() *thor.Address  { return c.Clause.To }
+func (c ClauseAdapter) GetData() string       { return c.Clause.Data }
 
-// parseTransactionOperationsFromClauseData parses operations from clause data with client for contract calls
-func (e *MeshTransactionEncoder) parseTransactionOperationsFromClauseData(clauseData []ClauseData, originAddr string, gas uint64, status *string) []*types.Operation {
+type ClauseParser struct {
+	vechainClient       meshthor.VeChainClientInterface
+	operationsExtractor *OperationsExtractor
+}
+
+func NewClauseParser(vechainClient meshthor.VeChainClientInterface, operationsExtractor *OperationsExtractor) *ClauseParser {
+	return &ClauseParser{vechainClient: vechainClient, operationsExtractor: operationsExtractor}
+}
+
+// ParseTransactionOperationsFromClauseData parses operations from clause data with client for contract calls
+func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []ClauseData, originAddr string, gas uint64, status *string) []*types.Operation {
 	var operations []*types.Operation
 	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := e.analyzeClauses(clauseData, gas)
 
@@ -91,7 +102,7 @@ func (e *MeshTransactionEncoder) parseTransactionOperationsFromClauseData(clause
 }
 
 // analyzeClauses analyzes clauses to determine what types of operations are present
-func (e *MeshTransactionEncoder) analyzeClauses(clauseData []ClauseData, gas uint64) (hasValueTransfer, hasContractInteraction, hasEnergyTransfer bool) {
+func (e *ClauseParser) analyzeClauses(clauseData []ClauseData, gas uint64) (hasValueTransfer, hasContractInteraction, hasEnergyTransfer bool) {
 	hasEnergyTransfer = gas > 0
 
 	for _, clause := range clauseData {
@@ -108,7 +119,7 @@ func (e *MeshTransactionEncoder) analyzeClauses(clauseData []ClauseData, gas uin
 }
 
 // getClauseValue extracts the value from a clause as big.Int
-func (e *MeshTransactionEncoder) getClauseValue(clause ClauseData) *big.Int {
+func (e *ClauseParser) getClauseValue(clause ClauseData) *big.Int {
 	valueBytes, _ := clause.GetValue().MarshalText()
 	value := new(big.Int)
 	value.SetString(string(valueBytes), 0) // 0 means auto-detect base (hex with 0x prefix or decimal)
@@ -116,7 +127,7 @@ func (e *MeshTransactionEncoder) getClauseValue(clause ClauseData) *big.Int {
 }
 
 // isVIP180Transfer checks if a clause represents a VIP180 token transfer
-func (e *MeshTransactionEncoder) isVIP180Transfer(clause ClauseData, value *big.Int) bool {
+func (e *ClauseParser) isVIP180Transfer(clause ClauseData, value *big.Int) bool {
 	return value.Cmp(big.NewInt(0)) == 0 &&
 		len(clause.GetData()) > 0 &&
 		clause.GetTo() != nil &&
@@ -124,19 +135,19 @@ func (e *MeshTransactionEncoder) isVIP180Transfer(clause ClauseData, value *big.
 }
 
 // hasContractInteraction checks if a clause has contract interaction
-func (e *MeshTransactionEncoder) hasContractInteraction(clause ClauseData) bool {
+func (e *ClauseParser) hasContractInteraction(clause ClauseData) bool {
 	return len(clause.GetData()) > 0 || (clause.GetTo() != nil && !clause.GetTo().IsZero())
 }
 
 // parseVIP180Transfer parses VIP180 token transfer operations
-func (e *MeshTransactionEncoder) parseVIP180Transfer(clause ClauseData, clauseIndex, operationIndex int, originAddr string, status *string) ([]*types.Operation, int) {
+func (e *ClauseParser) parseVIP180Transfer(clause ClauseData, clauseIndex, operationIndex int, originAddr string, status *string) ([]*types.Operation, int) {
 	transferData, err := vip180.DecodeVIP180TransferCallData(clause.GetData())
 	if err != nil {
 		return []*types.Operation{}, operationIndex
 	}
 
 	// Get token currency
-	tokenCurrency, err := GetTokenCurrencyFromContractAddress(clause.GetTo().String(), e.vechainClient)
+	tokenCurrency, err := e.operationsExtractor.GetTokenCurrencyFromContractAddress(clause.GetTo().String(), e.vechainClient)
 	if err != nil {
 		log.Println("error getting token currency, assigning UNKNOWN symbol", err)
 		tokenCurrency = &types.Currency{
@@ -155,16 +166,16 @@ func (e *MeshTransactionEncoder) parseVIP180Transfer(clause ClauseData, clauseIn
 }
 
 // parseVETTransfer parses VET transfer operations
-func (e *MeshTransactionEncoder) parseVETTransfer(clause ClauseData, clauseIndex, operationIndex int, originAddr string, value *big.Int, status *string) ([]*types.Operation, int) {
+func (e *ClauseParser) parseVETTransfer(clause ClauseData, clauseIndex, operationIndex int, originAddr string, value *big.Int, status *string) ([]*types.Operation, int) {
 	valueStr := value.String()
 	operations := []*types.Operation{
-		e.createTransferOperation(operationIndex, nil, originAddr, "-"+valueStr, VETCurrency, clauseIndex, status),
+		e.createTransferOperation(operationIndex, nil, originAddr, "-"+valueStr, meshcommon.VETCurrency, clauseIndex, status),
 	}
 
 	// Add receiver operation if there's a valid recipient
 	if clause.GetTo() != nil && !clause.GetTo().IsZero() {
 		operations = append(operations,
-			e.createTransferOperation(operationIndex+1, nil, clause.GetTo().String(), valueStr, VETCurrency, clauseIndex, status))
+			e.createTransferOperation(operationIndex+1, nil, clause.GetTo().String(), valueStr, meshcommon.VETCurrency, clauseIndex, status))
 		return operations, operationIndex + 2
 	}
 
@@ -172,13 +183,13 @@ func (e *MeshTransactionEncoder) parseVETTransfer(clause ClauseData, clauseIndex
 }
 
 // createTransferOperation creates a transfer operation with common fields
-func (e *MeshTransactionEncoder) createTransferOperation(index int, networkIndex *int64, address, amount string, currency *types.Currency, clauseIndex int, status *string) *types.Operation {
+func (e *ClauseParser) createTransferOperation(index int, networkIndex *int64, address, amount string, currency *types.Currency, clauseIndex int, status *string) *types.Operation {
 	return &types.Operation{
 		OperationIdentifier: &types.OperationIdentifier{
 			Index:        int64(index),
 			NetworkIndex: networkIndex,
 		},
-		Type:     OperationTypeTransfer,
+		Type:     meshcommon.OperationTypeTransfer,
 		Status:   status,
 		Account:  &types.AccountIdentifier{Address: address},
 		Amount:   &types.Amount{Value: amount, Currency: currency},
@@ -187,7 +198,7 @@ func (e *MeshTransactionEncoder) createTransferOperation(index int, networkIndex
 }
 
 // createContractInteractionOperation creates a contract interaction operation
-func (e *MeshTransactionEncoder) createContractInteractionOperation(clause ClauseData, clauseIndex, operationIndex int, originAddr string, status *string) *types.Operation {
+func (e *ClauseParser) createContractInteractionOperation(clause ClauseData, clauseIndex, operationIndex int, originAddr string, status *string) *types.Operation {
 	toAddr := ""
 	if clause.GetTo() != nil {
 		toAddr = clause.GetTo().String()
@@ -195,10 +206,10 @@ func (e *MeshTransactionEncoder) createContractInteractionOperation(clause Claus
 
 	return &types.Operation{
 		OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
-		Type:                OperationTypeContractCall,
+		Type:                meshcommon.OperationTypeContractCall,
 		Status:              status,
 		Account:             &types.AccountIdentifier{Address: originAddr},
-		Amount:              &types.Amount{Value: "0", Currency: VETCurrency},
+		Amount:              &types.Amount{Value: "0", Currency: meshcommon.VETCurrency},
 		Metadata: map[string]any{
 			"clauseIndex": clauseIndex,
 			"to":          toAddr,
@@ -208,31 +219,31 @@ func (e *MeshTransactionEncoder) createContractInteractionOperation(clause Claus
 }
 
 // createEnergyTransferOperation creates an energy transfer operation
-func (e *MeshTransactionEncoder) createEnergyTransferOperation(operationIndex int, originAddr string, gas uint64, status *string) *types.Operation {
+func (e *ClauseParser) createEnergyTransferOperation(operationIndex int, originAddr string, gas uint64, status *string) *types.Operation {
 	return &types.Operation{
 		OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
-		Type:                OperationTypeFee,
+		Type:                meshcommon.OperationTypeFee,
 		Status:              status,
 		Account:             &types.AccountIdentifier{Address: originAddr},
-		Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: VTHOCurrency},
+		Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: meshcommon.VTHOCurrency},
 		Metadata:            map[string]any{"gas": strconv.FormatUint(gas, 10)},
 	}
 }
 
-// parseTransactionOperationsFromClauses is a helper function that parses operations from clauses
-func (e *MeshTransactionEncoder) parseTransactionOperationsFromClauses(clauses []*api.JSONClause, originAddr string, gas uint64, status *string) []*types.Operation {
+// ParseTransactionOperationsFromJSONClauses is a helper function that parses operations from clauses
+func (e *ClauseParser) ParseTransactionOperationsFromJSONClauses(clauses []*api.JSONClause, originAddr string, gas uint64, status *string) []*types.Operation {
 	clauseData := make([]ClauseData, len(clauses))
 	for i, clause := range clauses {
-		clauseData[i] = JSONClauseAdapter{clause: clause}
+		clauseData[i] = JSONClauseAdapter{Clause: clause}
 	}
-	return e.parseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
+	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
 }
 
-// ParseTransactionOperationsFromTransactionClauses is a helper function that parses operations from transactions.Clauses
-func (e *MeshTransactionEncoder) ParseTransactionOperationsFromTransactionClauses(clauses api.Clauses, originAddr string, gas uint64, status *string) []*types.Operation {
+// ParseOperationsFromAPIClauses is a helper function that parses operations from transactions.Clauses
+func (e *ClauseParser) ParseOperationsFromAPIClauses(clauses api.Clauses, originAddr string, gas uint64, status *string) []*types.Operation {
 	clauseData := make([]ClauseData, len(clauses))
 	for i, clause := range clauses {
-		clauseData[i] = ClauseAdapter{clause: clause}
+		clauseData[i] = ClauseAdapter{Clause: clause}
 	}
-	return e.parseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
+	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
 }

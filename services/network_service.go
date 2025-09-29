@@ -2,24 +2,36 @@ package services
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
+	meshhttp "github.com/vechain/mesh/common/http"
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 // NetworkService handles network-related endpoints
 type NetworkService struct {
-	vechainClient meshthor.VeChainClientInterface
-	config        *meshconfig.Config
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
+	vechainClient   meshthor.VeChainClientInterface
+	config          *meshconfig.Config
+}
+
+// Peer represents a connected peer
+type Peer struct {
+	PeerID      string
+	BestBlockID string
 }
 
 // NewNetworkService creates a new network service
 func NewNetworkService(vechainClient meshthor.VeChainClientInterface, config *meshconfig.Config) *NetworkService {
 	return &NetworkService{
-		vechainClient: vechainClient,
-		config:        config,
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
+		vechainClient:   vechainClient,
+		config:          config,
 	}
 }
 
@@ -34,56 +46,56 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	meshutils.WriteJSONResponse(w, networks)
+	n.responseHandler.WriteJSONResponse(w, networks)
 }
 
 // NetworkStatus returns the current network status
 func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+	if err := n.requestHandler.ParseJSONFromContext(r, &request); err != nil {
+		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Get real VeChain data
 	bestBlock, err := n.vechainClient.GetBlock("best")
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetBestBlock), http.StatusInternalServerError)
+		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetBestBlock), http.StatusInternalServerError)
 		return
 	}
 
 	// Get genesis block
 	genesisBlock, err := n.vechainClient.GetBlock("0")
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetGenesisBlock), http.StatusInternalServerError)
+		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetGenesisBlock), http.StatusInternalServerError)
 		return
 	}
 
 	// Get sync progress
 	progress, err := n.vechainClient.GetSyncProgress()
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetSyncProgress), http.StatusInternalServerError)
+		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetSyncProgress), http.StatusInternalServerError)
 		return
 	}
 
 	// Get peers
 	peers, err := n.vechainClient.GetPeers()
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetPeers), http.StatusInternalServerError)
+		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetPeers), http.StatusInternalServerError)
 		return
 	}
 
 	// Convert peers to utils.Peer type
-	utilsPeers := make([]meshutils.Peer, len(peers))
+	utilsPeers := make([]Peer, len(peers))
 	for i, peer := range peers {
-		utilsPeers[i] = meshutils.Peer{
+		utilsPeers[i] = Peer{
 			PeerID:      peer.PeerID,
 			BestBlockID: peer.BestBlockID,
 		}
 	}
 
 	// Calculate target index
-	targetIndex := meshutils.GetTargetIndex(int64(bestBlock.Number), utilsPeers)
+	targetIndex := getTargetIndex(int64(bestBlock.Number), utilsPeers)
 
 	// Convert peers to types.Peer
 	meshPeers := make([]*types.Peer, len(peers))
@@ -92,7 +104,6 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 			PeerID: peer.PeerID,
 		}
 	}
-
 
 	currentIndex := int64(bestBlock.Number)
 	stage := "block sync"
@@ -117,44 +128,44 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		Peers: meshPeers,
 	}
 
-	meshutils.WriteJSONResponse(w, status)
+	n.responseHandler.WriteJSONResponse(w, status)
 }
 
 // NetworkOptions returns network options and capabilities
 func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	var request types.NetworkRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+	if err := n.requestHandler.ParseJSONFromContext(r, &request); err != nil {
+		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Define operation statuses
 	operationStatuses := []*types.OperationStatus{
 		{
-			Status:     meshutils.OperationStatusNone,
+			Status:     meshcommon.OperationStatusNone,
 			Successful: true,
 		},
 		{
-			Status:     meshutils.OperationStatusSucceeded,
+			Status:     meshcommon.OperationStatusSucceeded,
 			Successful: true,
 		},
 		{
-			Status:     meshutils.OperationStatusReverted,
+			Status:     meshcommon.OperationStatusReverted,
 			Successful: false,
 		},
 	}
 
 	// Define operation types
 	operationTypes := []string{
-		meshutils.OperationTypeTransfer,
-		meshutils.OperationTypeFee,
-		meshutils.OperationTypeFeeDelegation,
+		meshcommon.OperationTypeTransfer,
+		meshcommon.OperationTypeFee,
+		meshcommon.OperationTypeFeeDelegation,
 	}
 
 	// Define balance exemptions for VTHO (dynamic exemption)
 	balanceExemptions := []*types.BalanceExemption{
 		{
-			Currency:      meshutils.VTHOCurrency,
+			Currency:      meshcommon.VTHOCurrency,
 			ExemptionType: types.BalanceDynamic,
 		},
 	}
@@ -163,7 +174,7 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 	allow := &types.Allow{
 		OperationStatuses:       operationStatuses,
 		OperationTypes:          operationTypes,
-		Errors:                  meshutils.GetAllErrors(),
+		Errors:                  meshcommon.GetAllErrors(),
 		HistoricalBalanceLookup: true,
 		CallMethods:             []string{},
 		BalanceExemptions:       balanceExemptions,
@@ -182,5 +193,22 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 		Allow:   allow,
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	n.responseHandler.WriteJSONResponse(w, response)
+}
+
+// getTargetIndex calculates the target index based on local index and peers
+func getTargetIndex(localIndex int64, peers []Peer) int64 {
+	result := localIndex
+	for _, peer := range peers {
+		// Extract block number from bestBlockID (first 8 bytes = 16 hex characters)
+		if len(peer.BestBlockID) >= 16 {
+			blockNumHex := peer.BestBlockID[:16]
+			if blockNum, err := strconv.ParseInt(blockNumHex, 16, 64); err == nil {
+				if result < blockNum {
+					result = blockNum
+				}
+			}
+		}
+	}
+	return result
 }

@@ -1,4 +1,4 @@
-package utils
+package common
 
 import "github.com/coinbase/rosetta-sdk-go/types"
 

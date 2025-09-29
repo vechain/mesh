@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshutils "github.com/vechain/mesh/utils"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 )
 
 // TestSolo tests the complete construction flow and other endpoints in solo mode
@@ -98,7 +98,7 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	// Sign the payload
 	t.Log("Signing payload")
 	payloadHex := fmt.Sprintf("%x", payloadsResp.Payloads[0].Bytes)
-	signature, err := meshutils.SignPayload(config.SenderPrivateKey, payloadHex)
+	signature, err := meshcrypto.NewSigningHandler(config.SenderPrivateKey).SignPayload(payloadHex)
 	if err != nil {
 		t.Fatalf("Failed to sign payload: %v", err)
 	}

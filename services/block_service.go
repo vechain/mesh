@@ -5,22 +5,30 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
+	meshhttp "github.com/vechain/mesh/common/http"
+	meshtx "github.com/vechain/mesh/common/tx"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/api"
 )
 
 // BlockService handles block API endpoints
 type BlockService struct {
-	vechainClient meshthor.VeChainClientInterface
-	encoder       *meshutils.MeshTransactionEncoder
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
+	vechainClient   meshthor.VeChainClientInterface
+	encoder         *meshtx.MeshTransactionEncoder
+	builder         *meshtx.TransactionBuilder
 }
 
 // NewBlockService creates a new block service
 func NewBlockService(vechainClient meshthor.VeChainClientInterface) *BlockService {
 	return &BlockService{
-		vechainClient: vechainClient,
-		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
+		vechainClient:   vechainClient,
+		encoder:         meshtx.NewMeshTransactionEncoder(vechainClient),
+		builder:         meshtx.NewTransactionBuilder(),
 	}
 }
 
@@ -28,13 +36,13 @@ func NewBlockService(vechainClient meshthor.VeChainClientInterface) *BlockServic
 func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 	request, err := b.parseBlockRequest(r)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
 		return
 	}
 
 	block, err := b.getBlockByPartialIdentifier(*request.BlockIdentifier)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 			"error": err.Error(),
 		}), http.StatusBadRequest)
 		return
@@ -42,26 +50,26 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 
 	parent, err := b.getParentBlock(block)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 			"error": err.Error(),
 		}), http.StatusInternalServerError)
 		return
 	}
 
-	meshutils.WriteJSONResponse(w, b.buildBlockResponse(block, parent))
+	b.responseHandler.WriteJSONResponse(w, b.buildBlockResponse(block, parent))
 }
 
 // BlockTransaction gets a specific transaction from a block
 func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) {
 	request, err := b.parseBlockTransactionRequest(r)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
 		return
 	}
 
 	block, err := b.getBlockByIdentifier(*request.BlockIdentifier)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrBlockNotFound, map[string]any{
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 			"error": err.Error(),
 		}), http.StatusBadRequest)
 		return
@@ -70,19 +78,19 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 	// Get the full transaction data from the block
 	foundTx, err := b.findTransactionInBlock(block, request.TransactionIdentifier.Hash)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrTransactionNotFound, map[string]any{
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrTransactionNotFound, map[string]any{
 			"transaction_identifier_hash": request.TransactionIdentifier.Hash,
 		}), http.StatusBadRequest)
 		return
 	}
 
-	meshutils.WriteJSONResponse(w, b.buildBlockTransactionResponse(foundTx))
+	b.responseHandler.WriteJSONResponse(w, b.buildBlockTransactionResponse(foundTx))
 }
 
 // parseBlockRequest parses and validates a block request
 func (b *BlockService) parseBlockRequest(r *http.Request) (*types.BlockRequest, error) {
 	var request types.BlockRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
+	if err := b.requestHandler.ParseJSONFromContext(r, &request); err != nil {
 		return nil, fmt.Errorf("invalid request body")
 	}
 
@@ -104,7 +112,7 @@ func (b *BlockService) parseBlockRequest(r *http.Request) (*types.BlockRequest, 
 // parseBlockTransactionRequest parses and validates a block transaction request
 func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.BlockTransactionRequest, error) {
 	var request types.BlockTransactionRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
+	if err := b.requestHandler.ParseJSONFromContext(r, &request); err != nil {
 		return nil, fmt.Errorf("invalid request body")
 	}
 
@@ -191,7 +199,7 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 		operations := b.encoder.ParseTransactionOperationsFromAPI(tx)
 
 		if len(operations) > 0 {
-			transaction := meshutils.BuildMeshTransactionFromAPI(tx, operations)
+			transaction := b.builder.BuildMeshTransactionFromAPI(tx, operations)
 			transactions = append(transactions, transaction)
 		} else {
 			otherTransactions = append(otherTransactions, &types.TransactionIdentifier{
@@ -221,7 +229,7 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 // buildBlockTransactionResponse builds the response for a block transaction request
 func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *types.BlockTransactionResponse {
 	operations := b.encoder.ParseTransactionOperationsFromAPI(tx)
-	meshTx := meshutils.BuildMeshTransactionFromAPI(tx, operations)
+	meshTx := b.builder.BuildMeshTransactionFromAPI(tx, operations)
 
 	return &types.BlockTransactionResponse{
 		Transaction: meshTx,

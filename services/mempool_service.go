@@ -4,22 +4,33 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
+	meshhttp "github.com/vechain/mesh/common/http"
+	meshoperations "github.com/vechain/mesh/common/operations"
+	meshtx "github.com/vechain/mesh/common/tx"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
 	"github.com/vechain/thor/v2/thor"
 )
 
 // MempoolService handles mempool API endpoints
 type MempoolService struct {
-	vechainClient meshthor.VeChainClientInterface
-	encoder       *meshutils.MeshTransactionEncoder
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
+	vechainClient   meshthor.VeChainClientInterface
+	encoder         *meshtx.MeshTransactionEncoder
+	builder         *meshtx.TransactionBuilder
+	clauseParser    *meshoperations.ClauseParser
 }
 
 // NewMempoolService creates a new mempool service
 func NewMempoolService(vechainClient meshthor.VeChainClientInterface) *MempoolService {
 	return &MempoolService{
-		vechainClient: vechainClient,
-		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
+		vechainClient:   vechainClient,
+		encoder:         meshtx.NewMeshTransactionEncoder(vechainClient),
+		builder:         meshtx.NewTransactionBuilder(),
+		clauseParser:    meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
 	}
 }
 
@@ -27,8 +38,8 @@ func NewMempoolService(vechainClient meshthor.VeChainClientInterface) *MempoolSe
 func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 	// Parse request body to get metadata (origin filter)
 	var requestBody map[string]any
-	if err := meshutils.ParseJSONFromRequestContext(r, &requestBody); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+	if err := m.requestHandler.ParseJSONFromContext(r, &requestBody); err != nil {
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
@@ -45,7 +56,7 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 	// Get all pending transactions from the mempool
 	txIDs, err := m.vechainClient.GetMempoolTransactions(origin)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrFailedToGetMempool, map[string]any{
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetMempool, map[string]any{
 			"error": err.Error(),
 		}), http.StatusInternalServerError)
 		return
@@ -63,27 +74,27 @@ func (m *MempoolService) Mempool(w http.ResponseWriter, r *http.Request) {
 		TransactionIdentifiers: transactionIdentifiers,
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	m.responseHandler.WriteJSONResponse(w, response)
 }
 
 // MempoolTransaction gets a specific transaction from the mempool
 func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	var request types.MempoolTransactionRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+	if err := m.requestHandler.ParseJSONFromContext(r, &request); err != nil {
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Validate required fields
 	if request.TransactionIdentifier == nil || request.TransactionIdentifier.Hash == "" {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidTransactionIdentifier), http.StatusBadRequest)
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidTransactionIdentifier), http.StatusBadRequest)
 		return
 	}
 
 	// Parse transaction hash
 	txID, err := thor.ParseBytes32(request.TransactionIdentifier.Hash)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrInvalidTransactionHash, map[string]any{
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidTransactionHash, map[string]any{
 			"error": err.Error(),
 		}), http.StatusBadRequest)
 		return
@@ -92,21 +103,21 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 	// Get transaction from mempool
 	tx, err := m.vechainClient.GetMempoolTransaction(&txID)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetErrorWithMetadata(meshutils.ErrTransactionNotFoundInMempool, map[string]any{
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrTransactionNotFoundInMempool, map[string]any{
 			"error": err.Error(),
 		}), http.StatusNotFound)
 		return
 	}
 
 	// Parse operations directly from transactions.Transaction
-	status := meshutils.OperationStatusPending
-	operations := m.encoder.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
-	meshTx := meshutils.BuildMeshTransactionFromTransaction(tx, operations)
+	status := meshcommon.OperationStatusPending
+	operations := m.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	meshTx := m.builder.BuildMeshTransactionFromTransaction(tx, operations)
 
 	// Build the response
 	response := &types.MempoolTransactionResponse{
 		Transaction: meshTx,
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	m.responseHandler.WriteJSONResponse(w, response)
 }

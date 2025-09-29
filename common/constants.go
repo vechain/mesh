@@ -1,11 +1,6 @@
-package utils
+package common
 
 import "github.com/coinbase/rosetta-sdk-go/types"
-
-// Context key for request body
-type RequestBodyKeyType string
-
-const RequestBodyKey RequestBodyKeyType = "request_body"
 
 // Operation types for VeChain
 const (

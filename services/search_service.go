@@ -4,35 +4,44 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
+	meshhttp "github.com/vechain/mesh/common/http"
+	meshoperations "github.com/vechain/mesh/common/operations"
+	meshtx "github.com/vechain/mesh/common/tx"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
 )
 
 // SearchService handles search API endpoints
 type SearchService struct {
-	vechainClient meshthor.VeChainClientInterface
-	encoder       *meshutils.MeshTransactionEncoder
+	vechainClient   meshthor.VeChainClientInterface
+	encoder         *meshtx.MeshTransactionEncoder
+	clauseParser    *meshoperations.ClauseParser
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
 }
 
 // NewSearchService creates a new search service
 func NewSearchService(vechainClient meshthor.VeChainClientInterface) *SearchService {
 	return &SearchService{
-		vechainClient: vechainClient,
-		encoder:       meshutils.NewMeshTransactionEncoder(vechainClient),
+		vechainClient:   vechainClient,
+		encoder:         meshtx.NewMeshTransactionEncoder(vechainClient),
+		clauseParser:    meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
 	}
 }
 
 // SearchTransactions handles the /search/transactions endpoint
 func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Request) {
 	var request types.SearchTransactionsRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+	if err := s.requestHandler.ParseJSONFromContext(r, &request); err != nil {
+		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
 	// Validate transaction identifier
 	if request.TransactionIdentifier == nil || request.TransactionIdentifier.Hash == "" {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestParameters), http.StatusBadRequest)
+		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestParameters), http.StatusBadRequest)
 		return
 	}
 
@@ -41,14 +50,14 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 	// Get transaction to get the clauses
 	tx, err := s.vechainClient.GetTransaction(txID)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrTransactionNotFound), http.StatusBadRequest)
+		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrTransactionNotFound), http.StatusBadRequest)
 		return
 	}
 
 	// Get transaction receipt to check status
 	txReceipt, err := s.vechainClient.GetTransactionReceipt(txID)
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrTransactionNotFound), http.StatusBadRequest)
+		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrTransactionNotFound), http.StatusBadRequest)
 		return
 	}
 
@@ -59,11 +68,11 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Convert transaction to operations
-	status := meshutils.OperationStatusSucceeded
+	status := meshcommon.OperationStatusSucceeded
 	if txReceipt.Reverted {
-		status = meshutils.OperationStatusReverted
+		status = meshcommon.OperationStatusReverted
 	}
-	operations := s.encoder.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), txReceipt.GasUsed, &status)
+	operations := s.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), txReceipt.GasUsed, &status)
 
 	// Create transaction identifier
 	transactionIdentifier := &types.TransactionIdentifier{
@@ -88,5 +97,5 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 		TotalCount:   1,
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	s.responseHandler.WriteJSONResponse(w, response)
 }

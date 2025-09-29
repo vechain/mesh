@@ -11,10 +11,10 @@ import (
 
 	"github.com/gorilla/mux"
 
+	meshhttp "github.com/vechain/mesh/common/http"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/services"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
 	meshvalidation "github.com/vechain/mesh/validation"
 )
 
@@ -22,6 +22,7 @@ import (
 type VeChainMeshServer struct {
 	router               *mux.Router
 	server               *http.Server
+	responseHandler      *meshhttp.ResponseHandler
 	validationMiddleware func(http.Handler) http.Handler
 	networkService       *services.NetworkService
 	accountService       *services.AccountService
@@ -56,7 +57,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 			}
 
 			// Store the body in context for services to use
-			ctx := context.WithValue(r.Context(), meshutils.RequestBodyKey, body)
+			ctx := context.WithValue(r.Context(), meshhttp.RequestBodyKey, body)
 			r = r.WithContext(ctx)
 
 			// Restore the body for the next handler (in case some service still needs it)
@@ -147,7 +148,7 @@ func (v *VeChainMeshServer) healthCheck(w http.ResponseWriter, r *http.Request) 
 		"service":   "VeChain Mesh API",
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	v.responseHandler.WriteJSONResponse(w, response)
 }
 
 // Start starts the server

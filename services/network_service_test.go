@@ -158,3 +158,26 @@ func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 		t.Errorf("NetworkStatus() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
 	}
 }
+
+func TestGetTargetIndex(t *testing.T) {
+	peers := []Peer{
+		{
+			BestBlockID: "0000000000000001",
+		},
+		{
+			BestBlockID: "0000000000000002",
+		},
+	}
+
+	// Test with local index 0
+	index := getTargetIndex(0, peers)
+	if index != 2 {
+		t.Errorf("Expected index 2, got %d", index)
+	}
+
+	// Test with local index higher than peers
+	index = getTargetIndex(5, peers)
+	if index != 5 {
+		t.Errorf("Expected index 5, got %d", index)
+	}
+}

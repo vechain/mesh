@@ -5,27 +5,32 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
+	meshhttp "github.com/vechain/mesh/common/http"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
 )
 
 // EventsService handles events API endpoints
 type EventsService struct {
-	vechainClient meshthor.VeChainClientInterface
+	requestHandler  *meshhttp.RequestHandler
+	responseHandler *meshhttp.ResponseHandler
+	vechainClient   meshthor.VeChainClientInterface
 }
 
 // NewEventsService creates a new events service
 func NewEventsService(vechainClient meshthor.VeChainClientInterface) *EventsService {
 	return &EventsService{
-		vechainClient: vechainClient,
+		requestHandler:  meshhttp.NewRequestHandler(),
+		responseHandler: meshhttp.NewResponseHandler(),
+		vechainClient:   vechainClient,
 	}
 }
 
 // EventsBlocks handles the /events/blocks endpoint
 func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 	var request types.EventsBlocksRequest
-	if err := meshutils.ParseJSONFromRequestContext(r, &request); err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestBody), http.StatusBadRequest)
+	if err := e.requestHandler.ParseJSONFromContext(r, &request); err != nil {
+		e.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
 		return
 	}
 
@@ -34,7 +39,7 @@ func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 	if request.Offset != nil {
 		offset = *request.Offset
 		if offset < 0 {
-			meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestParameters), http.StatusBadRequest)
+			e.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestParameters), http.StatusBadRequest)
 			return
 		}
 	}
@@ -43,7 +48,7 @@ func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 	if request.Limit != nil {
 		limit = *request.Limit
 		if limit < 1 || limit > 100 {
-			meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrInvalidRequestParameters), http.StatusBadRequest)
+			e.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestParameters), http.StatusBadRequest)
 			return
 		}
 	}
@@ -51,7 +56,7 @@ func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 	// Get the best block number
 	bestBlock, err := e.vechainClient.GetBlock("best")
 	if err != nil {
-		meshutils.WriteErrorResponse(w, meshutils.GetError(meshutils.ErrFailedToGetBestBlock), http.StatusInternalServerError)
+		e.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetBestBlock), http.StatusInternalServerError)
 		return
 	}
 
@@ -63,7 +68,7 @@ func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 			MaxSequence: bestBlockNum,
 			Events:      []*types.BlockEvent{},
 		}
-		meshutils.WriteJSONResponse(w, response)
+		e.responseHandler.WriteJSONResponse(w, response)
 		return
 	}
 
@@ -99,5 +104,5 @@ func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 		Events:      events,
 	}
 
-	meshutils.WriteJSONResponse(w, response)
+	e.responseHandler.WriteJSONResponse(w, response)
 }

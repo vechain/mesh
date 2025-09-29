@@ -9,13 +9,14 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshutils "github.com/vechain/mesh/utils"
+	meshoperations "github.com/vechain/mesh/common/operations"
 )
 
 // ValidationMiddleware handles request validation
 type ValidationMiddleware struct {
-	networkIdentifier *types.NetworkIdentifier
-	runMode           string
+	networkIdentifier   *types.NetworkIdentifier
+	runMode             string
+	operationsExtractor *meshoperations.OperationsExtractor
 }
 
 // ValidationType represents the type of validation to perform
@@ -70,8 +71,9 @@ var (
 // NewValidationMiddleware creates a new validation middleware
 func NewValidationMiddleware(networkIdentifier *types.NetworkIdentifier, runMode string) *ValidationMiddleware {
 	return &ValidationMiddleware{
-		networkIdentifier: networkIdentifier,
-		runMode:           runMode,
+		networkIdentifier:   networkIdentifier,
+		runMode:             runMode,
+		operationsExtractor: meshoperations.NewOperationsExtractor(),
 	}
 }
 
@@ -238,7 +240,7 @@ func (v *ValidationMiddleware) CheckConstructionPayloads(w http.ResponseWriter, 
 	}
 
 	// Validate origins (should be exactly 1)
-	origins := meshutils.GetTxOrigins(request.Operations)
+	origins := v.operationsExtractor.GetTxOrigins(request.Operations)
 	if len(origins) == 0 {
 		http.Error(w, "No origin found in operations", http.StatusBadRequest)
 		return false

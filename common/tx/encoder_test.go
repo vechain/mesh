@@ -1,16 +1,15 @@
-package utils
+package tx
 
 import (
 	"bytes"
 	"math/big"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
+	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
-	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
 )
@@ -91,7 +90,7 @@ func TestNewMeshTransactionEncoder(t *testing.T) {
 }
 
 // Tests for EncodeUnsignedTransaction
-func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Legacy(t *testing.T) {
+func TestEncodeUnsignedTransaction_Legacy(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	vechainTx := createTestVeChainTransaction()
 	origin := []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f}
@@ -110,7 +109,7 @@ func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Legacy(t *testing.T) {
 	}
 }
 
-func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Dynamic(t *testing.T) {
+func TestEncodeUnsignedTransaction_Dynamic(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	vechainTx := createTestVeChainDynamicTransaction()
@@ -131,7 +130,7 @@ func TestMeshTransactionEncoder_EncodeUnsignedTransaction_Dynamic(t *testing.T) 
 }
 
 // Tests for DecodeUnsignedTransaction
-func TestMeshTransactionEncoder_DecodeUnsignedTransaction_ValidData(t *testing.T) {
+func TestDecodeUnsignedTransaction_ValidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// First encode a transaction
@@ -183,7 +182,7 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_ValidData(t *testing.T
 	}
 }
 
-func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) {
+func TestDecodeUnsignedTransaction_Dynamic(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// First encode a dynamic transaction
@@ -240,7 +239,7 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_Dynamic(t *testing.T) 
 	}
 }
 
-func TestMeshTransactionEncoder_DecodeUnsignedTransaction_InvalidData(t *testing.T) {
+func TestDecodeUnsignedTransaction_InvalidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	invalidData := []byte{0x01, 0x02, 0x03} // Invalid RLP data
@@ -252,7 +251,7 @@ func TestMeshTransactionEncoder_DecodeUnsignedTransaction_InvalidData(t *testing
 }
 
 // Tests for DecodeSignedTransaction
-func TestMeshTransactionEncoder_DecodeSignedTransaction_ValidData(t *testing.T) {
+func TestDecodeSignedTransaction_ValidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// First encode a signed transaction
@@ -300,7 +299,7 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_ValidData(t *testing.T) 
 	}
 }
 
-func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
+func TestDecodeSignedTransaction_Dynamic(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	// Create a dynamic mesh transaction
@@ -367,7 +366,7 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_Dynamic(t *testing.T) {
 	}
 }
 
-func TestMeshTransactionEncoder_DecodeSignedTransaction_InvalidData(t *testing.T) {
+func TestDecodeSignedTransaction_InvalidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
 	invalidData := []byte{0x01, 0x02, 0x03} // Invalid RLP data
@@ -379,7 +378,7 @@ func TestMeshTransactionEncoder_DecodeSignedTransaction_InvalidData(t *testing.T
 }
 
 // Tests for EncodeSignedTransaction
-func TestMeshTransactionEncoder_EncodeSignedTransaction_Legacy(t *testing.T) {
+func TestEncodeSignedTransaction_Legacy(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	meshTx := createTestMeshTransaction()
 
@@ -427,44 +426,8 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 
 	// Check first operation
 	op := operations[0]
-	if op.Type != OperationTypeTransfer && op.Type != "ContractCall" {
-		t.Errorf("ParseTransactionOperationsFromAPI() operation type = %v, want %v or ContractCall", op.Type, OperationTypeTransfer)
-	}
-}
-
-// Tests for BuildMeshTransactionFromAPI
-func TestBuildMeshTransactionFromAPI(t *testing.T) {
-	// Create test transaction
-	tx := &api.JSONEmbeddedTx{
-		ID: func() thor.Bytes32 {
-			hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
-			return hash
-		}(),
-		Clauses: []*api.JSONClause{
-			{
-				To: func() *thor.Address {
-					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
-					return &addr
-				}(),
-				Value: func() math.HexOrDecimal256 {
-					val, _ := new(big.Int).SetString("0xde0b6b3a7640000", 0)
-					return math.HexOrDecimal256(*val)
-				}(),
-				Data: "0x",
-			},
-		},
-		Origin: func() thor.Address {
-			addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
-			return addr
-		}(),
-	}
-
-	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-	operations := encoder.ParseTransactionOperationsFromAPI(tx)
-	meshTx := BuildMeshTransactionFromAPI(tx, operations)
-
-	if meshTx.TransactionIdentifier == nil {
-		t.Errorf("BuildMeshTransactionFromAPI() returned nil TransactionIdentifier")
+	if op.Type != meshcommon.OperationTypeTransfer && op.Type != "ContractCall" {
+		t.Errorf("ParseTransactionOperationsFromAPI() operation type = %v, want %v or ContractCall", op.Type, meshcommon.OperationTypeTransfer)
 	}
 }
 
@@ -502,101 +465,140 @@ func TestParseTransactionFromBytes(t *testing.T) {
 	}
 }
 
-// Tests for BuildTransactionFromRequest
-func TestBuildTransactionFromRequest(t *testing.T) {
-	config := createTestConfig()
+func TestParseTransactionSignersAndOperations(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	encoder := NewMeshTransactionEncoder(mockClient)
 
-	request := types.ConstructionPayloadsRequest{
-		Operations: []*types.Operation{
-			{
-				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                OperationTypeTransfer,
-				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
-				},
-				Amount: &types.Amount{
-					Value:    "-1000000000000000000",
-					Currency: VETCurrency,
-				},
-			},
-		},
-		Metadata: map[string]any{
-			"transactionType": "legacy",
-			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
-			"gas":             float64(21000),
-			"nonce":           "0x1",
-			"gasPriceCoef":    uint8(128),
-		},
-	}
-
-	tx, err := BuildTransactionFromRequest(request, config)
-	if err != nil {
-		t.Errorf("BuildTransactionFromRequest() error = %v", err)
-	}
-	if tx == nil {
-		t.Errorf("BuildTransactionFromRequest() returned nil transaction")
-	}
-}
-
-// Tests for addClausesToBuilder
-func TestAddClausesToBuilder(t *testing.T) {
-	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
-
-	operations := []*types.Operation{
+	tests := []struct {
+		name            string
+		meshTx          *MeshTransaction
+		expectedOps     int
+		expectedSigners int
+	}{
 		{
-			OperationIdentifier: &types.OperationIdentifier{Index: 0},
-			Type:                OperationTypeTransfer,
-			Account: &types.AccountIdentifier{
-				Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+			name: "simple VET transfer",
+			meshTx: &MeshTransaction{
+				Transaction: func() *thorTx.Transaction {
+					builder := thorTx.NewBuilder(thorTx.TypeLegacy)
+					builder.ChainTag(0x27)
+					blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+					builder.BlockRef(blockRef)
+					builder.Expiration(720)
+					builder.Gas(21000)
+					builder.GasPriceCoef(0)
+					builder.Nonce(0x1234567890abcdef)
+
+					// Add a clause
+					toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+					value := new(big.Int)
+					value.SetString("1000000000000000000", 10) // 1 VET
+
+					thorClause := thorTx.NewClause(&toAddr)
+					thorClause = thorClause.WithValue(value)
+					thorClause = thorClause.WithData([]byte{})
+					builder.Clause(thorClause)
+
+					return builder.Build()
+				}(),
+				Origin: func() []byte {
+					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					return addr.Bytes()
+				}(),
+				Delegator: []byte{},
 			},
-			Amount: &types.Amount{
-				Value:    "1000000000000000000",
-				Currency: VETCurrency,
-			},
+			expectedOps:     4,
+			expectedSigners: 1,
 		},
-	}
+		{
+			name: "VET transfer with delegator",
+			meshTx: &MeshTransaction{
+				Transaction: func() *thorTx.Transaction {
+					builder := thorTx.NewBuilder(thorTx.TypeLegacy)
+					builder.ChainTag(0x27)
+					blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+					builder.BlockRef(blockRef)
+					builder.Expiration(720)
+					builder.Gas(21000)
+					builder.GasPriceCoef(0)
+					builder.Nonce(0x1234567890abcdef)
 
-	err := addClausesToBuilder(builder, operations)
-	if err != nil {
-		t.Errorf("addClausesToBuilder() error = %v", err)
-	}
-}
+					// Add a clause
+					toAddr, _ := thor.ParseAddress("0x1234567890123456789012345678901234567890")
+					value := new(big.Int)
+					value.SetString("500000000000000000", 10) // 0.5 VET
 
-// Tests for BuildMeshTransactionFromTransactions
-func TestBuildMeshTransactionFromTransactions(t *testing.T) {
-	// Create test transaction
-	tx := &transactions.Transaction{
-		ID: func() thor.Bytes32 {
-			hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
-			return hash
-		}(),
-		Clauses: api.Clauses{
-			{
-				To: func() *thor.Address {
+					thorClause := thorTx.NewClause(&toAddr)
+					thorClause = thorClause.WithValue(value)
+					thorClause = thorClause.WithData([]byte{})
+					builder.Clause(thorClause)
+
+					return builder.Build()
+				}(),
+				Origin: func() []byte {
+					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					return addr.Bytes()
+				}(),
+				Delegator: func() []byte {
 					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
-					return &addr
+					return addr.Bytes()
 				}(),
-				Value: func() *math.HexOrDecimal256 {
-					val, _ := new(big.Int).SetString("0xde0b6b3a7640000", 0)
-					hexVal := math.HexOrDecimal256(*val)
-					return &hexVal
-				}(),
-				Data: "0x",
 			},
+			expectedOps:     4,
+			expectedSigners: 2,
 		},
-		Origin: func() thor.Address {
-			addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
-			return addr
-		}(),
+		{
+			name: "empty clauses",
+			meshTx: &MeshTransaction{
+				Transaction: func() *thorTx.Transaction {
+					builder := thorTx.NewBuilder(thorTx.TypeLegacy)
+					builder.ChainTag(0x27)
+					blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+					builder.BlockRef(blockRef)
+					builder.Expiration(720)
+					builder.Gas(0)
+					builder.GasPriceCoef(0)
+					builder.Nonce(0x1234567890abcdef)
+
+					return builder.Build()
+				}(),
+				Origin: func() []byte {
+					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					return addr.Bytes()
+				}(),
+				Delegator: []byte{},
+			},
+			expectedOps:     0,
+			expectedSigners: 1,
+		},
 	}
 
-	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-	status := OperationStatusSucceeded
-	operations := encoder.ParseTransactionOperationsFromTransactionClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
-	meshTx := BuildMeshTransactionFromTransaction(tx, operations)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			operations, signers := encoder.parseTransactionSignersAndOperations(tt.meshTx)
 
-	if meshTx.TransactionIdentifier == nil {
-		t.Errorf("BuildMeshTransactionFromTransactions() returned nil TransactionIdentifier")
+			if len(operations) != tt.expectedOps {
+				t.Errorf("parseTransactionSignersAndOperations() operations length = %v, want %v", len(operations), tt.expectedOps)
+			}
+
+			if len(signers) != tt.expectedSigners {
+				t.Errorf("parseTransactionSignersAndOperations() signers length = %v, want %v", len(signers), tt.expectedSigners)
+			}
+
+			// Verify origin is always the first signer
+			if len(signers) > 0 {
+				originAddr := thor.BytesToAddress(tt.meshTx.Origin)
+				if signers[0].Address != originAddr.String() {
+					t.Errorf("parseTransactionSignersAndOperations() first signer = %v, want %v", signers[0].Address, originAddr.String())
+				}
+			}
+
+			// Verify delegator is second signer if present
+			if len(tt.meshTx.Delegator) > 0 && len(signers) > 1 {
+				delegatorAddr := thor.BytesToAddress(tt.meshTx.Delegator)
+				if signers[1].Address != delegatorAddr.String() {
+					t.Errorf("parseTransactionSignersAndOperations() second signer = %v, want %v", signers[1].Address, delegatorAddr.String())
+				}
+			}
+		})
 	}
 }

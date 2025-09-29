@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/vechain/mesh/thor"
+	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/abi"
-	thorv2 "github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/thor"
 )
 
 // VIP180 ABI definition
@@ -299,11 +299,11 @@ const VIP180ABI = `[
 type VIP180Contract struct {
 	address string
 	abi     *abi.ABI
-	client  thor.VeChainClientInterface
+	client  meshthor.VeChainClientInterface
 }
 
 // NewVIP180Contract creates a new VIP180 contract wrapper
-func NewVIP180Contract(address string, client thor.VeChainClientInterface) (*VIP180Contract, error) {
+func NewVIP180Contract(address string, client meshthor.VeChainClientInterface) (*VIP180Contract, error) {
 	contractABI, err := abi.New([]byte(VIP180ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ABI: %w", err)
@@ -344,7 +344,7 @@ func (c *VIP180Contract) BalanceOf(owner string) (*big.Int, error) {
 	}
 
 	// Convert string address to thor.Address
-	ownerAddr, err := thorv2.ParseAddress(owner)
+	ownerAddr, err := thor.ParseAddress(owner)
 	if err != nil {
 		return nil, fmt.Errorf("invalid owner address: %w", err)
 	}

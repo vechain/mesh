@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshutils "github.com/vechain/mesh/utils"
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 // Transaction types
@@ -100,23 +100,23 @@ func CreateTestNetworkIdentifier(network string) *types.NetworkIdentifier {
 
 // CreateVETCurrency creates a VET currency definition
 func CreateVETCurrency() *types.Currency {
-	return meshutils.VETCurrency
+	return meshcommon.VETCurrency
 }
 
 // CreateVTHOCurrency creates a VTHO currency definition
 func CreateVTHOCurrency() *types.Currency {
-	return meshutils.VTHOCurrency
+	return meshcommon.VTHOCurrency
 }
 
 // CreateTransferOperations creates transfer operations for testing
 func CreateTransferOperations(senderAddress, recipientAddress, amount string) []*types.Operation {
-	status := meshutils.OperationStatusNone
+	status := meshcommon.OperationStatusNone
 	return []*types.Operation{
 		{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Type:   meshutils.OperationTypeTransfer,
+			Type:   meshcommon.OperationTypeTransfer,
 			Status: &status,
 			Account: &types.AccountIdentifier{
 				Address: recipientAddress,
@@ -130,7 +130,7 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Type:   meshutils.OperationTypeTransfer,
+			Type:   meshcommon.OperationTypeTransfer,
 			Status: &status,
 			Account: &types.AccountIdentifier{
 				Address: senderAddress,
@@ -258,12 +258,12 @@ func ValidateConstructionMetadataResponse(response *types.ConstructionMetadataRe
 		return fmt.Errorf("suggested_fee currency not returned")
 	}
 
-	if fee.Currency.Symbol != meshutils.VTHOCurrency.Symbol {
+	if fee.Currency.Symbol != meshcommon.VTHOCurrency.Symbol {
 		return fmt.Errorf("expected VTHO currency, got %s", fee.Currency.Symbol)
 	}
 
-	if fee.Currency.Decimals != meshutils.VTHOCurrency.Decimals {
-		return fmt.Errorf("expected %d decimals, got %d", meshutils.VTHOCurrency.Decimals, fee.Currency.Decimals)
+	if fee.Currency.Decimals != meshcommon.VTHOCurrency.Decimals {
+		return fmt.Errorf("expected %d decimals, got %d", meshcommon.VTHOCurrency.Decimals, fee.Currency.Decimals)
 	}
 
 	// Validate VTHO contract address
@@ -272,7 +272,7 @@ func ValidateConstructionMetadataResponse(response *types.ConstructionMetadataRe
 	}
 
 	contractAddr, ok := fee.Currency.Metadata["contractAddress"].(string)
-	expectedContractAddr := meshutils.VTHOCurrency.Metadata["contractAddress"].(string)
+	expectedContractAddr := meshcommon.VTHOCurrency.Metadata["contractAddress"].(string)
 	if !ok || contractAddr != expectedContractAddr {
 		return fmt.Errorf("invalid VTHO contract address: %v", fee.Currency.Metadata["contractAddress"])
 	}

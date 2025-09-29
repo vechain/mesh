@@ -13,7 +13,8 @@ import (
 	meshconfig "github.com/vechain/mesh/config"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
-	meshutils "github.com/vechain/mesh/utils"
+	meshhttp "github.com/vechain/mesh/common/http"
+	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/thor/v2/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
 )
@@ -48,7 +49,7 @@ func makeHTTPRequest(method, url string, body []byte) (*httptest.ResponseRecorde
 	req.Header.Set("Content-Type", "application/json")
 
 	// Simulate middleware by adding request body to context
-	ctx := context.WithValue(req.Context(), meshutils.RequestBodyKey, body)
+	ctx := context.WithValue(req.Context(), meshhttp.RequestBodyKey, body)
 	req = req.WithContext(ctx)
 
 	w := httptest.NewRecorder()
@@ -155,25 +156,25 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 			// Sender operation (negative amount)
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                meshutils.OperationTypeTransfer,
+				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
 					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
-					Currency: meshutils.VETCurrency,
+					Currency: meshcommon.VETCurrency,
 				},
 			},
 			// Receiver operation (positive amount)
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 1},
-				Type:                meshutils.OperationTypeTransfer,
+				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
 					Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
 				},
 				Amount: &types.Amount{
 					Value:    "1000000000000000000",
-					Currency: meshutils.VETCurrency,
+					Currency: meshcommon.VETCurrency,
 				},
 			},
 		},
@@ -331,13 +332,13 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                meshutils.OperationTypeTransfer,
+				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
 					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
-					Currency: meshutils.VETCurrency,
+					Currency: meshcommon.VETCurrency,
 				},
 			},
 		},
@@ -392,13 +393,13 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                meshutils.OperationTypeTransfer,
+				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
 					Address: "0x1234567890123456789012345678901234567890", // Different address
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
-					Currency: meshutils.VETCurrency,
+					Currency: meshcommon.VETCurrency,
 				},
 			},
 		},
@@ -442,13 +443,13 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                meshutils.OperationTypeTransfer,
+				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
 					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
-					Currency: meshutils.VETCurrency,
+					Currency: meshcommon.VETCurrency,
 				},
 			},
 		},
@@ -492,13 +493,13 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
-				Type:                meshutils.OperationTypeTransfer,
+				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
 					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
-					Currency: meshutils.VETCurrency,
+					Currency: meshcommon.VETCurrency,
 				},
 			},
 		},
@@ -949,7 +950,7 @@ func TestConstructionService_calculateGas(t *testing.T) {
 	options = map[string]any{
 		"clauses": []any{
 			map[string]any{
-				"to": meshutils.VTHOCurrency.Metadata["contractAddress"].(string),
+				"to": meshcommon.VTHOCurrency.Metadata["contractAddress"].(string),
 			},
 		},
 	}
@@ -977,7 +978,7 @@ func TestConstructionService_calculateGas(t *testing.T) {
 	options = map[string]any{
 		"clauses": []any{
 			map[string]any{
-				"to": meshutils.VTHOCurrency.Metadata["contractAddress"].(string),
+				"to": meshcommon.VTHOCurrency.Metadata["contractAddress"].(string),
 			},
 			map[string]any{
 				"to": "0x1234567890123456789012345678901234567890",

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	meshutils "github.com/vechain/mesh/utils"
+	meshhttp "github.com/vechain/mesh/common/http"
 )
 
 // CreateRequestWithContext simulates the middleware by adding request body to context
@@ -18,7 +18,7 @@ func CreateRequestWithContext(method, url string, body any) *http.Request {
 	req.Header.Set("Content-Type", "application/json")
 
 	// Simulate middleware by adding request body to context
-	ctx := context.WithValue(req.Context(), meshutils.RequestBodyKey, requestBody)
+	ctx := context.WithValue(req.Context(), meshhttp.RequestBodyKey, requestBody)
 	req = req.WithContext(ctx)
 
 	return req
