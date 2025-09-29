@@ -209,7 +209,7 @@ Derived address: 0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa
 
 ## Documentation
 
-- [Mesh API Specification](https://github.com/coinbase/rosetta-sdk-go) - Official Mesh API documentation
+- [Mesh API Specification](https://docs.cdp.coinbase.com/mesh/mesh-api-spec/api-reference) - Official Mesh API documentation
 - [VeChain Documentation](https://docs.vechain.org/) - VeChain blockchain documentation
 
 ## Contributing
@@ -223,5 +223,3 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ## Credits
 
 - [Coinbase Mesh SDK](https://github.com/coinbase/rosetta-sdk-go) - Base framework for Mesh API implementation
-- [Gorilla Mux](https://github.com/gorilla/mux) - HTTP router and URL matcher
-- VeChain developer community for blockchain insights
