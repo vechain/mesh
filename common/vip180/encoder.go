@@ -22,7 +22,7 @@ type VIP180Encoder struct {
 }
 
 func NewVIP180Encoder() *VIP180Encoder {
-	vip180ABIPath := "compiled/VIP180Token.abi"
+	vip180ABIPath := "compiled/VIP180.abi"
 	vip180ABI := contracts.MustABI(vip180ABIPath)
 	contractABI, err := abi.New(vip180ABI)
 	if err != nil {
