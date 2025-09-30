@@ -21,7 +21,7 @@ type VIP180Contract struct {
 
 // NewVIP180Contract creates a new VIP180 contract wrapper
 func NewVIP180Contract(address string, client meshthor.VeChainClientInterface) (*VIP180Contract, error) {
-	vip180ABIPath := "compiled/VIP180.abi"
+	vip180ABIPath := "compiled/IVIP180.abi"
 	vip180ABI := contracts.MustABI(vip180ABIPath)
 	contractABI, err := abi.New(vip180ABI)
 	if err != nil {

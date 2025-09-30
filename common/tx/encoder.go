@@ -131,13 +131,11 @@ func (e *MeshTransactionEncoder) ParseTransactionFromBytes(txBytes []byte, signe
 	var err error
 
 	if signed {
-		// For signed transactions, try to decode as Mesh transaction first
 		meshTx, err = e.DecodeSignedTransaction(txBytes)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to decode signed transaction: %w", err)
 		}
 	} else {
-		// For unsigned transactions, decode as Mesh transaction
 		meshTx, err = e.DecodeUnsignedTransaction(txBytes)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to decode unsigned transaction: %w", err)
