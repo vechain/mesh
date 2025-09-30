@@ -6,10 +6,10 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
-	meshthor "github.com/vechain/mesh/thor"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
 	meshhttp "github.com/vechain/mesh/common/http"
 	"github.com/vechain/mesh/common/vip180"
+	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 )
 
@@ -18,6 +18,7 @@ type AccountService struct {
 	requestHandler  *meshhttp.RequestHandler
 	responseHandler *meshhttp.ResponseHandler
 	vechainClient   meshthor.VeChainClientInterface
+	bytesHandler    *meshcrypto.BytesHandler
 }
 
 // NewAccountService creates a new account service
@@ -26,6 +27,7 @@ func NewAccountService(vechainClient meshthor.VeChainClientInterface) *AccountSe
 		requestHandler:  meshhttp.NewRequestHandler(),
 		responseHandler: meshhttp.NewResponseHandler(),
 		vechainClient:   vechainClient,
+		bytesHandler:    meshcrypto.NewBytesHandler(),
 	}
 }
 
@@ -56,7 +58,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 	for _, currency := range currenciesToQuery {
 		balance, err := a.getBalanceForCurrency(request.AccountIdentifier.Address, currency)
 		if err != nil {
-				a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetAccount, map[string]any{
+			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetAccount, map[string]any{
 				"error":    err.Error(),
 				"currency": currency.Symbol,
 			}), http.StatusInternalServerError)
@@ -192,7 +194,7 @@ func (a *AccountService) getVETBalance(address string) (*types.Amount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal VET balance: %w", err)
 	}
-	vetBalance, err := meshcrypto.NewBytesHandler().HexToDecimal(string(balanceBytes))
+	vetBalance, err := a.bytesHandler.HexToDecimal(string(balanceBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VET balance: %w", err)
 	}
@@ -211,7 +213,7 @@ func (a *AccountService) getVTHOBalance(address string) (*types.Amount, error) {
 	}
 
 	energyBytes, _ := account.Energy.MarshalText()
-	vthoBalance, err := meshcrypto.NewBytesHandler().HexToDecimal(string(energyBytes))
+	vthoBalance, err := a.bytesHandler.HexToDecimal(string(energyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VTHO balance: %w", err)
 	}
