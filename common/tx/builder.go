@@ -16,10 +16,14 @@ import (
 	thorTx "github.com/vechain/thor/v2/tx"
 )
 
-type TransactionBuilder struct{}
+type TransactionBuilder struct {
+	vip180Encoder *vip180.VIP180Encoder
+}
 
 func NewTransactionBuilder() *TransactionBuilder {
-	return &TransactionBuilder{}
+	return &TransactionBuilder{
+		vip180Encoder: vip180.NewVIP180Encoder(),
+	}
 }
 
 // buildMeshTransaction is a helper function that builds a Mesh transaction
@@ -166,7 +170,7 @@ func (b *TransactionBuilder) addClausesToBuilder(builder *thorTx.Builder, operat
 						}
 
 						// Encode VIP180 transfer call data
-						transferDataHex, err := vip180.EncodeVIP180TransferCallData(op.Account.Address, op.Amount.Value)
+						transferDataHex, err := b.vip180Encoder.EncodeVIP180TransferCallData(op.Account.Address, op.Amount.Value)
 						if err != nil {
 							return fmt.Errorf("failed to encode VIP180 transfer: %w", err)
 						}

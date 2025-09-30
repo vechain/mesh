@@ -7,17 +7,34 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/vechain/mesh/common/vip180/contracts"
 	"github.com/vechain/thor/v2/abi"
 )
 
 // vip180TransferData represents decoded transfer data from a VIP180 token
 type vip180TransferData struct {
-	To     common.Address
-	Amount *big.Int
+	To    common.Address `abi:"_to"`
+	Value *big.Int       `abi:"_value"`
+}
+
+type VIP180Encoder struct {
+	abi *abi.ABI
+}
+
+func NewVIP180Encoder() *VIP180Encoder {
+	vip180ABIPath := "compiled/VIP180Token.abi"
+	vip180ABI := contracts.MustABI(vip180ABIPath)
+	contractABI, err := abi.New(vip180ABI)
+	if err != nil {
+		panic(fmt.Errorf("failed to create ABI: %w", err))
+	}
+	return &VIP180Encoder{
+		abi: contractABI,
+	}
 }
 
 // DecodeVIP180TransferCallData decodes VIP180 transfer function call data using ABI
-func DecodeVIP180TransferCallData(data string) (*vip180TransferData, error) {
+func (e *VIP180Encoder) DecodeVIP180TransferCallData(data string) (*vip180TransferData, error) {
 	cleanData := strings.TrimPrefix(data, "0x")
 
 	dataBytes, err := hex.DecodeString(cleanData)
@@ -25,12 +42,7 @@ func DecodeVIP180TransferCallData(data string) (*vip180TransferData, error) {
 		return nil, fmt.Errorf("invalid hex data: %w", err)
 	}
 
-	contractABI, err := abi.New([]byte(VIP180ABI))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ABI: %w", err)
-	}
-
-	method, err := contractABI.MethodByInput(dataBytes)
+	method, err := e.abi.MethodByInput(dataBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find method: %w", err)
 	}
@@ -50,7 +62,7 @@ func DecodeVIP180TransferCallData(data string) (*vip180TransferData, error) {
 }
 
 // IsVIP180TransferCallData checks if the data represents a VIP180 transfer call
-func IsVIP180TransferCallData(data string) bool {
+func (e *VIP180Encoder) IsVIP180TransferCallData(data string) bool {
 	cleanData := strings.TrimPrefix(data, "0x")
 
 	if len(cleanData) < 8 {
@@ -62,24 +74,14 @@ func IsVIP180TransferCallData(data string) bool {
 		return false
 	}
 
-	contractABI, err := abi.New([]byte(VIP180ABI))
-	if err != nil {
-		return false
-	}
-
-	_, err = contractABI.MethodByInput(dataBytes)
+	_, err = e.abi.MethodByInput(dataBytes)
 	return err == nil
 }
 
 // EncodeVIP180TransferCallData encodes VIP180 transfer call data
-func EncodeVIP180TransferCallData(to string, amount string) (string, error) {
-	contractABI, err := abi.New([]byte(VIP180ABI))
-	if err != nil {
-		return "", fmt.Errorf("failed to create ABI: %v", err)
-	}
-
+func (e *VIP180Encoder) EncodeVIP180TransferCallData(to string, amount string) (string, error) {
 	// Get the transfer method
-	method, exists := contractABI.MethodByName("transfer")
+	method, exists := e.abi.MethodByName("transfer")
 	if !exists {
 		return "", fmt.Errorf("transfer method not found in ABI")
 	}

@@ -50,10 +50,11 @@ func (c ClauseAdapter) GetData() string       { return c.Clause.Data }
 type ClauseParser struct {
 	vechainClient       meshthor.VeChainClientInterface
 	operationsExtractor *OperationsExtractor
+	vip180Encoder       *vip180.VIP180Encoder
 }
 
 func NewClauseParser(vechainClient meshthor.VeChainClientInterface, operationsExtractor *OperationsExtractor) *ClauseParser {
-	return &ClauseParser{vechainClient: vechainClient, operationsExtractor: operationsExtractor}
+	return &ClauseParser{vechainClient: vechainClient, operationsExtractor: operationsExtractor, vip180Encoder: vip180.NewVIP180Encoder()}
 }
 
 // ParseTransactionOperationsFromClauseData parses operations from clause data with client for contract calls
@@ -131,7 +132,7 @@ func (e *ClauseParser) isVIP180Transfer(clause ClauseData, value *big.Int) bool 
 	return value.Cmp(big.NewInt(0)) == 0 &&
 		len(clause.GetData()) > 0 &&
 		clause.GetTo() != nil &&
-		vip180.IsVIP180TransferCallData(clause.GetData())
+		e.vip180Encoder.IsVIP180TransferCallData(clause.GetData())
 }
 
 // hasContractInteraction checks if a clause has contract interaction
@@ -141,7 +142,7 @@ func (e *ClauseParser) hasContractInteraction(clause ClauseData) bool {
 
 // parseVIP180Transfer parses VIP180 token transfer operations
 func (e *ClauseParser) parseVIP180Transfer(clause ClauseData, clauseIndex, operationIndex int, originAddr string, status *string) ([]*types.Operation, int) {
-	transferData, err := vip180.DecodeVIP180TransferCallData(clause.GetData())
+	transferData, err := e.vip180Encoder.DecodeVIP180TransferCallData(clause.GetData())
 	if err != nil {
 		return []*types.Operation{}, operationIndex
 	}
@@ -158,8 +159,8 @@ func (e *ClauseParser) parseVIP180Transfer(clause ClauseData, clauseIndex, opera
 
 	networkIndex := int64(clauseIndex)
 	operations := []*types.Operation{
-		e.createTransferOperation(operationIndex, &networkIndex, originAddr, "-"+transferData.Amount.String(), tokenCurrency, clauseIndex, status),
-		e.createTransferOperation(operationIndex+1, &networkIndex, transferData.To.String(), transferData.Amount.String(), tokenCurrency, clauseIndex, status),
+		e.createTransferOperation(operationIndex, &networkIndex, originAddr, "-"+transferData.Value.String(), tokenCurrency, clauseIndex, status),
+		e.createTransferOperation(operationIndex+1, &networkIndex, transferData.To.String(), transferData.Value.String(), tokenCurrency, clauseIndex, status),
 	}
 
 	return operations, operationIndex + 2

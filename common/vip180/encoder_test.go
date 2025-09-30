@@ -33,9 +33,10 @@ func TestIsVIP180TransferCallData(t *testing.T) {
 		},
 	}
 
+	encoder := NewVIP180Encoder()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsVIP180TransferCallData(tt.data)
+			result := encoder.IsVIP180TransferCallData(tt.data)
 			if result != tt.expected {
 				t.Errorf("IsVIP180TransferCallData() = %v, want %v", result, tt.expected)
 			}
@@ -45,38 +46,38 @@ func TestIsVIP180TransferCallData(t *testing.T) {
 
 func TestDecodeVIP180TransferCallData(t *testing.T) {
 	tests := []struct {
-		name        string
-		data        string
-		expectedTo  string
-		expectedAmt string
-		expectError bool
+		name          string
+		data          string
+		expectedTo    string
+		expectedValue string
+		expectError   bool
 	}{
 		{
-			name:        "Valid transfer data",
-			data:        "0xa9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-			expectedTo:  "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
-			expectedAmt: "1000000000000000000",
-			expectError: false,
+			name:          "Valid transfer data",
+			data:          "0xa9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+			expectedTo:    "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			expectedValue: "1000000000000000000",
+			expectError:   false,
 		},
 		{
-			name:        "Invalid data length",
-			data:        "0xa9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa",
-			expectedTo:  "",
-			expectedAmt: "",
-			expectError: true,
+			name:          "Invalid data length",
+			data:          "0xa9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa",
+			expectedTo:    "",
+			expectedValue: "",
+			expectError:   true,
 		},
 		{
-			name:        "Invalid hex data",
-			data:        "0xinvalid",
-			expectedTo:  "",
-			expectedAmt: "",
-			expectError: true,
+			name:          "Invalid hex data",
+			data:          "0xinvalid",
+			expectedTo:    "",
+			expectedValue: "",
+			expectError:   true,
 		},
 	}
-
+	encoder := NewVIP180Encoder()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := DecodeVIP180TransferCallData(tt.data)
+			result, err := encoder.DecodeVIP180TransferCallData(tt.data)
 
 			if tt.expectError {
 				if err == nil {
@@ -97,8 +98,8 @@ func TestDecodeVIP180TransferCallData(t *testing.T) {
 				t.Errorf("DecodeVIP180TransferCallData() To = %v, want %v", resultTo, expectedTo)
 			}
 
-			if result.Amount.String() != tt.expectedAmt {
-				t.Errorf("DecodeVIP180TransferCallData() Amount = %v, want %v", result.Amount.String(), tt.expectedAmt)
+			if result.Value.String() != tt.expectedValue {
+				t.Errorf("DecodeVIP180TransferCallData() Value = %v, want %v", result.Value.String(), tt.expectedValue)
 			}
 		})
 	}
@@ -131,9 +132,11 @@ func TestEncodeVIP180TransferCallData(t *testing.T) {
 		},
 	}
 
+	encoder := NewVIP180Encoder()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := EncodeVIP180TransferCallData(tt.to, tt.amount)
+			result, err := encoder.EncodeVIP180TransferCallData(tt.to, tt.amount)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EncodeVIP180TransferCallData() error = %v, wantErr %v", err, tt.wantErr)
 				return

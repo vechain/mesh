@@ -33,6 +33,7 @@ type ConstructionService struct {
 	config              *config.Config
 	bytesHandler        *meshcrypto.BytesHandler
 	operationsExtractor *meshoperations.OperationsExtractor
+	vip180Encoder       *vip180.VIP180Encoder
 }
 
 // NewConstructionService creates a new construction service
@@ -46,6 +47,7 @@ func NewConstructionService(vechainClient meshthor.VeChainClientInterface, confi
 		config:              config,
 		bytesHandler:        meshcrypto.NewBytesHandler(),
 		operationsExtractor: meshoperations.NewOperationsExtractor(),
+		vip180Encoder:       vip180.NewVIP180Encoder(),
 	}
 }
 
@@ -130,7 +132,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 	// Add VIP180 token transfer clauses
 	for _, op := range tokensOpers {
 		// Encode VIP180 transfer call data
-		transferData, err := vip180.EncodeVIP180TransferCallData(op["to"], op["value"])
+		transferData, err := c.vip180Encoder.EncodeVIP180TransferCallData(op["to"], op["value"])
 		if err != nil {
 			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 				"error": err.Error(),
