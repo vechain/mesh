@@ -299,8 +299,16 @@ func ValidateMetadataFields(metadata map[string]any) error {
 	}
 
 	// Validate common fields
-	if _, ok := metadata["blockRef"].(string); !ok {
+	if blockRef, ok := metadata["blockRef"].(string); !ok {
 		return fmt.Errorf("blockRef not found or invalid in metadata")
+	} else {
+		blockRefBytes, err := hex.DecodeString(blockRef[2:])
+		if err != nil {
+			return fmt.Errorf("invalid blockRef: %w", err)
+		}
+		if len(blockRefBytes) != 8 {
+			return fmt.Errorf("blockRef should be 8 bytes long, got %d", len(blockRefBytes))
+		}
 	}
 
 	if chainTag, ok := metadata["chainTag"].(float64); !ok || chainTag <= 0 {
@@ -516,20 +524,6 @@ func CreatePreprocessRequestWithTransactionType(networkIdentifier *types.Network
 	}
 
 	return request
-}
-
-// ValidateTransactionTypeInMetadata validates that the metadata contains the expected transaction type
-func ValidateTransactionTypeInMetadata(metadata map[string]any, expectedType string) error {
-	actualType, ok := metadata["transactionType"].(string)
-	if !ok {
-		return fmt.Errorf("transactionType not found in metadata")
-	}
-
-	if actualType != expectedType {
-		return fmt.Errorf("expected transaction type %s, got %s", expectedType, actualType)
-	}
-
-	return nil
 }
 
 // ValidateLegacyMetadataFields validates legacy-specific metadata fields

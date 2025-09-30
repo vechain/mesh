@@ -73,8 +73,8 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	}
 	t.Logf("Metadata response: %+v", metadataResp)
 
-	// Validate transaction type in metadata
-	if err := ValidateTransactionTypeInMetadata(metadataResp.Metadata, transactionType); err != nil {
+	// Validate metadata
+	if err := ValidateMetadataFields(metadataResp.Metadata); err != nil {
 		t.Fatalf("Metadata validation failed: %v", err)
 	}
 

@@ -189,7 +189,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 
 	// Calculate gas and create blockRef
 	gas := c.calculateGas(request.Options)
-	blockRef := bestBlock.ID[:18]
+	blockRef := bestBlock.ID[:8]
 	nonce, err := c.bytesHandler.GenerateNonce()
 	if err != nil {
 		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
