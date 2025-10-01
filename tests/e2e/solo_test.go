@@ -59,7 +59,7 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 
 	// Construction Preprocess
 	t.Logf("Testing /construction/preprocess for %s transaction", transactionType)
-	preprocessResp, err := testConstructionPreprocess(client, networkIdentifier, config, transactionType)
+	preprocessResp, err := testConstructionPreprocess(client, networkIdentifier, nil, config, transactionType)
 	if err != nil {
 		t.Fatalf("Construction preprocess test failed: %v", err)
 	}

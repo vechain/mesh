@@ -79,13 +79,13 @@ func testNetworkStatus(client *HTTPClient, networkIdentifier *types.NetworkIdent
 }
 
 // testConstructionPreprocess tests the /construction/preprocess endpoint
-func testConstructionPreprocess(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, config *TestConfig, transactionType string) (*types.ConstructionPreprocessResponse, error) {
-	var operations []*types.Operation
-
-	if transactionType == TransactionTypeLegacy {
-		operations = CreateLegacyTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
-	} else {
-		operations = CreateDynamicTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
+func testConstructionPreprocess(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, operations []*types.Operation, config *TestConfig, transactionType string) (*types.ConstructionPreprocessResponse, error) {
+	if operations == nil {
+		if transactionType == TransactionTypeLegacy {
+			operations = CreateLegacyTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
+		} else {
+			operations = CreateDynamicTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
+		}
 	}
 
 	request := &types.ConstructionPreprocessRequest{

@@ -1,6 +1,6 @@
 # VeChain Mesh API Makefile
 
-.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
+.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
 
 # Default target
 help:
@@ -26,6 +26,8 @@ help:
 	@echo "  test-e2e - Run e2e tests (requires solo mode server)"
 	@echo "  test-e2e-verbose - Run e2e tests with verbose output"
 	@echo "  test-e2e-full - Full e2e test cycle (start solo, test, stop solo)"
+	@echo "  test-e2e-vip180 - Run VIP180 e2e test (requires solo mode server)"
+	@echo "  test-e2e-vip180-full - Full VIP180 e2e test cycle (start solo, test, stop solo)"
 	@echo "  clean - Clean Go build artifacts and cache"
 	@echo ""
 	@echo "Utilities:"
@@ -47,7 +49,7 @@ test-unit-coverage:
 	@go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=78.2
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=78.4
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."
@@ -122,6 +124,43 @@ test-e2e-full:
 		echo "✅ All e2e tests passed!"; \
 	else \
 		echo "❌ Some e2e tests failed!"; \
+	fi; \
+	exit $$test_result'
+
+test-e2e-vip180:
+	@echo "Running VIP180 e2e test..."
+	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
+	go test -v -run TestVIP180Solo ./tests/e2e/...
+
+test-e2e-vip180-full:
+	@echo "Starting full VIP180 e2e test cycle..."
+	@echo "1. Starting solo mode services..."
+	@$(MAKE) docker-solo-up
+	@echo "2. Waiting for services to be ready..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+			echo "✅ Mesh API server is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "❌ Timeout waiting for server to start"; \
+		$(MAKE) docker-solo-down; \
+		exit 1; \
+	fi
+	@echo "3. Running VIP180 e2e test..."
+	@bash -c '$(MAKE) test-e2e-vip180; \
+	test_result=$$?; \
+	echo "4. Stopping solo mode services..."; \
+	$(MAKE) docker-solo-down; \
+	if [ $$test_result -eq 0 ]; then \
+		echo "✅ VIP180 e2e test passed!"; \
+	else \
+		echo "❌ VIP180 e2e test failed!"; \
 	fi; \
 	exit $$test_result'
 

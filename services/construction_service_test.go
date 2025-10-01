@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
+	meshhttp "github.com/vechain/mesh/common/http"
 	meshconfig "github.com/vechain/mesh/config"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
-	meshhttp "github.com/vechain/mesh/common/http"
-	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/thor/v2/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
 )
@@ -203,6 +203,114 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 	// Verify response structure
 	if response.Options == nil {
 		t.Errorf("ConstructionPreprocess() options is nil")
+	}
+}
+
+func TestConstructionService_ConstructionPreprocess_VIP180Token(t *testing.T) {
+	service := createMockConstructionService()
+
+	// Create valid request with VIP180 token operations
+	request := types.ConstructionPreprocessRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			// Sender operation (negative amount)
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+				},
+				Amount: &types.Amount{
+					Value: "-1000000000000000000",
+					Currency: &types.Currency{
+						Symbol:   "TVIP",
+						Decimals: 18,
+						Metadata: map[string]any{
+							"contractAddress": "0x1234567890123456789012345678901234567890",
+						},
+					},
+				},
+			},
+			// Receiver operation (positive amount)
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 1},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+				},
+				Amount: &types.Amount{
+					Value: "1000000000000000000",
+					Currency: &types.Currency{
+						Symbol:   "TVIP",
+						Decimals: 18,
+						Metadata: map[string]any{
+							"contractAddress": "0x1234567890123456789012345678901234567890",
+						},
+					},
+				},
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": "legacy",
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", "/construction/preprocess", requestBody)
+
+	// Call ConstructionPreprocess
+	service.ConstructionPreprocess(w, req)
+
+	// Check response
+	if w.Code != http.StatusOK {
+		t.Errorf("ConstructionPreprocess() status code = %v, want %v. Body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Parse response
+	var response types.ConstructionPreprocessResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	// Verify response structure
+	if response.Options == nil {
+		t.Errorf("ConstructionPreprocess() options is nil")
+		return
+	}
+
+	// Verify clauses were created for VIP180 token transfer
+	if clauses, ok := response.Options["clauses"].([]any); ok {
+		if len(clauses) == 0 {
+			t.Errorf("ConstructionPreprocess() expected clauses, got empty array")
+		}
+		// Verify the clause has the token contract address as "to"
+		if len(clauses) > 0 {
+			if clause, ok := clauses[0].(map[string]any); ok {
+				if to, exists := clause["to"]; exists {
+					if to != "0x1234567890123456789012345678901234567890" {
+						t.Errorf("ConstructionPreprocess() clause 'to' = %v, want contract address", to)
+					}
+				} else {
+					t.Errorf("ConstructionPreprocess() clause missing 'to' field")
+				}
+				// Verify the clause has value "0" for token transfer
+				if value, exists := clause["value"]; exists {
+					if value != "0" {
+						t.Errorf("ConstructionPreprocess() clause 'value' = %v, want '0' for token transfer", value)
+					}
+				}
+				// Verify the clause has encoded data
+				if data, exists := clause["data"]; exists {
+					if dataStr, ok := data.(string); !ok || dataStr == "" || dataStr == "0x" {
+						t.Errorf("ConstructionPreprocess() clause 'data' should contain encoded VIP180 transfer data")
+					}
+				} else {
+					t.Errorf("ConstructionPreprocess() clause missing 'data' field")
+				}
+			}
+		}
+	} else {
+		t.Errorf("ConstructionPreprocess() options['clauses'] not found or not an array")
 	}
 }
 
