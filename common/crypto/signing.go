@@ -5,33 +5,33 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
 type SigningHandler struct {
-	privateKeyHex string
+	privateKeyBytes []byte
 }
 
 func NewSigningHandler(privateKeyHex string) *SigningHandler {
 	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
+
+	// Parse private key
+	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
+	if err != nil {
+		panic(fmt.Errorf("error decoding private key: %v", err))
+	}
+
 	return &SigningHandler{
-		privateKeyHex: privateKeyHex,
+		privateKeyBytes: privateKeyBytes,
 	}
 }
 
 // SignPayload signs a payload using secp256k1 and returns the signature in hex format
 // This function is used by both the sign_payload script and e2e tests
 func (h *SigningHandler) SignPayload(payloadHex string) (string, error) {
-	if len(payloadHex) > 2 && payloadHex[:2] == "0x" {
-		payloadHex = payloadHex[2:]
-	}
-
-	// Parse private key
-	privateKeyBytes, err := hex.DecodeString(h.privateKeyHex)
-	if err != nil {
-		return "", fmt.Errorf("error decoding private key: %v", err)
-	}
+	payloadHex = strings.TrimPrefix(payloadHex, "0x")
 
 	// Parse payload
 	payloadBytes, err := hex.DecodeString(payloadHex)
@@ -39,14 +39,8 @@ func (h *SigningHandler) SignPayload(payloadHex string) (string, error) {
 		return "", fmt.Errorf("error decoding payload: %v", err)
 	}
 
-	// Create ECDSA private key
-	_, err = crypto.ToECDSA(privateKeyBytes)
-	if err != nil {
-		return "", fmt.Errorf("error creating ECDSA private key: %v", err)
-	}
-
-	// Sign the payload (same as elliptic.js signPayload function)
-	signature, err := secp256k1.Sign(payloadBytes, privateKeyBytes)
+	// Sign the payload
+	signature, err := secp256k1.Sign(payloadBytes, h.privateKeyBytes)
 	if err != nil {
 		return "", fmt.Errorf("error signing payload: %v", err)
 	}
@@ -57,7 +51,7 @@ func (h *SigningHandler) SignPayload(payloadHex string) (string, error) {
 	recoveryID := signature[64]
 
 	// Format signature as hex string (r + s + v)
-	// v is 0x00 or 0x01 based on recovery ID (same as elliptic.js)
+	// v is 0x00 or 0x01 based on recovery ID
 	v := "00"
 	if recoveryID == 1 {
 		v = "01"
@@ -70,14 +64,8 @@ func (h *SigningHandler) SignPayload(payloadHex string) (string, error) {
 
 // GetAddressFromPrivateKey derives the Ethereum address from a private key
 func (h *SigningHandler) GetAddressFromPrivateKey() (string, error) {
-	// Parse private key
-	privateKeyBytes, err := hex.DecodeString(h.privateKeyHex)
-	if err != nil {
-		return "", fmt.Errorf("error decoding private key: %v", err)
-	}
-
 	// Create ECDSA private key
-	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	privateKey, err := crypto.ToECDSA(h.privateKeyBytes)
 	if err != nil {
 		return "", fmt.Errorf("error creating ECDSA private key: %v", err)
 	}

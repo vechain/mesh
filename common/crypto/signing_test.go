@@ -19,6 +19,7 @@ func TestSignPayload(t *testing.T) {
 		payload      string
 		expectError  bool
 		errorMessage string
+		expectPanic  bool
 	}{
 		{
 			name:        "valid private key and payload",
@@ -48,8 +49,8 @@ func TestSignPayload(t *testing.T) {
 			name:         "invalid private key hex",
 			privateKey:   "invalid_hex",
 			payload:      payloadHex,
-			expectError:  true,
 			errorMessage: "error decoding private key",
+			expectPanic:  true,
 		},
 		{
 			name:         "invalid payload hex",
@@ -63,7 +64,7 @@ func TestSignPayload(t *testing.T) {
 			privateKey:   "",
 			payload:      payloadHex,
 			expectError:  true,
-			errorMessage: "error creating ECDSA private key",
+			errorMessage: "error signing payload: invalid private key",
 		},
 		{
 			name:         "empty payload",
@@ -77,12 +78,23 @@ func TestSignPayload(t *testing.T) {
 			privateKey:   "1234", // Too short
 			payload:      payloadHex,
 			expectError:  true,
-			errorMessage: "error creating ECDSA private key",
+			errorMessage: "error signing payload: invalid private key",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("NewSigningHandler() expected panic, got none")
+					}
+				}()
+				NewSigningHandler(tt.privateKey)
+				t.Errorf("NewSigningHandler() expected panic, got none")
+				return
+			}
+
 			signature, err := NewSigningHandler(tt.privateKey).SignPayload(tt.payload)
 
 			if tt.expectError {
@@ -130,6 +142,7 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 		expectedAddr string
 		expectError  bool
 		errorMessage string
+		expectPanic  bool
 	}{
 		{
 			name:         "valid private key",
@@ -149,6 +162,7 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 			expectedAddr: "",
 			expectError:  true,
 			errorMessage: "error decoding private key",
+			expectPanic:  true,
 		},
 		{
 			name:         "empty private key",
@@ -168,6 +182,17 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("NewSigningHandler() expected panic, got none")
+					}
+				}()
+				NewSigningHandler(tt.privateKey)
+				t.Errorf("NewSigningHandler() expected panic, got none")
+				return
+			}
+
 			address, err := NewSigningHandler(tt.privateKey).GetAddressFromPrivateKey()
 
 			if tt.expectError {
@@ -211,6 +236,7 @@ func TestSignPayloadWithAddress(t *testing.T) {
 		payload      string
 		expectError  bool
 		errorMessage string
+		expectPanic  bool
 	}{
 		{
 			name:        "valid private key and payload",
@@ -224,6 +250,7 @@ func TestSignPayloadWithAddress(t *testing.T) {
 			payload:      payloadHex,
 			expectError:  true,
 			errorMessage: "error decoding private key",
+			expectPanic:  true,
 		},
 		{
 			name:         "invalid payload",
@@ -236,6 +263,16 @@ func TestSignPayloadWithAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("NewSigningHandler() expected panic, got none")
+					}
+				}()
+				NewSigningHandler(tt.privateKey)
+				t.Errorf("NewSigningHandler() expected panic, got none")
+				return
+			}
 			signature, address, err := NewSigningHandler(tt.privateKey).SignPayloadWithAddress(tt.payload)
 
 			if tt.expectError {
