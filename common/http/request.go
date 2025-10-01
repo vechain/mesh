@@ -7,9 +7,10 @@ import (
 )
 
 type RequestBodyKeyType string
+
 const RequestBodyKey RequestBodyKeyType = "request_body"
 
-type RequestHandler struct {}
+type RequestHandler struct{}
 
 func NewRequestHandler() *RequestHandler {
 	return &RequestHandler{}

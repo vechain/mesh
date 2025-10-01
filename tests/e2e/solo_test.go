@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshcrypto "github.com/vechain/mesh/common/crypto"
 	meshcommon "github.com/vechain/mesh/common"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 )
 
 // TestSolo tests the complete construction flow and other endpoints in solo mode
