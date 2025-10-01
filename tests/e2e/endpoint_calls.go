@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 // testNetworkList tests the /network/list endpoint
 func testNetworkList(client *HTTPClient) (*types.NetworkListResponse, error) {
 	request := &types.MetadataRequest{}
 
-	resp, err := client.Post("/network/list", request)
+	resp, err := client.Post(meshcommon.NetworkListEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +37,7 @@ func testNetworkOptions(client *HTTPClient, networkIdentifier *types.NetworkIden
 		NetworkIdentifier: networkIdentifier,
 	}
 
-	resp, err := client.Post("/network/options", request)
+	resp, err := client.Post(meshcommon.NetworkOptionsEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func testNetworkStatus(client *HTTPClient, networkIdentifier *types.NetworkIdent
 		NetworkIdentifier: networkIdentifier,
 	}
 
-	resp, err := client.Post("/network/status", request)
+	resp, err := client.Post(meshcommon.NetworkStatusEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func testNetworkStatus(client *HTTPClient, networkIdentifier *types.NetworkIdent
 // testConstructionPreprocess tests the /construction/preprocess endpoint
 func testConstructionPreprocess(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, operations []*types.Operation, config *TestConfig, transactionType string) (*types.ConstructionPreprocessResponse, error) {
 	if operations == nil {
-		if transactionType == TransactionTypeLegacy {
+		if transactionType == meshcommon.TransactionTypeLegacy {
 			operations = CreateLegacyTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
 		} else {
 			operations = CreateDynamicTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
@@ -93,7 +94,7 @@ func testConstructionPreprocess(client *HTTPClient, networkIdentifier *types.Net
 		Operations:        operations,
 	}
 
-	resp, err := client.Post("/construction/preprocess", request)
+	resp, err := client.Post(meshcommon.ConstructionPreprocessEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +125,7 @@ func testConstructionMetadata(client *HTTPClient, networkIdentifier *types.Netwo
 	}
 	request.Options["transactionType"] = transactionType
 
-	resp, err := client.Post("/construction/metadata", request)
+	resp, err := client.Post(meshcommon.ConstructionMetadataEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -141,11 +142,11 @@ func testConstructionMetadata(client *HTTPClient, networkIdentifier *types.Netwo
 
 	// Validate type-specific fields
 	switch transactionType {
-	case TransactionTypeLegacy:
+	case meshcommon.TransactionTypeLegacy:
 		if err := ValidateLegacyMetadataFields(response.Metadata); err != nil {
 			return nil, err
 		}
-	case TransactionTypeDynamic:
+	case meshcommon.TransactionTypeDynamic:
 		if err := ValidateDynamicMetadataFields(response.Metadata); err != nil {
 			return nil, err
 		}
@@ -158,7 +159,7 @@ func testConstructionMetadata(client *HTTPClient, networkIdentifier *types.Netwo
 func testConstructionPayloads(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, metadataResp *types.ConstructionMetadataResponse, config *TestConfig, transactionType string) (*types.ConstructionPayloadsResponse, error) {
 	var operations []*types.Operation
 
-	if transactionType == TransactionTypeLegacy {
+	if transactionType == meshcommon.TransactionTypeLegacy {
 		operations = CreateLegacyTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
 	} else {
 		operations = CreateDynamicTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
@@ -171,7 +172,7 @@ func testConstructionPayloads(client *HTTPClient, networkIdentifier *types.Netwo
 		PublicKeys:        []*types.PublicKey{CreateTestPublicKey()},
 	}
 
-	resp, err := client.Post("/construction/payloads", request)
+	resp, err := client.Post(meshcommon.ConstructionPayloadsEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +205,7 @@ func testConstructionCombine(client *HTTPClient, networkIdentifier *types.Networ
 		},
 	}
 
-	resp, err := client.Post("/construction/combine", request)
+	resp, err := client.Post(meshcommon.ConstructionCombineEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +230,7 @@ func testConstructionHash(client *HTTPClient, networkIdentifier *types.NetworkId
 		SignedTransaction: combineResp.SignedTransaction,
 	}
 
-	resp, err := client.Post("/construction/hash", request)
+	resp, err := client.Post(meshcommon.ConstructionHashEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +255,7 @@ func testConstructionSubmit(client *HTTPClient, networkIdentifier *types.Network
 		SignedTransaction: combineResp.SignedTransaction,
 	}
 
-	resp, err := client.Post("/construction/submit", request)
+	resp, err := client.Post(meshcommon.ConstructionSubmitEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +279,7 @@ func testMempool(client *HTTPClient, networkIdentifier *types.NetworkIdentifier)
 		NetworkIdentifier: networkIdentifier,
 	}
 
-	resp, err := client.Post("/mempool", request)
+	resp, err := client.Post(meshcommon.MempoolEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +299,7 @@ func testMempoolTransaction(client *HTTPClient, networkIdentifier *types.Network
 		TransactionIdentifier: txID,
 	}
 
-	resp, err := client.Post("/mempool/transaction", request)
+	resp, err := client.Post(meshcommon.MempoolTransactionEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +324,7 @@ func testBlock(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, b
 		BlockIdentifier:   blockIdentifier,
 	}
 
-	resp, err := client.Post("/block", request)
+	resp, err := client.Post(meshcommon.BlockEndpoint, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make block request: %v", err)
 	}
@@ -344,7 +345,7 @@ func testBlockTransaction(client *HTTPClient, networkIdentifier *types.NetworkId
 		TransactionIdentifier: transactionIdentifier,
 	}
 
-	resp, err := client.Post("/block/transaction", request)
+	resp, err := client.Post(meshcommon.BlockTransactionEndpoint, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make block transaction request: %v", err)
 	}
@@ -365,7 +366,7 @@ func testEventsBlocks(client *HTTPClient, networkIdentifier *types.NetworkIdenti
 		Limit:             limit,
 	}
 
-	resp, err := client.Post("/events/blocks", request)
+	resp, err := client.Post(meshcommon.EventsBlocksEndpoint, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make events blocks request: %v", err)
 	}
@@ -385,7 +386,7 @@ func testSearchTransactions(client *HTTPClient, networkIdentifier *types.Network
 		TransactionIdentifier: transactionIdentifier,
 	}
 
-	resp, err := client.Post("/search/transactions", request)
+	resp, err := client.Post(meshcommon.SearchTransactionsEndpoint, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make search transactions request: %v", err)
 	}
@@ -426,7 +427,7 @@ func testConstructionParse(client *HTTPClient, networkIdentifier *types.NetworkI
 		Transaction:       string(transaction),
 	}
 
-	resp, err := client.Post("/construction/parse", request)
+	resp, err := client.Post(meshcommon.ConstructionParseEndpoint, request)
 	if err != nil {
 		return nil, err
 	}
@@ -439,6 +440,32 @@ func testConstructionParse(client *HTTPClient, networkIdentifier *types.NetworkI
 	// Validate response
 	if err := ValidateConstructionParseResponse(&response); err != nil {
 		return nil, err
+	}
+
+	return &response, nil
+}
+
+// testCall tests the /call endpoint
+func testCall(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, method string, parameters map[string]any) (*types.CallResponse, error) {
+	request := &types.CallRequest{
+		NetworkIdentifier: networkIdentifier,
+		Method:            method,
+		Parameters:        parameters,
+	}
+
+	resp, err := client.Post(meshcommon.CallEndpoint, request)
+	if err != nil {
+		return nil, err
+	}
+
+	var response types.CallResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, err
+	}
+
+	// Basic validation
+	if response.Result == nil {
+		return nil, fmt.Errorf("call response result is nil")
 	}
 
 	return &response, nil

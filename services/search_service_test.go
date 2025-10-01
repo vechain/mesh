@@ -9,6 +9,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/stretchr/testify/assert"
+	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
@@ -72,7 +73,7 @@ func TestSearchService_SearchTransactions_Success(t *testing.T) {
 	}
 
 	// Create HTTP request
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/search/transactions", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call the handler
@@ -115,7 +116,7 @@ func TestSearchService_SearchTransactions_InvalidRequestBody(t *testing.T) {
 	searchService := NewSearchService(mockClient)
 
 	// Create invalid JSON request
-	req := httptest.NewRequest(meshtests.POSTMethod, "/search/transactions", nil)
+	req := httptest.NewRequest("POST", meshcommon.SearchTransactionsEndpoint, nil)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -139,7 +140,7 @@ func TestSearchService_SearchTransactions_MissingTransactionIdentifier(t *testin
 	request := types.SearchTransactionsRequest{}
 
 	// Create HTTP request
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/search/transactions", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call the handler
@@ -166,7 +167,7 @@ func TestSearchService_SearchTransactions_EmptyTransactionHash(t *testing.T) {
 	}
 
 	// Create HTTP request
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/search/transactions", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call the handler
@@ -194,7 +195,7 @@ func TestSearchService_SearchTransactions_TransactionNotFound(t *testing.T) {
 	}
 
 	// Create HTTP request
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/search/transactions", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call the handler
@@ -222,7 +223,7 @@ func TestSearchService_SearchTransactions_ThorClientError(t *testing.T) {
 	}
 
 	// Create HTTP request
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/search/transactions", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call the handler

@@ -11,13 +11,10 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/ethereum/go-ethereum/common"
 	meshcommon "github.com/vechain/mesh/common"
-)
-
-// Transaction types
-const (
-	TransactionTypeLegacy  = "legacy"
-	TransactionTypeDynamic = "dynamic"
+	"github.com/vechain/mesh/common/vip180/contracts"
+	"github.com/vechain/thor/v2/abi"
 )
 
 // Expected metadata fields based on the actual implementation
@@ -93,7 +90,7 @@ func ParseResponse(resp *http.Response, target any) error {
 // CreateTestNetworkIdentifier creates a network identifier for testing
 func CreateTestNetworkIdentifier(network string) *types.NetworkIdentifier {
 	return &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    network,
 	}
 }
@@ -162,7 +159,7 @@ func ValidateNetworkListResponse(response *types.NetworkListResponse) error {
 	}
 
 	network := response.NetworkIdentifiers[0]
-	if network.Blockchain != "vechainthor" {
+	if network.Blockchain != meshcommon.BlockchainName {
 		return fmt.Errorf("unexpected blockchain: %s", network.Blockchain)
 	}
 
@@ -294,7 +291,7 @@ func ValidateMetadataFields(metadata map[string]any) error {
 		return fmt.Errorf("transactionType not found in metadata")
 	}
 
-	if transactionType != TransactionTypeLegacy && transactionType != TransactionTypeDynamic {
+	if transactionType != meshcommon.TransactionTypeLegacy && transactionType != meshcommon.TransactionTypeDynamic {
 		return fmt.Errorf("invalid transaction type: %s", transactionType)
 	}
 
@@ -325,11 +322,11 @@ func ValidateMetadataFields(metadata map[string]any) error {
 
 	// Validate type-specific fields
 	switch transactionType {
-	case TransactionTypeLegacy:
+	case meshcommon.TransactionTypeLegacy:
 		if gasPriceCoef, ok := metadata["gasPriceCoef"].(float64); !ok || gasPriceCoef < 0 || gasPriceCoef > 255 {
 			return fmt.Errorf("gasPriceCoef not found or invalid for legacy transaction")
 		}
-	case TransactionTypeDynamic:
+	case meshcommon.TransactionTypeDynamic:
 		if _, ok := metadata["maxFeePerGas"].(string); !ok {
 			return fmt.Errorf("maxFeePerGas not found for dynamic transaction")
 		}
@@ -495,7 +492,7 @@ func CreateLegacyTransactionOperations(senderAddress, recipientAddress, amount s
 		if op.Metadata == nil {
 			op.Metadata = make(map[string]any)
 		}
-		op.Metadata["transactionType"] = TransactionTypeLegacy
+		op.Metadata["transactionType"] = meshcommon.TransactionTypeLegacy
 	}
 
 	return operations
@@ -510,7 +507,7 @@ func CreateDynamicTransactionOperations(senderAddress, recipientAddress, amount 
 		if op.Metadata == nil {
 			op.Metadata = make(map[string]any)
 		}
-		op.Metadata["transactionType"] = TransactionTypeDynamic
+		op.Metadata["transactionType"] = meshcommon.TransactionTypeDynamic
 	}
 
 	return operations
@@ -726,4 +723,27 @@ func validateParseResponsesMatch(unsignedResp, signedResp *types.ConstructionPar
 	}
 
 	return nil
+}
+
+// encodeConstructorData encodes the constructor parameters using VeChain ABI
+func encodeConstructorData(config *VIP180TestConfig) []byte {
+	// Load the VIP180 ABI
+	vip180TokenABI := contracts.MustABI("compiled/VIP180.abi")
+	contractABI, err := abi.New(vip180TokenABI)
+	if err != nil {
+		return nil
+	}
+
+	bridgeAddr := common.HexToAddress(config.BridgeAddress)
+	data, err := contractABI.Constructor().EncodeInput(config.TokenName, config.TokenSymbol, config.TokenDecimals, bridgeAddr)
+	if err != nil {
+		return nil
+	}
+
+	// VeChain's EncodeInput includes a 4-byte method ID prefix for methods,
+	// but for constructors, we need to strip it since constructors don't have method IDs
+	if len(data) > 4 {
+		return data[4:]
+	}
+	return data
 }

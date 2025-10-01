@@ -6,8 +6,9 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
-	meshthor "github.com/vechain/mesh/thor"
 	meshcommon "github.com/vechain/mesh/common"
+	meshtests "github.com/vechain/mesh/tests"
+	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
@@ -21,7 +22,7 @@ func TestCreateTransactionBuilder(t *testing.T) {
 			"gasPriceCoef": float64(100),
 		}
 
-		builder, err := builder.createTransactionBuilder("legacy", metadata)
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeLegacy, metadata)
 		if err != nil {
 			t.Errorf("createTransactionBuilder() error = %v, want nil", err)
 		}
@@ -35,7 +36,7 @@ func TestCreateTransactionBuilder(t *testing.T) {
 			"gasPriceCoef": uint8(100),
 		}
 
-		builder, err := builder.createTransactionBuilder("legacy", metadata)
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeLegacy, metadata)
 		if err != nil {
 			t.Errorf("createTransactionBuilder() error = %v, want nil", err)
 		}
@@ -49,7 +50,7 @@ func TestCreateTransactionBuilder(t *testing.T) {
 			"gasPriceCoef": "invalid",
 		}
 
-		builder, err := builder.createTransactionBuilder("legacy", metadata)
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeLegacy, metadata)
 		if err == nil {
 			t.Errorf("createTransactionBuilder() should return error for invalid gasPriceCoef type")
 		}
@@ -64,7 +65,7 @@ func TestCreateTransactionBuilder(t *testing.T) {
 			"maxPriorityFeePerGas": "1000000000",
 		}
 
-		builder, err := builder.createTransactionBuilder("dynamic", metadata)
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeDynamic, metadata)
 		if err != nil {
 			t.Errorf("createTransactionBuilder() error = %v, want nil", err)
 		}
@@ -84,7 +85,7 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
@@ -93,7 +94,7 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
 			"chainTag":        float64(1),
 			"gas":             float64(21000),
@@ -121,7 +122,7 @@ func TestAddClausesToBuilder(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{Index: 0},
 			Type:                meshcommon.OperationTypeTransfer,
 			Account: &types.AccountIdentifier{
-				Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+				Address: meshtests.TestAddress1,
 			},
 			Amount: &types.Amount{
 				Value:    "1000000000000000000",
@@ -148,7 +149,7 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 		Clauses: api.Clauses{
 			{
 				To: func() *thor.Address {
-					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+					addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 					return &addr
 				}(),
 				Value: func() *math.HexOrDecimal256 {
@@ -160,7 +161,7 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 			},
 		},
 		Origin: func() thor.Address {
-			addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+			addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 			return addr
 		}(),
 	}
@@ -187,7 +188,7 @@ func TestBuildMeshTransactionFromAPI(t *testing.T) {
 		Clauses: []*api.JSONClause{
 			{
 				To: func() *thor.Address {
-					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+					addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 					return &addr
 				}(),
 				Value: func() math.HexOrDecimal256 {
@@ -198,7 +199,7 @@ func TestBuildMeshTransactionFromAPI(t *testing.T) {
 			},
 		},
 		Origin: func() thor.Address {
-			addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+			addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 			return addr
 		}(),
 	}

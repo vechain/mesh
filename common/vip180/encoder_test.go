@@ -3,6 +3,8 @@ package vip180
 import (
 	"strings"
 	"testing"
+
+	meshtests "github.com/vechain/mesh/tests"
 )
 
 func TestIsVIP180TransferCallData(t *testing.T) {
@@ -55,7 +57,7 @@ func TestDecodeVIP180TransferCallData(t *testing.T) {
 		{
 			name:          "Valid transfer data",
 			data:          "0xa9059cbb000000000000000000000000f077b491b355e64048ce21e3a6fc4751eeea77fa0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-			expectedTo:    "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			expectedTo:    meshtests.FirstSoloAddress,
 			expectedValue: "1000000000000000000",
 			expectError:   false,
 		},
@@ -114,19 +116,19 @@ func TestEncodeVIP180TransferCallData(t *testing.T) {
 	}{
 		{
 			name:    "Valid transfer data",
-			to:      "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			to:      meshtests.FirstSoloAddress,
 			amount:  "1000000000000000000",
 			wantErr: false,
 		},
 		{
 			name:    "Invalid amount",
-			to:      "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			to:      meshtests.FirstSoloAddress,
 			amount:  "invalid",
 			wantErr: true,
 		},
 		{
 			name:    "Empty amount",
-			to:      "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			to:      meshtests.FirstSoloAddress,
 			amount:  "",
 			wantErr: true,
 		},

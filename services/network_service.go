@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
+	meshhttp "github.com/vechain/mesh/common/http"
 	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
-	meshhttp "github.com/vechain/mesh/common/http"
-	meshcommon "github.com/vechain/mesh/common"
 )
 
 // NetworkService handles network-related endpoints
@@ -40,7 +40,7 @@ func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
 	networks := &types.NetworkListResponse{
 		NetworkIdentifiers: []*types.NetworkIdentifier{
 			{
-				Blockchain: "vechainthor",
+				Blockchain: meshcommon.BlockchainName,
 				Network:    n.config.GetNetwork(),
 			},
 		},
@@ -176,7 +176,7 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 		OperationTypes:          operationTypes,
 		Errors:                  meshcommon.GetAllErrors(),
 		HistoricalBalanceLookup: true,
-		CallMethods:             []string{},
+		CallMethods:             []string{meshcommon.CallMethodInspectClauses},
 		BalanceExemptions:       balanceExemptions,
 		MempoolCoins:            false,
 	}

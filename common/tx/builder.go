@@ -94,7 +94,7 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 
 // createTransactionBuilder creates a transaction builder based on type
 func (b *TransactionBuilder) createTransactionBuilder(transactionType string, metadata map[string]any) (*thorTx.Builder, error) {
-	if transactionType == "legacy" {
+	if transactionType == meshcommon.TransactionTypeLegacy {
 		builder := thorTx.NewBuilder(thorTx.TypeLegacy)
 		gasPriceCoefValue := metadata["gasPriceCoef"]
 		var gasPriceCoef uint8

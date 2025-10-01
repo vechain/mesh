@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -53,7 +55,7 @@ func TestNewConfig(t *testing.T) {
 	if config.NetworkIdentifier == nil {
 		t.Errorf("NewConfig() NetworkIdentifier is nil")
 	} else {
-		if config.NetworkIdentifier.Blockchain != "vechainthor" {
+		if config.NetworkIdentifier.Blockchain != meshcommon.BlockchainName {
 			t.Errorf("NewConfig() NetworkIdentifier.Blockchain = %v, want vechainthor", config.NetworkIdentifier.Blockchain)
 		}
 		if config.NetworkIdentifier.Network == "" {
@@ -219,7 +221,7 @@ func TestSetDerivedFields(t *testing.T) {
 			if config.NetworkIdentifier == nil {
 				t.Errorf("setDerivedFields() NetworkIdentifier is nil")
 			} else {
-				if config.NetworkIdentifier.Blockchain != "vechainthor" {
+				if config.NetworkIdentifier.Blockchain != meshcommon.BlockchainName {
 					t.Errorf("setDerivedFields() NetworkIdentifier.Blockchain = %v, want vechainthor", config.NetworkIdentifier.Blockchain)
 				}
 				if config.NetworkIdentifier.Network != tt.expectedNetwork {
@@ -242,7 +244,7 @@ func TestConfigGetters(t *testing.T) {
 		NodeVersion: "1.0.0",
 		ServiceName: "vechain-mesh",
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "solo",
 		},
 	}
@@ -252,7 +254,7 @@ func TestConfigGetters(t *testing.T) {
 	if networkID == nil {
 		t.Errorf("GetNetworkIdentifier() returned nil")
 	} else {
-		if networkID.Blockchain != "vechainthor" {
+		if networkID.Blockchain != meshcommon.BlockchainName {
 			t.Errorf("GetNetworkIdentifier() Blockchain = %v, want vechainthor", networkID.Blockchain)
 		}
 		if networkID.Network != "solo" {

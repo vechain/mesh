@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
@@ -30,7 +32,7 @@ func TestMempoolService_Mempool_InvalidRequestBody(t *testing.T) {
 	service := NewMempoolService(mockClient)
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/mempool", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.MempoolEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -50,12 +52,12 @@ func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
 	// Create request
 	request := map[string]any{
 		"network_identifier": map[string]any{
-			"blockchain": "vechainthor",
+			"blockchain": meshcommon.BlockchainName,
 			"network":    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/mempool", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call Mempool
@@ -75,15 +77,15 @@ func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
 	// Create request with origin filter
 	request := map[string]any{
 		"network_identifier": map[string]any{
-			"blockchain": "vechainthor",
+			"blockchain": meshcommon.BlockchainName,
 			"network":    "test",
 		},
 		"metadata": map[string]any{
-			"origin": "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			"origin": meshtests.FirstSoloAddress,
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/mempool", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call Mempool
@@ -101,7 +103,7 @@ func TestMempoolService_MempoolTransaction_InvalidRequestBody(t *testing.T) {
 	service := NewMempoolService(mockClient)
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/mempool/transaction", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.MempoolTransactionEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -121,13 +123,13 @@ func TestMempoolService_MempoolTransaction_MissingTransactionIdentifier(t *testi
 	// Create request without transaction identifier
 	request := types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		// TransactionIdentifier is nil
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction
@@ -146,7 +148,7 @@ func TestMempoolService_MempoolTransaction_EmptyTransactionHash(t *testing.T) {
 	// Create request with empty transaction hash
 	request := types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
@@ -154,7 +156,7 @@ func TestMempoolService_MempoolTransaction_EmptyTransactionHash(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction
@@ -173,7 +175,7 @@ func TestMempoolService_MempoolTransaction_InvalidTransactionHash(t *testing.T) 
 	// Create request with invalid transaction hash
 	request := types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
@@ -181,7 +183,7 @@ func TestMempoolService_MempoolTransaction_InvalidTransactionHash(t *testing.T) 
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction
@@ -200,7 +202,7 @@ func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
 	// Create request
 	request := types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
@@ -208,7 +210,7 @@ func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/mempool/transaction", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call MempoolTransaction

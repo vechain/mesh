@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -13,14 +15,14 @@ func TestParseJSONFromRequestContext(t *testing.T) {
 	// Create test request data
 	request := types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 	requestBody, _ := json.Marshal(request)
 
 	// Create request with body in context
-	req := httptest.NewRequest("POST", "/network/status", nil)
+	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, nil)
 	ctx := context.WithValue(req.Context(), RequestBodyKey, requestBody)
 	req = req.WithContext(ctx)
 
@@ -32,7 +34,7 @@ func TestParseJSONFromRequestContext(t *testing.T) {
 	}
 
 	// Verify parsed data
-	if parsedRequest.NetworkIdentifier.Blockchain != "vechainthor" {
+	if parsedRequest.NetworkIdentifier.Blockchain != meshcommon.BlockchainName {
 		t.Errorf("Expected blockchain 'vechainthor', got '%s'", parsedRequest.NetworkIdentifier.Blockchain)
 	}
 	if parsedRequest.NetworkIdentifier.Network != "test" {
@@ -42,7 +44,7 @@ func TestParseJSONFromRequestContext(t *testing.T) {
 
 func TestParseJSONFromRequestContext_NoBodyInContext(t *testing.T) {
 	// Create request WITHOUT body in context
-	req := httptest.NewRequest("POST", "/network/status", nil)
+	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, nil)
 
 	// Test parsing should fail
 	var parsedRequest types.NetworkRequest
@@ -61,7 +63,7 @@ func TestParseJSONFromRequestContext_NoBodyInContext(t *testing.T) {
 func TestParseJSONFromRequestContext_InvalidJSON(t *testing.T) {
 	// Create request with invalid JSON in context
 	invalidJSON := []byte(`{"invalid": json}`)
-	req := httptest.NewRequest("POST", "/network/status", nil)
+	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, nil)
 	ctx := context.WithValue(req.Context(), RequestBodyKey, invalidJSON)
 	req = req.WithContext(ctx)
 

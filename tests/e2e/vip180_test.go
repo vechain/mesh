@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -9,12 +8,10 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	meshcommon "github.com/vechain/mesh/common"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
 	meshvip180 "github.com/vechain/mesh/common/vip180"
-	"github.com/vechain/mesh/common/vip180/contracts"
 	meshthor "github.com/vechain/mesh/thor"
 	thorTx "github.com/vechain/thor/v2/tx"
 )
@@ -45,8 +42,8 @@ func TestVIP180Solo(t *testing.T) {
 	t.Log("✅ Contract deployment validated")
 
 	client := NewHTTPClient(config.BaseURL, config.TimeoutSeconds)
-	// Step 3: Test VIP180 transfer using Rosetta construction endpoints
-	t.Log("Step 3: Testing VIP180 transfer using Rosetta construction endpoints")
+	// Step 3: Test VIP180 transfer using Mesh construction endpoints
+	t.Log("Step 3: Testing VIP180 transfer using Mesh construction endpoints")
 	if err := testVIP180Transfer(t, client, networkIdentifier, config); err != nil {
 		t.Fatalf("Failed to test VIP180 transfer: %v", err)
 	}
@@ -57,7 +54,7 @@ func TestVIP180Solo(t *testing.T) {
 // deployVIP180Contract deploys the VIP180 contract using Thor Solo API
 func deployVIP180Contract(client *meshthor.VeChainClient, config *VIP180TestConfig) (string, error) {
 	// Create deployment transaction using Thor transaction builder
-	deploymentTx, err := createDeploymentTransaction(config)
+	deploymentTx, err := createDeploymentTransaction(client, config)
 	if err != nil {
 		return "", fmt.Errorf("failed to create deployment transaction: %v", err)
 	}
@@ -68,7 +65,7 @@ func deployVIP180Contract(client *meshthor.VeChainClient, config *VIP180TestConf
 		return "", fmt.Errorf("failed to sign deployment transaction: %v", err)
 	}
 
-	// Submit using VeChain client (same as Rosetta uses)
+	// Submit using VeChain client (same as Mesh uses)
 	fmt.Printf("Submitting signed transaction using VeChain client\n")
 	txHash, err := client.SubmitTransaction(signedTx)
 	if err != nil {
@@ -116,28 +113,28 @@ func validateContractDeployment(client *meshthor.VeChainClient, config *VIP180Te
 	return nil
 }
 
-// testVIP180Transfer tests VIP180 transfer using Rosetta construction endpoints
+// testVIP180Transfer tests VIP180 transfer using Mesh construction endpoints
 func testVIP180Transfer(t *testing.T, client *HTTPClient, networkIdentifier *types.NetworkIdentifier, config *VIP180TestConfig) error {
 	// Create VIP180 transfer operations
 	operations := createVIP180TransferOperations(config)
 
 	// Test construction preprocess
 	t.Log("Testing /construction/preprocess for VIP180 transfer")
-	preprocessResp, err := testConstructionPreprocess(client, networkIdentifier, operations, config.TestConfig, "legacy")
+	preprocessResp, err := testConstructionPreprocess(client, networkIdentifier, operations, config.TestConfig, meshcommon.TransactionTypeLegacy)
 	if err != nil {
 		return fmt.Errorf("construction preprocess test failed: %v", err)
 	}
 
 	// Test construction metadata
 	t.Log("Testing /construction/metadata for VIP180 transfer")
-	metadataResp, err := testConstructionMetadata(client, networkIdentifier, preprocessResp, "legacy")
+	metadataResp, err := testConstructionMetadata(client, networkIdentifier, preprocessResp, meshcommon.TransactionTypeLegacy)
 	if err != nil {
 		return fmt.Errorf("construction metadata test failed: %v", err)
 	}
 
 	// Test construction payloads
 	t.Log("Testing /construction/payloads for VIP180 transfer")
-	payloadsResp, err := testConstructionPayloads(client, networkIdentifier, metadataResp, config.TestConfig, "legacy")
+	payloadsResp, err := testConstructionPayloads(client, networkIdentifier, metadataResp, config.TestConfig, meshcommon.TransactionTypeLegacy)
 	if err != nil {
 		return fmt.Errorf("construction payloads test failed: %v", err)
 	}
@@ -186,22 +183,21 @@ func testVIP180Transfer(t *testing.T, client *HTTPClient, networkIdentifier *typ
 	}
 	t.Logf("Search transactions response: total count = %d, transactions count = %d",
 		searchResp.TotalCount, len(searchResp.Transactions))
-	
+
 	t.Log("✅ VIP180 transfer confirmed in blockchain")
 	return nil
 }
 
 // createDeploymentTransaction creates a transaction to deploy the VIP180 contract
-func createDeploymentTransaction(config *VIP180TestConfig) (*thorTx.Transaction, error) {
+func createDeploymentTransaction(client *meshthor.VeChainClient, config *VIP180TestConfig) (*thorTx.Transaction, error) {
 	// Create constructor data with parameters: name, symbol, decimals, bridge
 	constructorData := encodeConstructorData(config)
 
 	// Combine bytecode with constructor data
-	fullBytecode := config.ContractBytecode + constructorData
+	fullBytecode := append(config.ContractBytecode, constructorData...)
 
 	// Get the best block to use as BlockRef
-	vechainClient := meshthor.NewVeChainClient("http://localhost:8669")
-	bestBlock, err := vechainClient.GetBlock("best")
+	bestBlock, err := client.GetBlock("best")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get best block: %v", err)
 	}
@@ -217,11 +213,7 @@ func createDeploymentTransaction(config *VIP180TestConfig) (*thorTx.Transaction,
 	// Create deployment clause
 	clause := thorTx.NewClause(nil)
 	clause = clause.WithValue(big.NewInt(0))
-	bytes, err := hex.DecodeString(fullBytecode)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode full bytecode: %v", err)
-	}
-	clause = clause.WithData(bytes)
+	clause = clause.WithData(fullBytecode)
 
 	// Create transaction builder for legacy transaction
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
@@ -234,32 +226,6 @@ func createDeploymentTransaction(config *VIP180TestConfig) (*thorTx.Transaction,
 	builder.Clause(clause)
 
 	return builder.Build(), nil
-}
-
-// encodeConstructorData encodes the constructor parameters using go-ethereum ABI
-func encodeConstructorData(config *VIP180TestConfig) string {
-	// Load the VIP180 ABI
-	vip180TokenABI := contracts.MustABI("compiled/VIP180.abi")
-	contractABI, err := abi.JSON(bytes.NewReader(vip180TokenABI))
-	if err != nil {
-		return ""
-	}
-
-	// Parse bridge address
-	bridgeAddr := common.HexToAddress(config.BridgeAddress)
-
-	// Pack with empty string ("") for constructor returns just the parameters
-	data, err := contractABI.Pack("",
-		config.TokenName,
-		config.TokenSymbol,
-		config.TokenDecimals,
-		bridgeAddr,
-	)
-	if err != nil {
-		return ""
-	}
-
-	return hex.EncodeToString(data)
 }
 
 // signTransaction signs a transaction using the private key

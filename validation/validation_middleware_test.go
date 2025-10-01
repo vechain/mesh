@@ -6,12 +6,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshtests "github.com/vechain/mesh/tests"
 )
 
 func TestNewValidationMiddleware(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
 	runMode := "online"
@@ -32,7 +35,7 @@ func TestNewValidationMiddleware(t *testing.T) {
 
 func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 		SubNetworkIdentifier: &types.SubNetworkIdentifier{
 			Network: "subnet1",
@@ -50,7 +53,7 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 			name: "valid network request",
 			request: types.NetworkRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 			},
@@ -70,7 +73,7 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 			name: "invalid network",
 			request: types.NetworkRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "mainnet",
 				},
 			},
@@ -87,7 +90,7 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 			name: "valid sub network identifier",
 			request: types.NetworkRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 					SubNetworkIdentifier: &types.SubNetworkIdentifier{
 						Network: "subnet1",
@@ -100,7 +103,7 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 			name: "invalid sub network identifier",
 			request: types.NetworkRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 					SubNetworkIdentifier: &types.SubNetworkIdentifier{
 						Network: "invalid-subnet",
@@ -130,7 +133,7 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 
 func TestValidationMiddleware_CheckRunMode(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
 
@@ -210,7 +213,7 @@ func TestValidationMiddleware_CheckModeNetwork(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			networkIdentifier := &types.NetworkIdentifier{
-				Blockchain: "vechainthor",
+				Blockchain: meshcommon.BlockchainName,
 				Network:    tt.network,
 			}
 			middleware := NewValidationMiddleware(networkIdentifier, tt.runMode)
@@ -230,7 +233,7 @@ func TestValidationMiddleware_CheckModeNetwork(t *testing.T) {
 
 func TestValidationMiddleware_CheckAccount(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
 	runMode := "online"
@@ -245,11 +248,11 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 			name: "valid account",
 			request: types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				AccountIdentifier: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 			},
 			expectError: false,
@@ -258,7 +261,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 			name: "invalid account address",
 			request: types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				AccountIdentifier: &types.AccountIdentifier{
@@ -271,7 +274,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 			name: "address too short",
 			request: types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				AccountIdentifier: &types.AccountIdentifier{
@@ -284,7 +287,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 			name: "address without 0x prefix",
 			request: types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				AccountIdentifier: &types.AccountIdentifier{
@@ -297,7 +300,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 			name: "address with invalid characters",
 			request: types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				AccountIdentifier: &types.AccountIdentifier{
@@ -310,7 +313,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 			name: "nil account identifier",
 			request: types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				AccountIdentifier: nil,
@@ -338,7 +341,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 
 func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
 	runMode := "online"
@@ -353,7 +356,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "empty operations",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{},
@@ -364,7 +367,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "nil operations",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: nil,
@@ -375,7 +378,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "no public keys",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{
@@ -383,7 +386,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 						OperationIdentifier: &types.OperationIdentifier{Index: 0},
 						Type:                "Transfer",
 						Account: &types.AccountIdentifier{
-							Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+							Address: meshtests.FirstSoloAddress,
 						},
 						Amount: &types.Amount{
 							Value:    "-1000000000000000000",
@@ -399,7 +402,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "too many public keys",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{
@@ -407,7 +410,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 						OperationIdentifier: &types.OperationIdentifier{Index: 0},
 						Type:                "Transfer",
 						Account: &types.AccountIdentifier{
-							Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+							Address: meshtests.FirstSoloAddress,
 						},
 						Amount: &types.Amount{
 							Value:    "-1000000000000000000",
@@ -427,7 +430,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "no metadata",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{
@@ -435,7 +438,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 						OperationIdentifier: &types.OperationIdentifier{Index: 0},
 						Type:                "Transfer",
 						Account: &types.AccountIdentifier{
-							Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+							Address: meshtests.FirstSoloAddress,
 						},
 						Amount: &types.Amount{
 							Value:    "-1000000000000000000",
@@ -454,7 +457,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "fee delegation with wrong number of public keys",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{
@@ -462,7 +465,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 						OperationIdentifier: &types.OperationIdentifier{Index: 0},
 						Type:                "Transfer",
 						Account: &types.AccountIdentifier{
-							Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+							Address: meshtests.FirstSoloAddress,
 						},
 						Amount: &types.Amount{
 							Value:    "-1000000000000000000",
@@ -483,7 +486,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "no origin in operations",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{
@@ -491,7 +494,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 						OperationIdentifier: &types.OperationIdentifier{Index: 0},
 						Type:                "Transfer",
 						Account: &types.AccountIdentifier{
-							Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+							Address: meshtests.FirstSoloAddress,
 						},
 						Amount: &types.Amount{
 							Value:    "1000000000000000000",
@@ -503,7 +506,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
 				},
 				Metadata: map[string]any{
-					"transactionType": "legacy",
+					"transactionType": meshcommon.TransactionTypeLegacy,
 				},
 			},
 			expectError: true,
@@ -512,7 +515,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 			name: "multiple origins in operations",
 			request: types.ConstructionPayloadsRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 				Operations: []*types.Operation{
@@ -520,7 +523,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 						OperationIdentifier: &types.OperationIdentifier{Index: 0},
 						Type:                "Transfer",
 						Account: &types.AccountIdentifier{
-							Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+							Address: meshtests.FirstSoloAddress,
 						},
 						Amount: &types.Amount{
 							Value:    "-1000000000000000000",
@@ -543,7 +546,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
 				},
 				Metadata: map[string]any{
-					"transactionType": "legacy",
+					"transactionType": meshcommon.TransactionTypeLegacy,
 				},
 			},
 			expectError: true,
@@ -569,7 +572,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 
 func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
 	runMode := "online"
@@ -585,7 +588,7 @@ func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 			name: "valid network request",
 			request: types.NetworkRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 			},
@@ -607,7 +610,7 @@ func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 			name: "invalid run mode",
 			request: types.NetworkRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: "vechainthor",
+					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
 				},
 			},
@@ -619,7 +622,7 @@ func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			requestBody, _ := json.Marshal(tt.request)
-			req := httptest.NewRequest("POST", "/network/status", bytes.NewBuffer(requestBody))
+			req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, bytes.NewBuffer(requestBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
@@ -636,7 +639,7 @@ func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 
 func TestValidationMiddleware_ValidateEndpoint(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
 	runMode := "online"
@@ -645,17 +648,17 @@ func TestValidationMiddleware_ValidateEndpoint(t *testing.T) {
 	// Test with a valid request
 	request := types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
 	requestBody, _ := json.Marshal(request)
-	req := httptest.NewRequest("POST", "/network/status", bytes.NewBuffer(requestBody))
+	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, bytes.NewBuffer(requestBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	result := middleware.ValidateEndpoint(w, req, requestBody, "/network/status")
+	result := middleware.ValidateEndpoint(w, req, requestBody, meshcommon.NetworkStatusEndpoint)
 	if !result {
 		t.Errorf("ValidateEndpoint() expected success but got error")
 	}

@@ -6,31 +6,34 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	meshtests "github.com/vechain/mesh/tests"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/thorclient"
 	"github.com/vechain/thor/v2/tx"
 )
 
 // MockVeChainClient is a mock client for tests that simulates VeChain responses
 type MockVeChainClient struct {
 	// Mock configuration
-	MockBestBlock     *api.JSONExpandedBlock
-	MockBlock         *api.JSONExpandedBlock
-	MockAccount       *api.Account
-	MockChainID       int
-	MockGasPrice      *DynamicGasPrice
-	MockSyncProgress  float64
-	MockPeers         []Peer
-	MockMempoolTxs    []*thor.Bytes32
-	MockMempoolTx     *transactions.Transaction
-	MockMempoolStatus *api.Status
-	MockCallResult    string
-	MockCallResults   []string
-	MockCallIndex     int
-	MockBlockByNumber *api.JSONExpandedBlock
-	MockTransaction   *transactions.Transaction
-	MockReceipt       *api.Receipt
+	MockBestBlock      *api.JSONExpandedBlock
+	MockBlock          *api.JSONExpandedBlock
+	MockAccount        *api.Account
+	MockChainID        int
+	MockGasPrice       *DynamicGasPrice
+	MockSyncProgress   float64
+	MockPeers          []Peer
+	MockMempoolTxs     []*thor.Bytes32
+	MockMempoolTx      *transactions.Transaction
+	MockMempoolStatus  *api.Status
+	MockCallResult     string
+	MockCallResults    []string
+	MockCallIndex      int
+	MockBlockByNumber  *api.JSONExpandedBlock
+	MockTransaction    *transactions.Transaction
+	MockReceipt        *api.Receipt
+	MockInspectClauses []*api.CallResult
 
 	// Simulated errors
 	MockError error
@@ -55,7 +58,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 				GasLimit:  10000000,
 				GasUsed:   5000000,
 				Beneficiary: func() thor.Address {
-					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 					return addr
 				}(),
 				TotalScore: 1000,
@@ -79,7 +82,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 						return hash
 					}(),
 					Origin: func() thor.Address {
-						addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+						addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 						return addr
 					}(),
 					Gas:          21000,
@@ -90,7 +93,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 					Clauses: []*api.JSONClause{
 						{
 							To: func() *thor.Address {
-								addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+								addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 								return &addr
 							}(),
 							Value: func() math.HexOrDecimal256 {
@@ -119,7 +122,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 				GasLimit:  10000000,
 				GasUsed:   5000000,
 				Beneficiary: func() thor.Address {
-					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 					return addr
 				}(),
 				TotalScore: 1000,
@@ -143,7 +146,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 						return hash
 					}(),
 					Origin: func() thor.Address {
-						addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+						addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 						return addr
 					}(),
 					Gas:          21000,
@@ -154,7 +157,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 					Clauses: []*api.JSONClause{
 						{
 							To: func() *thor.Address {
-								addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+								addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 								return &addr
 							}(),
 							Value: func() math.HexOrDecimal256 {
@@ -210,7 +213,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 			Clauses: api.Clauses{
 				{
 					To: func() *thor.Address {
-						addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+						addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 						return &addr
 					}(),
 					Value: func() *math.HexOrDecimal256 {
@@ -224,7 +227,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 			GasPriceCoef: func() *uint8 { val := uint8(0); return &val }(),
 			Gas:          21000,
 			Origin: func() thor.Address {
-				addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+				addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 				return addr
 			}(),
 			Nonce:     func() math.HexOrDecimal64 { val := math.HexOrDecimal64(0x1234567890abcdef); return val }(),
@@ -410,4 +413,39 @@ func (m *MockVeChainClient) SetTransaction(tx *transactions.Transaction) {
 // SetReceipt configures the simulated receipt
 func (m *MockVeChainClient) SetReceipt(receipt *api.Receipt) {
 	m.MockReceipt = receipt
+}
+
+// InspectClauses simulates inspecting clauses
+func (m *MockVeChainClient) InspectClauses(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error) {
+	if m.MockError != nil {
+		return nil, m.MockError
+	}
+
+	// If MockInspectClauses is set, return it
+	if m.MockInspectClauses != nil {
+		return m.MockInspectClauses, nil
+	}
+
+	// Default mock response
+	return []*api.CallResult{
+		{
+			Data:      "0x0000000000000000000000000000000000000000000000000000000000000001",
+			Events:    []*api.Event{},
+			Transfers: []*api.Transfer{},
+			GasUsed:   21000,
+			Reverted:  false,
+			VMError:   "",
+		},
+	}, nil
+}
+
+// SetInspectClausesResult configures the simulated inspect clauses result
+func (m *MockVeChainClient) SetInspectClausesResult(results []*api.CallResult) {
+	m.MockInspectClauses = results
+}
+
+// InspectClausesWithRevision simulates inspecting clauses with a specific revision
+func (m *MockVeChainClient) InspectClausesWithRevision(batchCallData *api.BatchCallData, revision string) ([]*api.CallResult, error) {
+	// For mock purposes, we ignore the revision and return the same results
+	return m.InspectClauses(batchCallData)
 }

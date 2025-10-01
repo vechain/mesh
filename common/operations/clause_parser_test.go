@@ -8,6 +8,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
@@ -64,7 +65,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 			name: "value transfer only",
 			clauseData: []ClauseData{
 				JSONClauseAdapter{Clause: createTestJSONClause(
-					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+					createTestAddress(meshtests.TestAddress1),
 					big.NewInt(1000000000000000000),
 					"0x",
 				)},
@@ -78,7 +79,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 			name: "contract interaction only",
 			clauseData: []ClauseData{
 				JSONClauseAdapter{Clause: createTestJSONClause(
-					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+					createTestAddress(meshtests.TestAddress1),
 					big.NewInt(0),
 					"0x1234",
 				)},
@@ -100,7 +101,7 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 			name: "all types",
 			clauseData: []ClauseData{
 				JSONClauseAdapter{Clause: createTestJSONClause(
-					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+					createTestAddress(meshtests.TestAddress1),
 					big.NewInt(1000000000000000000),
 					"0x1234",
 				)},
@@ -142,7 +143,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 		{
 			name: "zero value",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(0),
 				"0x",
 			)},
@@ -151,7 +152,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 		{
 			name: "positive value",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(1000000000000000000),
 				"0x",
 			)},
@@ -160,7 +161,7 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 		{
 			name: "large value",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				func() *big.Int { val, _ := big.NewInt(0).SetString("1000000000000000000000000", 10); return val }(),
 				"0x",
 			)},
@@ -192,7 +193,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 		{
 			name: "VIP180 transfer",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(0),
 				"0xa9059cbb00000000000000000000000016277a1ff38678291c41d1820957c78bb5da59ce0000000000000000000000000000000000000000000000000de0b6b3a7640000",
 			)},
@@ -202,7 +203,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 		{
 			name: "non-VIP180 with value",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(1000000000000000000),
 				"0x1234",
 			)},
@@ -212,7 +213,7 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 		{
 			name: "no data",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(0),
 				"0x",
 			)},
@@ -254,7 +255,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 		{
 			name: "has data",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(0),
 				"0x1234",
 			)},
@@ -263,7 +264,7 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 		{
 			name: "has to address",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(0),
 				"0x",
 			)},
@@ -318,7 +319,7 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 			name:         "basic transfer",
 			index:        0,
 			networkIndex: nil,
-			address:      "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+			address:      meshtests.TestAddress1,
 			amount:       "1000000000000000000",
 			currency:     meshcommon.VETCurrency,
 			clauseIndex:  0,
@@ -328,7 +329,7 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 			name:         "with network index",
 			index:        1,
 			networkIndex: func() *int64 { i := int64(0); return &i }(),
-			address:      "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			address:      meshtests.FirstSoloAddress,
 			amount:       "-500000000000000000",
 			currency:     meshcommon.VTHOCurrency,
 			clauseIndex:  1,
@@ -384,13 +385,13 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 		{
 			name: "with to address and data",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(0),
 				"0x1234",
 			)},
 			clauseIndex:    0,
 			operationIndex: 0,
-			originAddr:     "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:     meshtests.FirstSoloAddress,
 			status:         &testStatus,
 		},
 		{
@@ -402,7 +403,7 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 			)},
 			clauseIndex:    1,
 			operationIndex: 1,
-			originAddr:     "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:     meshtests.FirstSoloAddress,
 			status:         &testStatus,
 		},
 	}
@@ -451,14 +452,14 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 		{
 			name:           "basic energy transfer",
 			operationIndex: 0,
-			originAddr:     "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:     meshtests.FirstSoloAddress,
 			gas:            21000,
 			status:         &testStatus,
 		},
 		{
 			name:           "zero gas",
 			operationIndex: 1,
-			originAddr:     "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+			originAddr:     meshtests.TestAddress1,
 			gas:            0,
 			status:         &testStatus,
 		},
@@ -513,13 +514,13 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 		{
 			name: "transfer with recipient",
 			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+				createTestAddress(meshtests.TestAddress1),
 				big.NewInt(1000000000000000000),
 				"0x",
 			)},
 			clauseIndex:       0,
 			operationIndex:    0,
-			originAddr:        "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:        meshtests.FirstSoloAddress,
 			value:             big.NewInt(1000000000000000000),
 			status:            &testStatus,
 			expectedOps:       2,
@@ -534,7 +535,7 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 			)},
 			clauseIndex:       1,
 			operationIndex:    0,
-			originAddr:        "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:        meshtests.FirstSoloAddress,
 			value:             big.NewInt(500000000000000000),
 			status:            &testStatus,
 			expectedOps:       1,
@@ -594,7 +595,7 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 		{
 			name:        "empty clauses",
 			clauses:     []*api.JSONClause{},
-			originAddr:  "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:  meshtests.FirstSoloAddress,
 			gas:         0,
 			status:      &testStatus,
 			expectedOps: 0,
@@ -603,12 +604,12 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 			name: "single VET transfer",
 			clauses: []*api.JSONClause{
 				createTestJSONClause(
-					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+					createTestAddress(meshtests.TestAddress1),
 					big.NewInt(1000000000000000000),
 					"0x",
 				),
 			},
-			originAddr:  "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:  meshtests.FirstSoloAddress,
 			gas:         0,
 			status:      &testStatus,
 			expectedOps: 3,
@@ -617,12 +618,12 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 			name: "VET transfer with gas",
 			clauses: []*api.JSONClause{
 				createTestJSONClause(
-					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+					createTestAddress(meshtests.TestAddress1),
 					big.NewInt(1000000000000000000),
 					"0x",
 				),
 			},
-			originAddr:  "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:  meshtests.FirstSoloAddress,
 			gas:         21000,
 			status:      &testStatus,
 			expectedOps: 4,
@@ -656,7 +657,7 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 		{
 			name:        "empty clauses",
 			clauses:     api.Clauses{},
-			originAddr:  "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:  meshtests.FirstSoloAddress,
 			gas:         0,
 			status:      &testStatus,
 			expectedOps: 0,
@@ -665,12 +666,12 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 			name: "single VET transfer",
 			clauses: api.Clauses{
 				createTestClause(
-					createTestAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce"),
+					createTestAddress(meshtests.TestAddress1),
 					big.NewInt(1000000000000000000),
 					"0x",
 				),
 			},
-			originAddr:  "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			originAddr:  meshtests.FirstSoloAddress,
 			gas:         0,
 			status:      &testStatus,
 			expectedOps: 3,

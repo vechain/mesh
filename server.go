@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	meshcommon "github.com/vechain/mesh/common"
 	meshhttp "github.com/vechain/mesh/common/http"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/services"
@@ -31,6 +32,7 @@ type VeChainMeshServer struct {
 	mempoolService       *services.MempoolService
 	eventsService        *services.EventsService
 	searchService        *services.SearchService
+	callService          *services.CallService
 }
 
 // NewVeChainMeshServer creates a new server instance
@@ -76,6 +78,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	mempoolService := services.NewMempoolService(vechainClient)
 	eventsService := services.NewEventsService(vechainClient)
 	searchService := services.NewSearchService(vechainClient)
+	callService := services.NewCallService(vechainClient, cfg)
 
 	meshServer := &VeChainMeshServer{
 		router: router,
@@ -91,6 +94,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 		mempoolService:       mempoolService,
 		eventsService:        eventsService,
 		searchService:        searchService,
+		callService:          callService,
 	}
 
 	meshServer.setupRoutes()
@@ -101,43 +105,46 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 
 // setupRoutes configures the API routes
 func (v *VeChainMeshServer) setupRoutes() {
-	v.router.HandleFunc("/health", v.healthCheck).Methods("GET")
+	v.router.HandleFunc(meshcommon.HealthEndpoint, v.healthCheck).Methods("GET")
 
 	// Create a subrouter for API endpoints that need validation
 	apiRouter := v.router.PathPrefix("/").Subrouter()
 	apiRouter.Use(v.validationMiddleware)
 
 	// Network API endpoints
-	apiRouter.HandleFunc("/network/list", v.networkService.NetworkList).Methods("POST")
-	apiRouter.HandleFunc("/network/options", v.networkService.NetworkOptions).Methods("POST")
-	apiRouter.HandleFunc("/network/status", v.networkService.NetworkStatus).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.NetworkListEndpoint, v.networkService.NetworkList).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.NetworkOptionsEndpoint, v.networkService.NetworkOptions).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.NetworkStatusEndpoint, v.networkService.NetworkStatus).Methods("POST")
 
 	// Account API endpoints
-	apiRouter.HandleFunc("/account/balance", v.accountService.AccountBalance).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.AccountBalanceEndpoint, v.accountService.AccountBalance).Methods("POST")
 
 	// Construction API endpoints
-	apiRouter.HandleFunc("/construction/derive", v.constructionService.ConstructionDerive).Methods("POST")
-	apiRouter.HandleFunc("/construction/preprocess", v.constructionService.ConstructionPreprocess).Methods("POST")
-	apiRouter.HandleFunc("/construction/metadata", v.constructionService.ConstructionMetadata).Methods("POST")
-	apiRouter.HandleFunc("/construction/payloads", v.constructionService.ConstructionPayloads).Methods("POST")
-	apiRouter.HandleFunc("/construction/parse", v.constructionService.ConstructionParse).Methods("POST")
-	apiRouter.HandleFunc("/construction/combine", v.constructionService.ConstructionCombine).Methods("POST")
-	apiRouter.HandleFunc("/construction/hash", v.constructionService.ConstructionHash).Methods("POST")
-	apiRouter.HandleFunc("/construction/submit", v.constructionService.ConstructionSubmit).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionDeriveEndpoint, v.constructionService.ConstructionDerive).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionPreprocessEndpoint, v.constructionService.ConstructionPreprocess).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionMetadataEndpoint, v.constructionService.ConstructionMetadata).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionPayloadsEndpoint, v.constructionService.ConstructionPayloads).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionParseEndpoint, v.constructionService.ConstructionParse).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionCombineEndpoint, v.constructionService.ConstructionCombine).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionHashEndpoint, v.constructionService.ConstructionHash).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.ConstructionSubmitEndpoint, v.constructionService.ConstructionSubmit).Methods("POST")
 
 	// Block API endpoints
-	apiRouter.HandleFunc("/block", v.blockService.Block).Methods("POST")
-	apiRouter.HandleFunc("/block/transaction", v.blockService.BlockTransaction).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.BlockEndpoint, v.blockService.Block).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.BlockTransactionEndpoint, v.blockService.BlockTransaction).Methods("POST")
 
 	// Mempool API endpoints
-	apiRouter.HandleFunc("/mempool", v.mempoolService.Mempool).Methods("POST")
-	apiRouter.HandleFunc("/mempool/transaction", v.mempoolService.MempoolTransaction).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.MempoolEndpoint, v.mempoolService.Mempool).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.MempoolTransactionEndpoint, v.mempoolService.MempoolTransaction).Methods("POST")
 
 	// Events API endpoints
-	apiRouter.HandleFunc("/events/blocks", v.eventsService.EventsBlocks).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.EventsBlocksEndpoint, v.eventsService.EventsBlocks).Methods("POST")
 
 	// Search API endpoints
-	apiRouter.HandleFunc("/search/transactions", v.searchService.SearchTransactions).Methods("POST")
+	apiRouter.HandleFunc(meshcommon.SearchTransactionsEndpoint, v.searchService.SearchTransactions).Methods("POST")
+
+	// Call API endpoints
+	apiRouter.HandleFunc(meshcommon.CallEndpoint, v.callService.Call).Methods("POST")
 }
 
 // healthCheck endpoint to verify server status

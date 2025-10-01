@@ -28,6 +28,7 @@ type VeChainClientInterface interface {
 	CallContract(contractAddress, callData string) (string, error)
 	GetTransaction(txID string) (*transactions.Transaction, error)
 	GetTransactionReceipt(txID string) (*api.Receipt, error)
+	InspectClauses(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error)
 }
 type VeChainClient struct {
 	client *thorclient.Client
@@ -295,4 +296,13 @@ func (c *VeChainClient) GetTransactionReceipt(txID string) (*api.Receipt, error)
 		return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 	return receipt, nil
+}
+
+// InspectClauses simulates execution of clauses without submitting a transaction
+func (c *VeChainClient) InspectClauses(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error) {
+	results, err := c.client.InspectClauses(batchCallData, options...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect clauses: %w", err)
+	}
+	return results, nil
 }

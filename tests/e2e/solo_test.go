@@ -6,6 +6,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 // TestSolo tests the complete construction flow and other endpoints in solo mode
@@ -19,7 +20,7 @@ func TestSolo(t *testing.T) {
 	networkIdentifier := CreateTestNetworkIdentifier(config.Network)
 
 	// Test both transaction types in the same flow
-	transactionTypes := []string{TransactionTypeLegacy, TransactionTypeDynamic}
+	transactionTypes := []string{meshcommon.TransactionTypeLegacy, meshcommon.TransactionTypeDynamic}
 
 	for _, transactionType := range transactionTypes {
 		t.Run(transactionType+"Transaction", func(t *testing.T) {

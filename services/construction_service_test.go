@@ -39,7 +39,7 @@ func createTestPublicKey() *types.PublicKey {
 
 func createTestNetworkIdentifier(network string) *types.NetworkIdentifier {
 	return &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    network,
 	}
 }
@@ -85,7 +85,7 @@ func TestConstructionService_ConstructionDerive_InvalidRequestBody(t *testing.T)
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	w, req := makeHTTPRequest("POST", "/construction/derive", []byte("invalid json"))
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionDeriveEndpoint, []byte("invalid json"))
 
 	// Call ConstructionDerive
 	service.ConstructionDerive(w, req)
@@ -106,7 +106,7 @@ func TestConstructionService_ConstructionDerive_ValidRequest(t *testing.T) {
 	}
 
 	requestBody, _ := json.Marshal(request)
-	w, req := makeHTTPRequest("POST", "/construction/derive", requestBody)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionDeriveEndpoint, requestBody)
 
 	// Call ConstructionDerive
 	service.ConstructionDerive(w, req)
@@ -135,7 +135,7 @@ func TestConstructionService_ConstructionPreprocess_InvalidRequestBody(t *testin
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	w, req := makeHTTPRequest("POST", "/construction/preprocess", []byte("invalid json"))
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionPreprocessEndpoint, []byte("invalid json"))
 
 	// Call ConstructionPreprocess
 	service.ConstructionPreprocess(w, req)
@@ -158,7 +158,7 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
@@ -170,7 +170,7 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{Index: 1},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+					Address: meshtests.TestAddress1,
 				},
 				Amount: &types.Amount{
 					Value:    "1000000000000000000",
@@ -179,12 +179,12 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 		},
 	}
 
 	requestBody, _ := json.Marshal(request)
-	w, req := makeHTTPRequest("POST", "/construction/preprocess", requestBody)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionPreprocessEndpoint, requestBody)
 
 	// Call ConstructionPreprocess
 	service.ConstructionPreprocess(w, req)
@@ -218,7 +218,7 @@ func TestConstructionService_ConstructionPreprocess_VIP180Token(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Amount: &types.Amount{
 					Value: "-1000000000000000000",
@@ -236,7 +236,7 @@ func TestConstructionService_ConstructionPreprocess_VIP180Token(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{Index: 1},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+					Address: meshtests.TestAddress1,
 				},
 				Amount: &types.Amount{
 					Value: "1000000000000000000",
@@ -251,12 +251,12 @@ func TestConstructionService_ConstructionPreprocess_VIP180Token(t *testing.T) {
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 		},
 	}
 
 	requestBody, _ := json.Marshal(request)
-	w, req := makeHTTPRequest("POST", "/construction/preprocess", requestBody)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionPreprocessEndpoint, requestBody)
 
 	// Call ConstructionPreprocess
 	service.ConstructionPreprocess(w, req)
@@ -318,7 +318,7 @@ func TestConstructionService_ConstructionMetadata_InvalidRequestBody(t *testing.
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/metadata", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionMetadataEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -337,15 +337,15 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 	// Create valid request for legacy
 	request := types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Options: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/metadata", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionMetadataEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionMetadata
@@ -377,15 +377,15 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 	// Create valid request for dynamic
 	request := types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Options: map[string]any{
-			"transactionType": "dynamic",
+			"transactionType": meshcommon.TransactionTypeDynamic,
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/metadata", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionMetadataEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionMetadata
@@ -415,7 +415,7 @@ func TestConstructionService_ConstructionPayloads_InvalidRequestBody(t *testing.
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/payloads", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionPayloadsEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -434,7 +434,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 	// Create valid request
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Operations: []*types.Operation{
@@ -442,7 +442,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
@@ -457,7 +457,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
 			"chainTag":        float64(1),
 			"gas":             float64(21000),
@@ -466,7 +466,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionPayloadsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -495,7 +495,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 	// Create request with mismatched origin address
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Operations: []*types.Operation{
@@ -518,7 +518,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
 			"chainTag":        float64(1),
 			"gas":             float64(21000),
@@ -527,7 +527,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionPayloadsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -545,7 +545,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 	// Create request with invalid public key
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Operations: []*types.Operation{
@@ -553,7 +553,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
@@ -568,7 +568,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType": "legacy",
+			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
 			"chainTag":        float64(1),
 			"gas":             float64(21000),
@@ -577,7 +577,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionPayloadsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -595,7 +595,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 	// Create request with fee delegation but mismatched delegator address
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Operations: []*types.Operation{
@@ -603,7 +603,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
@@ -622,7 +622,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType":       "legacy",
+			"transactionType":       meshcommon.TransactionTypeLegacy,
 			"blockRef":              "0x0000000000000000",
 			"chainTag":              float64(1),
 			"gas":                   float64(21000),
@@ -632,7 +632,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/payloads", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionPayloadsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionPayloads
@@ -648,7 +648,7 @@ func TestConstructionService_ConstructionParse_InvalidRequestBody(t *testing.T) 
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/parse", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionParseEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -666,14 +666,14 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 
 	request := types.ConstructionParseRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		Signed:      false,
 		Transaction: "0xf85db84551f84281f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac08094f077b491b355e64048ce21e3a6fc4751eeea77fa80",
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/parse", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionParseEndpoint, request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionParse(w, req)
@@ -686,7 +686,7 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 func TestConstructionService_ConstructionCombine_InvalidRequestBody(t *testing.T) {
 	service := createMockConstructionService()
 
-	req := httptest.NewRequest("POST", "/construction/combine", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionCombineEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -703,7 +703,7 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 	// Create valid request with the provided values
 	request := types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "solo",
 		},
 		UnsignedTransaction: "0xf85db84551f84281f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac08094f077b491b355e64048ce21e3a6fc4751eeea77fa80",
@@ -711,7 +711,7 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 			{
 				SigningPayload: &types.SigningPayload{
 					AccountIdentifier: &types.AccountIdentifier{
-						Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+						Address: meshtests.FirstSoloAddress,
 					},
 					Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
 					SignatureType: "ecdsa_recovery",
@@ -726,7 +726,7 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionCombineEndpoint, request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -751,7 +751,7 @@ func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *t
 	// Create request with invalid unsigned transaction
 	request := types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "solo",
 		},
 		UnsignedTransaction: "invalid_hex",
@@ -759,7 +759,7 @@ func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *t
 			{
 				SigningPayload: &types.SigningPayload{
 					AccountIdentifier: &types.AccountIdentifier{
-						Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+						Address: meshtests.FirstSoloAddress,
 					},
 					Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
 					SignatureType: "ecdsa_recovery",
@@ -774,7 +774,7 @@ func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *t
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionCombineEndpoint, request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -790,14 +790,14 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 	// Create request with no signatures
 	request := types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "solo",
 		},
 		UnsignedTransaction: "0xf85281f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080",
 		Signatures:          []*types.Signature{}, // No signatures
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionCombineEndpoint, request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -811,7 +811,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 		{
 			SigningPayload: &types.SigningPayload{
 				AccountIdentifier: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
 				SignatureType: "ecdsa_recovery",
@@ -826,7 +826,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 		{
 			SigningPayload: &types.SigningPayload{
 				AccountIdentifier: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
 				SignatureType: "ecdsa_recovery",
@@ -841,7 +841,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 		{
 			SigningPayload: &types.SigningPayload{
 				AccountIdentifier: &types.AccountIdentifier{
-					Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					Address: meshtests.FirstSoloAddress,
 				},
 				Bytes:         []byte{0x4d, 0x7b, 0xe3, 0xe5, 0xd9, 0x77, 0xe3, 0xf6, 0xbc, 0x6d, 0xc1, 0xc7, 0x55, 0x85, 0x52, 0x35, 0x19, 0xa1, 0x38, 0x74, 0x12, 0xb3, 0x06, 0xd3, 0x5e, 0x51, 0xf0, 0xb7, 0x2c, 0x8b, 0x1b, 0x67},
 				SignatureType: "ecdsa_recovery",
@@ -855,7 +855,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 		},
 	}
 
-	req = meshtests.CreateRequestWithContext("POST", "/construction/combine", request)
+	req = meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionCombineEndpoint, request)
 	w = httptest.NewRecorder()
 
 	service.ConstructionCombine(w, req)
@@ -869,7 +869,7 @@ func TestConstructionService_ConstructionHash_InvalidRequestBody(t *testing.T) {
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/hash", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionHashEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -887,13 +887,13 @@ func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
 
 	request := types.ConstructionHashRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		SignedTransaction: "0x51f88481f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac0b8411bc4aff0c0d425ecd1a931ad435156a48b3e74b9a76b79fcc6e866337a73f05a7e05773a5fcbd4cf1251cf026e70c5cc5b3524866446de93a7d49897c0bac57900",
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/hash", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionHashEndpoint, request)
 	w := httptest.NewRecorder()
 
 	service.ConstructionHash(w, req)
@@ -907,7 +907,7 @@ func TestConstructionService_ConstructionSubmit_InvalidRequestBody(t *testing.T)
 	service := createMockConstructionService()
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/construction/submit", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionSubmitEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -926,13 +926,13 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 	// Create valid request
 	request := types.ConstructionSubmitRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "solo",
 		},
 		SignedTransaction: "0x51f88481f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac0b8411bc4aff0c0d425ecd1a931ad435156a48b3e74b9a76b79fcc6e866337a73f05a7e05773a5fcbd4cf1251cf026e70c5cc5b3524866446de93a7d49897c0bac57900",
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/construction/submit", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.ConstructionSubmitEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call ConstructionSubmit
@@ -958,7 +958,7 @@ func TestConstructionService_createDelegatorPayload(t *testing.T) {
 	builder.Nonce(0x1234567890abcdef)
 
 	// Add a clause
-	toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+	toAddr, _ := thor.ParseAddress(meshtests.TestAddress1)
 	value := new(big.Int)
 	value.SetString("1000000000000000000", 10) // 1 VET
 
@@ -1021,12 +1021,12 @@ func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
 
 	// Test with valid fee delegator account
 	metadata := map[string]any{
-		"fee_delegator_account": "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+		"fee_delegator_account": meshtests.TestAddress1,
 	}
 
 	account := service.getFeeDelegatorAccount(metadata)
-	if account != "0x16277a1ff38678291c41d1820957c78bb5da59ce" {
-		t.Errorf("getFeeDelegatorAccount() = %v, want 0x16277a1ff38678291c41d1820957c78bb5da59ce", account)
+	if account != meshtests.TestAddress1 {
+		t.Errorf("getFeeDelegatorAccount() = %v, want %s", account, meshtests.TestAddress1)
 	}
 
 	// Test with missing fee delegator account

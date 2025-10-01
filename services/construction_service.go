@@ -599,7 +599,7 @@ func (c *ConstructionService) calculateGas(options map[string]any) int64 {
 
 // buildMetadata builds metadata based on transaction type
 func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
-	if transactionType == "legacy" {
+	if transactionType == meshcommon.TransactionTypeLegacy {
 		return c.buildLegacyMetadata(blockRef, chainTag, gas, nonce)
 	}
 	return c.buildDynamicMetadata(blockRef, chainTag, gas, nonce)
@@ -615,7 +615,7 @@ func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas
 	gasPriceCoef := randomBytes[0]
 
 	metadata := map[string]any{
-		"transactionType": "legacy",
+		"transactionType": meshcommon.TransactionTypeLegacy,
 		"blockRef":        blockRef,
 		"chainTag":        chainTag,
 		"gas":             gas,
@@ -638,7 +638,7 @@ func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, ga
 		// Case where we are building a dynamic fee transaction but the base fee is 0
 		// This happens when the node is catching up with the chain block-wise
 		metadata := map[string]any{
-			"transactionType":      "dynamic",
+			"transactionType":      meshcommon.TransactionTypeDynamic,
 			"blockRef":             blockRef,
 			"chainTag":             chainTag,
 			"gas":                  gas,
@@ -652,7 +652,7 @@ func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, ga
 	// Normal case: use actual base fee and reward
 	gasPrice := new(big.Int).Add(dynamicGasPrice.BaseFee, dynamicGasPrice.Reward)
 	metadata := map[string]any{
-		"transactionType":      "dynamic",
+		"transactionType":      meshcommon.TransactionTypeDynamic,
 		"blockRef":             blockRef,
 		"chainTag":             chainTag,
 		"gas":                  gas,

@@ -2,6 +2,8 @@ package validation
 
 import (
 	"testing"
+
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 func TestGetValidationsForEndpoint(t *testing.T) {
@@ -12,92 +14,92 @@ func TestGetValidationsForEndpoint(t *testing.T) {
 	}{
 		{
 			name:     "network list endpoint",
-			endpoint: "/network/list",
+			endpoint: meshcommon.NetworkListEndpoint,
 			expected: NetworkListValidations,
 		},
 		{
 			name:     "network status endpoint",
-			endpoint: "/network/status",
+			endpoint: meshcommon.NetworkStatusEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "network options endpoint",
-			endpoint: "/network/options",
+			endpoint: meshcommon.NetworkOptionsEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "account balance endpoint",
-			endpoint: "/account/balance",
+			endpoint: meshcommon.AccountBalanceEndpoint,
 			expected: AccountBalanceValidations,
 		},
 		{
 			name:     "construction derive endpoint",
-			endpoint: "/construction/derive",
+			endpoint: meshcommon.ConstructionDeriveEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "construction preprocess endpoint",
-			endpoint: "/construction/preprocess",
+			endpoint: meshcommon.ConstructionPreprocessEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "construction metadata endpoint",
-			endpoint: "/construction/metadata",
+			endpoint: meshcommon.ConstructionMetadataEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "construction payloads endpoint",
-			endpoint: "/construction/payloads",
+			endpoint: meshcommon.ConstructionPayloadsEndpoint,
 			expected: ConstructionPayloadsValidations,
 		},
 		{
 			name:     "construction parse endpoint",
-			endpoint: "/construction/parse",
+			endpoint: meshcommon.ConstructionParseEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "construction combine endpoint",
-			endpoint: "/construction/combine",
+			endpoint: meshcommon.ConstructionCombineEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "construction hash endpoint",
-			endpoint: "/construction/hash",
+			endpoint: meshcommon.ConstructionHashEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "construction submit endpoint",
-			endpoint: "/construction/submit",
+			endpoint: meshcommon.ConstructionSubmitEndpoint,
 			expected: ConstructionValidations,
 		},
 		{
 			name:     "block endpoint",
-			endpoint: "/block",
+			endpoint: meshcommon.BlockEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "block transaction endpoint",
-			endpoint: "/block/transaction",
+			endpoint: meshcommon.BlockTransactionEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "mempool endpoint",
-			endpoint: "/mempool",
+			endpoint: meshcommon.MempoolEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "mempool transaction endpoint",
-			endpoint: "/mempool/transaction",
+			endpoint: meshcommon.MempoolTransactionEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "events blocks endpoint",
-			endpoint: "/events/blocks",
+			endpoint: meshcommon.EventsBlocksEndpoint,
 			expected: NetworkValidations,
 		},
 		{
 			name:     "search transactions endpoint",
-			endpoint: "/search/transactions",
+			endpoint: meshcommon.SearchTransactionsEndpoint,
 			expected: NetworkValidations,
 		},
 		{
@@ -126,24 +128,24 @@ func TestGetValidationsForEndpoint(t *testing.T) {
 func TestEndpointValidationSets(t *testing.T) {
 	// Test that all expected endpoints are in the validation sets
 	expectedEndpoints := []string{
-		"/network/list",
-		"/network/status",
-		"/network/options",
-		"/account/balance",
-		"/construction/derive",
-		"/construction/preprocess",
-		"/construction/metadata",
-		"/construction/payloads",
-		"/construction/parse",
-		"/construction/combine",
-		"/construction/hash",
-		"/construction/submit",
-		"/block",
-		"/block/transaction",
-		"/mempool",
-		"/mempool/transaction",
-		"/events/blocks",
-		"/search/transactions",
+		meshcommon.NetworkListEndpoint,
+		meshcommon.NetworkStatusEndpoint,
+		meshcommon.NetworkOptionsEndpoint,
+		meshcommon.AccountBalanceEndpoint,
+		meshcommon.ConstructionDeriveEndpoint,
+		meshcommon.ConstructionPreprocessEndpoint,
+		meshcommon.ConstructionMetadataEndpoint,
+		meshcommon.ConstructionPayloadsEndpoint,
+		meshcommon.ConstructionParseEndpoint,
+		meshcommon.ConstructionCombineEndpoint,
+		meshcommon.ConstructionHashEndpoint,
+		meshcommon.ConstructionSubmitEndpoint,
+		meshcommon.BlockEndpoint,
+		meshcommon.BlockTransactionEndpoint,
+		meshcommon.MempoolEndpoint,
+		meshcommon.MempoolTransactionEndpoint,
+		meshcommon.EventsBlocksEndpoint,
+		meshcommon.SearchTransactionsEndpoint,
 	}
 
 	for _, endpoint := range expectedEndpoints {

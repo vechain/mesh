@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	meshtests "github.com/vechain/mesh/tests"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
@@ -56,7 +57,7 @@ func TestVeChainClient_GetAccount(t *testing.T) {
 	client := NewVeChainClient("http://localhost:8669")
 
 	// Test with a valid account address
-	address := "0xf077b491b355e64048ce21e3a6fc4751eeea77fa"
+	address := meshtests.FirstSoloAddress
 	_, err := client.GetAccount(address)
 	if err == nil {
 		t.Errorf("GetAccount() should return error when no Thor node is available")
@@ -242,7 +243,7 @@ func TestMockVeChainClient_GetAccount(t *testing.T) {
 	mockClient := NewMockVeChainClient()
 
 	// Test with no mock account set
-	account, err := mockClient.GetAccount("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	account, err := mockClient.GetAccount(meshtests.FirstSoloAddress)
 	if err != nil {
 		t.Errorf("GetAccount() error = %v, want nil", err)
 	}
@@ -320,7 +321,7 @@ func TestMockVeChainClient_SetMockError(t *testing.T) {
 	mockClient.SetMockError(fmt.Errorf("test error"))
 
 	// Test that error is returned
-	_, err := mockClient.GetAccount("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	_, err := mockClient.GetAccount(meshtests.FirstSoloAddress)
 	if err == nil {
 		t.Errorf("GetAccount() should return error after SetMockError")
 	}
@@ -348,7 +349,7 @@ func TestMockVeChainClient_SetMockAccount(t *testing.T) {
 	mockClient.SetMockAccount(mockAccount)
 
 	// Test that account is returned
-	account, err := mockClient.GetAccount("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	account, err := mockClient.GetAccount(meshtests.FirstSoloAddress)
 	if err != nil {
 		t.Errorf("GetAccount() error = %v, want nil", err)
 	}

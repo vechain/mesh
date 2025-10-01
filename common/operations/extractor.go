@@ -22,7 +22,7 @@ func (e *OperationsExtractor) GetStringFromOptions(options map[string]any, key s
 	if value, ok := options[key].(string); ok {
 		return value
 	}
-	return "dynamic"
+	return meshcommon.TransactionTypeDynamic
 }
 
 // GetTxOrigins extracts origin addresses from operations

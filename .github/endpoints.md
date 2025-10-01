@@ -20,7 +20,7 @@ This table shows the endpoint coverage of the Mesh API implementation for VeChai
 
 | Method | Endpoint | Implemented | Description | Mode |
 |--------|----------|--------------|-------------|------|
-| POST   | /call    | ❌ No        | Call contract method      | - |
+| POST   | /call    | ✅ Yes        | Simulate transaction      | online |
 
 ## Construction
 
@@ -71,9 +71,8 @@ This table shows the endpoint coverage of the Mesh API implementation for VeChai
 ## Coverage Summary
 
 - **Total standard endpoints**: 20
-- **Implemented**: 18 (90%)
-- **Not implemented**: 2 (10%)
+- **Implemented**: 19 (95%)
+- **Not implemented**: 1 (5%)
 
 ### Pending endpoints to implement:
 - `/account/coins`
-- `/call`

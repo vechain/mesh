@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshconfig "github.com/vechain/mesh/config"
 	meshtests "github.com/vechain/mesh/tests"
@@ -42,7 +44,7 @@ func TestNetworkService_NetworkList(t *testing.T) {
 	service := NewNetworkService(mockClient, config)
 
 	// Create request
-	req := httptest.NewRequest("POST", "/network/list", nil)
+	req := httptest.NewRequest("POST", meshcommon.NetworkListEndpoint, nil)
 	w := httptest.NewRecorder()
 
 	// Call NetworkList
@@ -65,7 +67,7 @@ func TestNetworkService_NetworkList(t *testing.T) {
 	}
 
 	network := response.NetworkIdentifiers[0]
-	if network.Blockchain != "vechainthor" {
+	if network.Blockchain != meshcommon.BlockchainName {
 		t.Errorf("NetworkList() blockchain = %v, want vechainthor", network.Blockchain)
 	}
 
@@ -82,12 +84,12 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 	// Create request with proper body
 	request := types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/network/options", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.NetworkOptionsEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call NetworkOptions
@@ -120,7 +122,7 @@ func TestNetworkService_NetworkStatus_InvalidRequestBody(t *testing.T) {
 	service := NewNetworkService(mockClient, config)
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/network/status", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -141,12 +143,12 @@ func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 	// Create request
 	request := types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/network/status", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.NetworkStatusEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call NetworkStatus

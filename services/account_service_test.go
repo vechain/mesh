@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	meshtests "github.com/vechain/mesh/tests"
@@ -35,7 +37,7 @@ func TestAccountService_AccountBalance_InvalidRequestBody(t *testing.T) {
 	service := NewAccountService(mockClient)
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.AccountBalanceEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -55,15 +57,15 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 	// Create request
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -92,18 +94,18 @@ func TestAccountService_AccountBalance_WithSpecificCurrencies(t *testing.T) {
 	// Create request with specific currencies
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 		Currencies: []*types.Currency{
 			{Symbol: "VET", Decimals: 18},
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -132,18 +134,18 @@ func TestAccountService_AccountBalance_InvalidCurrencies(t *testing.T) {
 	// Create request with invalid currencies (empty symbol)
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 		Currencies: []*types.Currency{
 			{Symbol: "", Decimals: 18}, // Empty symbol should fail validation
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -251,18 +253,18 @@ func TestAccountService_AccountBalance_WithBlockIdentifier(t *testing.T) {
 	// Create request with block identifier
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
 			Index: func() *int64 { i := int64(100); return &i }(),
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -291,18 +293,18 @@ func TestAccountService_AccountBalance_WithVTHOCurrency(t *testing.T) {
 	// Create request with VTHO currency
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 		Currencies: []*types.Currency{
 			{Symbol: "VTHO", Decimals: 18},
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -331,11 +333,11 @@ func TestAccountService_AccountBalance_WithBothCurrencies(t *testing.T) {
 	// Create request with both VET and VTHO currencies
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 		Currencies: []*types.Currency{
 			{Symbol: "VET", Decimals: 18},
@@ -343,7 +345,7 @@ func TestAccountService_AccountBalance_WithBothCurrencies(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call AccountBalance
@@ -375,11 +377,11 @@ func TestAccountService_AccountBalance_WithVIP180Token_Success(t *testing.T) {
 	// Create request with VIP180 token currency
 	request := types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			Address: meshtests.FirstSoloAddress,
 		},
 		Currencies: []*types.Currency{
 			{
@@ -392,7 +394,7 @@ func TestAccountService_AccountBalance_WithVIP180Token_Success(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/account/balance", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
 	w := httptest.NewRecorder()
 
 	service.AccountBalance(w, req)
@@ -444,7 +446,7 @@ func TestAccountService_getVETBalance(t *testing.T) {
 		mockClient.SetMockAccount(mockAccount)
 
 		// Test getting VET balance
-		amount, err := service.getVETBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+		amount, err := service.getVETBalance(meshtests.FirstSoloAddress)
 		if err != nil {
 			t.Errorf("getVETBalance() error = %v, want nil", err)
 		}
@@ -458,7 +460,7 @@ func TestAccountService_getVETBalance(t *testing.T) {
 		mockClient.SetMockError(fmt.Errorf("account not found"))
 
 		// Test error case
-		amount, err := service.getVETBalance("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+		amount, err := service.getVETBalance(meshtests.FirstSoloAddress)
 		if err == nil {
 			t.Errorf("getVETBalance() should return error when account not found")
 		}

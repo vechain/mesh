@@ -4,8 +4,10 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshthor "github.com/vechain/mesh/thor"
 	meshcommon "github.com/vechain/mesh/common"
+	meshthor "github.com/vechain/mesh/thor"
+
+	meshtests "github.com/vechain/mesh/tests"
 )
 
 func TestGetStringFromOptions(t *testing.T) {
@@ -24,19 +26,19 @@ func TestGetStringFromOptions(t *testing.T) {
 
 	// Test non-existing key
 	result = extractor.GetStringFromOptions(options, "nonexistent")
-	if result != "dynamic" {
+	if result != meshcommon.TransactionTypeDynamic {
 		t.Errorf("Expected 'dynamic', got %s", result)
 	}
 
 	// Test non-string value
 	result = extractor.GetStringFromOptions(options, "key2")
-	if result != "dynamic" {
+	if result != meshcommon.TransactionTypeDynamic {
 		t.Errorf("Expected 'dynamic' for non-string value, got %s", result)
 	}
 
 	// Test nil value
 	result = extractor.GetStringFromOptions(options, "key3")
-	if result != "dynamic" {
+	if result != meshcommon.TransactionTypeDynamic {
 		t.Errorf("Expected 'dynamic' for nil value, got %s", result)
 	}
 }
@@ -161,7 +163,7 @@ func TestGetVETOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value:    "1000000000000000000",
@@ -172,7 +174,7 @@ func TestGetVETOperations(t *testing.T) {
 			expected: []map[string]string{
 				{
 					"value": "1000000000000000000",
-					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+					"to":    meshtests.TestAddress1,
 				},
 			},
 		},
@@ -182,7 +184,7 @@ func TestGetVETOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value:    "-1000000000000000000",
@@ -198,7 +200,7 @@ func TestGetVETOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value:    "1000000000000000000",
@@ -214,7 +216,7 @@ func TestGetVETOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeFee,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value:    "1000000000000000000",
@@ -230,7 +232,7 @@ func TestGetVETOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value:    "1000000000000000000",
@@ -240,7 +242,7 @@ func TestGetVETOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+						Address: meshtests.FirstSoloAddress,
 					},
 					Amount: &types.Amount{
 						Value:    "2000000000000000000",
@@ -251,11 +253,11 @@ func TestGetVETOperations(t *testing.T) {
 			expected: []map[string]string{
 				{
 					"value": "1000000000000000000",
-					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+					"to":    meshtests.TestAddress1,
 				},
 				{
 					"value": "2000000000000000000",
-					"to":    "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+					"to":    meshtests.FirstSoloAddress,
 				},
 			},
 		},
@@ -300,7 +302,7 @@ func TestGetTokensOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value: "1000000000000000000",
@@ -318,7 +320,7 @@ func TestGetTokensOperations(t *testing.T) {
 				{
 					"token": "0x0000000000000000000000000000456e65726779",
 					"value": "1000000000000000000",
-					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+					"to":    meshtests.TestAddress1,
 				},
 			},
 		},
@@ -328,7 +330,7 @@ func TestGetTokensOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value: "-1000000000000000000",
@@ -350,7 +352,7 @@ func TestGetTokensOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeFee,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value: "1000000000000000000",
@@ -371,7 +373,7 @@ func TestGetTokensOperations(t *testing.T) {
 				{
 					Type: meshcommon.OperationTypeTransfer,
 					Account: &types.AccountIdentifier{
-						Address: "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+						Address: meshtests.TestAddress1,
 					},
 					Amount: &types.Amount{
 						Value: "1000000000000000000",
@@ -389,7 +391,7 @@ func TestGetTokensOperations(t *testing.T) {
 				{
 					"token": "0x9999999999999999999999999999999999999999",
 					"value": "1000000000000000000",
-					"to":    "0x16277a1ff38678291c41d1820957c78bb5da59ce",
+					"to":    meshtests.TestAddress1,
 				},
 			},
 		},

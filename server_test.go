@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	meshcommon "github.com/vechain/mesh/common"
 	meshconfig "github.com/vechain/mesh/config"
 )
 
@@ -60,7 +62,7 @@ func TestVeChainMeshServer_HealthCheck(t *testing.T) {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
 
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest("GET", meshcommon.HealthEndpoint, nil)
 	w := httptest.NewRecorder()
 
 	server.healthCheck(w, req)
@@ -146,7 +148,7 @@ func TestVeChainMeshServer_NetworkEndpoints(t *testing.T) {
 	}
 
 	// Test network/list endpoint
-	req := httptest.NewRequest("POST", "/network/list", bytes.NewBufferString("{}"))
+	req := httptest.NewRequest("POST", meshcommon.NetworkListEndpoint, bytes.NewBufferString("{}"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -170,7 +172,7 @@ func TestVeChainMeshServer_AccountEndpoints(t *testing.T) {
 	}
 
 	// Test account/balance endpoint with invalid request (to avoid validation issues)
-	req := httptest.NewRequest("POST", "/account/balance", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.AccountBalanceEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -195,7 +197,7 @@ func TestVeChainMeshServer_ConstructionEndpoints(t *testing.T) {
 	}
 
 	// Test construction/derive endpoint with invalid request (to avoid validation issues)
-	req := httptest.NewRequest("POST", "/construction/derive", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.ConstructionDeriveEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -224,6 +226,8 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 		t.Fatalf("GetEndpoints() error = %v", err)
 	}
 
+	fmt.Println("endpoints", endpoints)
+
 	// Check that we have endpoints
 	if len(endpoints) == 0 {
 		t.Errorf("GetEndpoints() returned empty slice")
@@ -250,6 +254,7 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 		"POST /mempool/transaction":     false,
 		"POST /events/blocks":           false,
 		"POST /search/transactions":     false,
+		"POST /call":                    false,
 	}
 
 	// Mark found endpoints

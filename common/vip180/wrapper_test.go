@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -90,7 +91,7 @@ func TestVIP180Contract_BalanceOf(t *testing.T) {
 	// Test successful balance call - properly encoded uint256 (32 bytes)
 	mockClient.SetMockCallResult("0x0000000000000000000000000000000000000000000000000de0b6b3a7640000")
 
-	balance, err := contract.BalanceOf("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	balance, err := contract.BalanceOf(meshtests.FirstSoloAddress)
 	if err != nil {
 		t.Errorf("BalanceOf() error = %v, want nil", err)
 	}
@@ -108,7 +109,7 @@ func TestVIP180Contract_BalanceOf_Error(t *testing.T) {
 	// Test error case
 	mockClient.SetMockError(errors.New("contract call failed"))
 
-	_, err := contract.BalanceOf("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+	_, err := contract.BalanceOf(meshtests.FirstSoloAddress)
 	if err == nil {
 		t.Errorf("BalanceOf() error = nil, want error")
 	}

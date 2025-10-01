@@ -1,38 +1,43 @@
 package validation
 
+import meshcommon "github.com/vechain/mesh/common"
+
 // EndpointValidationSets defines the validation sets for different Mesh endpoints
 var EndpointValidationSets = map[string][]ValidationType{
 	// Network API endpoints
-	"/network/list":    NetworkListValidations,
-	"/network/status":  NetworkValidations,
-	"/network/options": NetworkValidations,
+	meshcommon.NetworkListEndpoint:    NetworkListValidations,
+	meshcommon.NetworkStatusEndpoint:  NetworkValidations,
+	meshcommon.NetworkOptionsEndpoint: NetworkValidations,
 
 	// Account API endpoints
-	"/account/balance": AccountBalanceValidations,
+	meshcommon.AccountBalanceEndpoint: AccountBalanceValidations,
 
 	// Construction API endpoints
-	"/construction/derive":     ConstructionValidations,
-	"/construction/preprocess": ConstructionValidations,
-	"/construction/metadata":   ConstructionValidations,
-	"/construction/payloads":   ConstructionPayloadsValidations,
-	"/construction/parse":      ConstructionValidations,
-	"/construction/combine":    ConstructionValidations,
-	"/construction/hash":       ConstructionValidations,
-	"/construction/submit":     ConstructionValidations,
+	meshcommon.ConstructionDeriveEndpoint:     ConstructionValidations,
+	meshcommon.ConstructionPreprocessEndpoint: ConstructionValidations,
+	meshcommon.ConstructionMetadataEndpoint:   ConstructionValidations,
+	meshcommon.ConstructionPayloadsEndpoint:   ConstructionPayloadsValidations,
+	meshcommon.ConstructionParseEndpoint:      ConstructionValidations,
+	meshcommon.ConstructionCombineEndpoint:    ConstructionValidations,
+	meshcommon.ConstructionHashEndpoint:       ConstructionValidations,
+	meshcommon.ConstructionSubmitEndpoint:     ConstructionValidations,
 
 	// Block API endpoints
-	"/block":             NetworkValidations,
-	"/block/transaction": NetworkValidations,
+	meshcommon.BlockEndpoint:            NetworkValidations,
+	meshcommon.BlockTransactionEndpoint: NetworkValidations,
 
 	// Mempool API endpoints
-	"/mempool":             NetworkValidations,
-	"/mempool/transaction": NetworkValidations,
+	meshcommon.MempoolEndpoint:            NetworkValidations,
+	meshcommon.MempoolTransactionEndpoint: NetworkValidations,
 
 	// Events API endpoints
-	"/events/blocks": NetworkValidations,
+	meshcommon.EventsBlocksEndpoint: NetworkValidations,
 
 	// Search API endpoints
-	"/search/transactions": NetworkValidations,
+	meshcommon.SearchTransactionsEndpoint: NetworkValidations,
+
+	// Call API endpoints
+	meshcommon.CallEndpoint: NetworkValidations,
 }
 
 // GetValidationsForEndpoint returns the validation set for a specific endpoint

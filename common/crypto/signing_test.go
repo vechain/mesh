@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"strings"
 	"testing"
+
+	meshtests "github.com/vechain/mesh/tests"
 )
 
 func TestSignPayload(t *testing.T) {
@@ -134,7 +136,7 @@ func TestSignPayload(t *testing.T) {
 func TestGetAddressFromPrivateKey(t *testing.T) {
 	// Test with known private key
 	privateKeyHex := "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"
-	expectedAddress := "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa"
+	expectedAddress := meshtests.FirstSoloAddress
 
 	tests := []struct {
 		name         string
@@ -228,7 +230,7 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 func TestSignPayloadWithAddress(t *testing.T) {
 	privateKeyHex := "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"
 	payloadHex := "c7c260e16e3c32a6176759a3556ff5618d7d6e7e2c9c9602d40461fcaa34cbec"
-	expectedAddress := "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa"
+	expectedAddress := meshtests.FirstSoloAddress
 
 	tests := []struct {
 		name         string
@@ -332,7 +334,7 @@ func TestSignPayloadConsistency(t *testing.T) {
 func TestAddressDerivationConsistency(t *testing.T) {
 	// Test that the same private key always derives the same address
 	privateKeyHex := "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"
-	expectedAddress := "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa"
+	expectedAddress := meshtests.FirstSoloAddress
 
 	handler := NewSigningHandler(privateKeyHex)
 

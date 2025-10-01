@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/mesh/config"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
@@ -26,7 +27,7 @@ func createTestVeChainTransaction() *thorTx.Transaction {
 	builder.Nonce(0x1234567890abcdef)
 
 	// Add a clause
-	toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+	toAddr, _ := thor.ParseAddress(meshtests.TestAddress1)
 	value := new(big.Int)
 	value.SetString("1000000000000000000", 10) // 1 VET
 
@@ -50,7 +51,7 @@ func createTestVeChainDynamicTransaction() *thorTx.Transaction {
 	builder.Nonce(0x1234567890abcdef)
 
 	// Add a clause
-	toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+	toAddr, _ := thor.ParseAddress(meshtests.TestAddress1)
 	value := new(big.Int)
 	value.SetString("1000000000000000000", 10) // 1 VET
 
@@ -402,7 +403,7 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 		Clauses: []*api.JSONClause{
 			{
 				To: func() *thor.Address {
-					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+					addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 					return &addr
 				}(),
 				Value: func() math.HexOrDecimal256 {
@@ -413,7 +414,7 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 			},
 		},
 		Origin: func() thor.Address {
-			addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+			addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 			return addr
 		}(),
 	}
@@ -489,7 +490,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 					builder.Nonce(0x1234567890abcdef)
 
 					// Add a clause
-					toAddr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+					toAddr, _ := thor.ParseAddress(meshtests.TestAddress1)
 					value := new(big.Int)
 					value.SetString("1000000000000000000", 10) // 1 VET
 
@@ -501,7 +502,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 					return builder.Build()
 				}(),
 				Origin: func() []byte {
-					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 					return addr.Bytes()
 				}(),
 				Delegator: []byte{},
@@ -535,11 +536,11 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 					return builder.Build()
 				}(),
 				Origin: func() []byte {
-					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 					return addr.Bytes()
 				}(),
 				Delegator: func() []byte {
-					addr, _ := thor.ParseAddress("0x16277a1ff38678291c41d1820957c78bb5da59ce")
+					addr, _ := thor.ParseAddress(meshtests.TestAddress1)
 					return addr.Bytes()
 				}(),
 			},
@@ -562,7 +563,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 					return builder.Build()
 				}(),
 				Origin: func() []byte {
-					addr, _ := thor.ParseAddress("0xf077b491b355e64048ce21e3a6fc4751eeea77fa")
+					addr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
 					return addr.Bytes()
 				}(),
 				Delegator: []byte{},

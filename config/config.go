@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 // Config holds the service configuration
@@ -87,7 +88,7 @@ func (c *Config) setDerivedFields() {
 	}
 
 	c.NetworkIdentifier = &types.NetworkIdentifier{
-		Blockchain: "vechainthor",
+		Blockchain: meshcommon.BlockchainName,
 		Network:    networkName,
 	}
 }

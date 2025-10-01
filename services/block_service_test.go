@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
@@ -29,7 +31,7 @@ func TestBlockService_Block_InvalidRequestBody(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/block", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.BlockEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -49,7 +51,7 @@ func TestBlockService_Block_ValidRequest(t *testing.T) {
 	// Create request with valid block identifier
 	request := types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
@@ -57,7 +59,7 @@ func TestBlockService_Block_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/block", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call Block
@@ -84,7 +86,7 @@ func TestBlockService_BlockTransaction_InvalidRequestBody(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", "/block/transaction", bytes.NewBufferString("invalid json"))
+	req := httptest.NewRequest("POST", meshcommon.BlockTransactionEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -104,7 +106,7 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 	// Create request with valid block and transaction identifiers
 	request := types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.BlockIdentifier{
@@ -115,7 +117,7 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/block/transaction", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockTransactionEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call BlockTransaction
@@ -144,7 +146,7 @@ func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
 	// Create request with hash identifier
 	request := types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
@@ -152,7 +154,7 @@ func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/block", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call Block
@@ -181,7 +183,7 @@ func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 	// Create request with both index and hash identifiers
 	request := types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
@@ -190,7 +192,7 @@ func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/block", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call Block
@@ -217,7 +219,7 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	t.Run("Invalid request body", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/block", bytes.NewReader([]byte("invalid json")))
+		req := httptest.NewRequest("POST", meshcommon.BlockEndpoint, bytes.NewReader([]byte("invalid json")))
 		w := httptest.NewRecorder()
 
 		service.Block(w, req)
@@ -233,7 +235,7 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 
 		request := types.BlockRequest{
 			NetworkIdentifier: &types.NetworkIdentifier{
-				Blockchain: "vechainthor",
+				Blockchain: meshcommon.BlockchainName,
 				Network:    "test",
 			},
 			BlockIdentifier: &types.PartialBlockIdentifier{
@@ -241,7 +243,7 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 			},
 		}
 
-		req := meshtests.CreateRequestWithContext("POST", "/block", request)
+		req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
 		w := httptest.NewRecorder()
 
 		service.Block(w, req)
@@ -259,7 +261,7 @@ func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
 	// Create request with hash block identifier
 	request := types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: "vechainthor",
+			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.BlockIdentifier{
@@ -270,7 +272,7 @@ func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", "/block/transaction", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockTransactionEndpoint, request)
 	w := httptest.NewRecorder()
 
 	// Call BlockTransaction

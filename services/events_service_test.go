@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
@@ -48,7 +49,7 @@ func TestEventsService_EventsBlocks_Success(t *testing.T) {
 		Limit:  &limit,
 	}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -105,7 +106,7 @@ func TestEventsService_EventsBlocks_DefaultValues(t *testing.T) {
 	// Empty request to test default values
 	request := types.EventsBlocksRequest{}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -146,7 +147,7 @@ func TestEventsService_EventsBlocks_OffsetBeyondBestBlock(t *testing.T) {
 		Limit:  &limit,
 	}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -176,7 +177,7 @@ func TestEventsService_EventsBlocks_InvalidOffset(t *testing.T) {
 		Limit:  &limit,
 	}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -195,7 +196,7 @@ func TestEventsService_EventsBlocks_InvalidLimit(t *testing.T) {
 		Limit:  &limit, // Invalid limit
 	}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -214,7 +215,7 @@ func TestEventsService_EventsBlocks_InvalidLimitTooHigh(t *testing.T) {
 		Limit:  &limit, // Invalid limit too high
 	}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -226,7 +227,7 @@ func TestEventsService_EventsBlocks_InvalidRequestBody(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewEventsService(mockClient)
 
-	req := createInvalidJSONRequest(meshtests.POSTMethod, "/events/blocks")
+	req := createInvalidJSONRequest("POST", meshcommon.EventsBlocksEndpoint)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)
@@ -248,7 +249,7 @@ func TestEventsService_EventsBlocks_ThorClientError(t *testing.T) {
 		Limit:  &limit,
 	}
 
-	req := meshtests.CreateRequestWithContext(meshtests.POSTMethod, "/events/blocks", request)
+	req := meshtests.CreateRequestWithContext("POST", meshcommon.EventsBlocksEndpoint, request)
 	w := createResponseRecorder()
 
 	service.EventsBlocks(w, req)

@@ -1,32 +1,9 @@
 package tests
 
 const (
-	// HTTP Methods
-	GETMethod  = "GET"
-	POSTMethod = "POST"
+	FirstSoloAddress = "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa"
+	TestAddress1     = "0x16277a1ff38678291c41d1820957c78bb5da59ce"
 
-	// Content Types
-	JSONContentType = "application/json"
-
-	// Common Test Data
-	EmptyJSON = "{}"
-
-	// Endpoints
-	AccountBalanceEndpoint       = "/account/balance"
-	BlockEndpoint                = "/block"
-	BlockTransactionEndpoint     = "/block/transaction"
-	ConstructionCombineEndpoint  = "/construction/combine"
-	ConstructionDeriveEndpoint   = "/construction/derive"
-	ConstructionHashEndpoint     = "/construction/hash"
-	ConstructionMetadataEndpoint = "/construction/metadata"
-	ConstructionParseEndpoint    = "/construction/parse"
-	ConstructionPayloadsEndpoint = "/construction/payloads"
-	ConstructionSubmitEndpoint   = "/construction/submit"
-	MempoolEndpoint              = "/mempool"
-	MempoolTransactionEndpoint   = "/mempool/transaction"
-	NetworkListEndpoint          = "/network/list"
-	NetworkOptionsEndpoint       = "/network/options"
-	NetworkStatusEndpoint        = "/network/status"
-	HealthEndpoint               = "/health"
-	EventsBlocksEndpoint         = "/events/blocks"
+	// This is the address used when simulating contract deployment in Thor
+	SimulatedContractAddress = "0x841a6556c524d47030762eb14dc4af897e605d9b"
 )

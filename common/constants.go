@@ -2,6 +2,30 @@ package common
 
 import "github.com/coinbase/rosetta-sdk-go/types"
 
+// Endpoints
+const (
+	AccountBalanceEndpoint         = "/account/balance"
+	BlockEndpoint                  = "/block"
+	BlockTransactionEndpoint       = "/block/transaction"
+	ConstructionCombineEndpoint    = "/construction/combine"
+	ConstructionDeriveEndpoint     = "/construction/derive"
+	ConstructionHashEndpoint       = "/construction/hash"
+	ConstructionPreprocessEndpoint = "/construction/preprocess"
+	ConstructionMetadataEndpoint   = "/construction/metadata"
+	ConstructionParseEndpoint      = "/construction/parse"
+	ConstructionPayloadsEndpoint   = "/construction/payloads"
+	ConstructionSubmitEndpoint     = "/construction/submit"
+	MempoolEndpoint                = "/mempool"
+	MempoolTransactionEndpoint     = "/mempool/transaction"
+	NetworkListEndpoint            = "/network/list"
+	NetworkOptionsEndpoint         = "/network/options"
+	NetworkStatusEndpoint          = "/network/status"
+	HealthEndpoint                 = "/health"
+	EventsBlocksEndpoint           = "/events/blocks"
+	SearchTransactionsEndpoint     = "/search/transactions"
+	CallEndpoint                   = "/call"
+)
+
 // Operation types for VeChain
 const (
 	OperationTypeTransfer      = "Transfer"
@@ -16,6 +40,22 @@ const (
 	OperationStatusPending   = "Pending"
 	OperationStatusSucceeded = "Succeeded"
 	OperationStatusReverted  = "Reverted"
+)
+
+// Blockchain identifier
+const (
+	BlockchainName = "vechainthor"
+)
+
+// Transaction types
+const (
+	TransactionTypeLegacy  = "legacy"
+	TransactionTypeDynamic = "dynamic"
+)
+
+// Call methods for VeChain
+const (
+	CallMethodInspectClauses = "inspect_clauses"
 )
 
 var (
