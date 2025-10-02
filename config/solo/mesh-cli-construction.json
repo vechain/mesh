@@ -20,81 +20,25 @@
     "broadcast_behind_tip": false,
     "block_broadcast_limit": 5,
     "rebroadcast_all": false,
-    "workflows": [
+    "end_conditions": {
+      "transfer": 2
+    },
+    "constructor_dsl_file": "workflows.ros",
+    "quiet": false,
+    "prefunded_accounts": [
       {
-        "name": "transfer",
-        "concurrency": 1,
-        "scenarios": [
-          {
-            "name": "simple_transfer",
-            "actions": [
-              {
-                "type": "set_variable",
-                "input": "{\"symbol\":\"VET\", \"decimals\":18}",
-                "output_path": "currency"
-              },
-              {
-                "type": "set_variable",
-                "input": "1000000000000000000",
-                "output_path": "transfer_amount"
-              },
-              {
-                "type": "find_balance",
-                "minimum_balance": {
-                  "value": "1000000000000000000",
-                  "currency": "{{currency}}"
-                },
-                "create_limit": 0,
-                "create_probability": 0
-              },
-              {
-                "type": "math",
-                "input": "{{transfer_amount}}",
-                "operation": "subtraction",
-                "output_path": "sender.balance_change"
-              },
-              {
-                "type": "math",
-                "input": "{{sender.balance_change}}",
-                "operation": "multiplication",
-                "value": "-1",
-                "output_path": "sender.balance_change"
-              },
-              {
-                "type": "find_balance",
-                "not_account_identifier": [
-                  "{{sender.account_identifier}}"
-                ],
-                "minimum_balance": {
-                  "value": "0",
-                  "currency": "{{currency}}"
-                },
-                "create_limit": 100,
-                "create_probability": 50
-              },
-              {
-                "type": "set_variable",
-                "input": "{{transfer_amount}}",
-                "output_path": "receiver.balance_change"
-              },
-              {
-                "type": "math",
-                "input": "{{receiver.balance_change}}",
-                "operation": "addition",
-                "value": "0",
-                "output_path": "receiver.balance_change"
-              }
-            ]
-          }
-        ]
+        "privkey": "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36",
+        "account_identifier": {
+          "address": "0xf077b491b355e64048ce21e3a6fc4751eeea77fa"
+        },
+        "curve_type": "secp256k1",
+        "currency": {
+          "symbol": "VET",
+          "decimals": 18
+        }
       }
     ],
-    "end_conditions": {
-      "create_account": 10,
-      "transfer": 10
-    },
     "results_output_file": "/data/construction_results.json",
     "status_port": 9091
   }
 }
-

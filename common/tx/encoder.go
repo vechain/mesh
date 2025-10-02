@@ -143,13 +143,13 @@ func (e *MeshTransactionEncoder) ParseTransactionFromBytes(txBytes []byte, signe
 	}
 
 	// Parse operations and signers
-	operations, signers := e.parseTransactionSignersAndOperations(meshTx)
+	operations, signers := e.parseTransactionSignersAndOperations(meshTx, signed)
 
 	return meshTx, operations, signers, nil
 }
 
 // parseTransactionSignersAndOperations parses signers and operations from a transaction
-func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *MeshTransaction) ([]*types.Operation, []*types.AccountIdentifier) {
+func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *MeshTransaction, signed bool) ([]*types.Operation, []*types.AccountIdentifier) {
 	originAddr := thor.BytesToAddress(meshTx.Origin)
 	var delegatorAddr *thor.Address
 	if len(meshTx.Delegator) > 0 {
@@ -157,15 +157,18 @@ func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *Me
 		delegatorAddr = &delegator
 	}
 
-	signers := []*types.AccountIdentifier{
-		{Address: originAddr.String()},
-	}
+	var signers []*types.AccountIdentifier
+	if signed {
+		signers = []*types.AccountIdentifier{
+			{Address: originAddr.String()},
+		}
 
-	// Add delegator signer if present
-	if delegatorAddr != nil {
-		signers = append(signers, &types.AccountIdentifier{
-			Address: delegatorAddr.String(),
-		})
+		// Add delegator signer if present
+		if delegatorAddr != nil {
+			signers = append(signers, &types.AccountIdentifier{
+				Address: delegatorAddr.String(),
+			})
+		}
 	}
 
 	// Parse clauses as operations using the existing clause parser

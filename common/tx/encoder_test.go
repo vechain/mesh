@@ -575,7 +575,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations, signers := encoder.parseTransactionSignersAndOperations(tt.meshTx)
+			operations, signers := encoder.parseTransactionSignersAndOperations(tt.meshTx, true)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseTransactionSignersAndOperations() operations length = %v, want %v", len(operations), tt.expectedOps)
