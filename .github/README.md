@@ -3,7 +3,6 @@
 > **⚠️ Work in Progress (WIP)**: This repository is currently under active development. The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
 >
 > **📋 TODO List:**
-> - Use mesh-cli to validate endpoints
 > - Publish docker image on release
 >
 > Expect more changes and improvements in upcoming releases.
@@ -204,6 +203,10 @@ Derived address: 0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa
    ```bash
    docker system prune -a
    ```
+
+## Validation
+
+This implementation includes integration with Coinbase's `mesh-cli` for automated endpoint validation. See **[Mesh CLI Validation Guide](mesh-cli-validation.md)**.
 
 ## Documentation
 

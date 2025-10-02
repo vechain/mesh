@@ -1,0 +1,100 @@
+{
+  "network": {
+    "blockchain": "vechainthor",
+    "network": "solo"
+  },
+  "online_url": "http://mesh:8080",
+  "data_directory": "/data",
+  "http_timeout": 300,
+  "max_retries": 5,
+  "retry_elapsed_time": 600,
+  "tip_delay": 60,
+  "log_configuration": false,
+  "construction": {
+    "offline_url": "http://mesh:8080",
+    "max_offline_connections": 120,
+    "stale_depth": 10,
+    "broadcast_limit": 5,
+    "ignore_broadcast_failures": false,
+    "clear_broadcasts": false,
+    "broadcast_behind_tip": false,
+    "block_broadcast_limit": 5,
+    "rebroadcast_all": false,
+    "workflows": [
+      {
+        "name": "transfer",
+        "concurrency": 1,
+        "scenarios": [
+          {
+            "name": "simple_transfer",
+            "actions": [
+              {
+                "type": "set_variable",
+                "input": "{\"symbol\":\"VET\", \"decimals\":18}",
+                "output_path": "currency"
+              },
+              {
+                "type": "set_variable",
+                "input": "1000000000000000000",
+                "output_path": "transfer_amount"
+              },
+              {
+                "type": "find_balance",
+                "minimum_balance": {
+                  "value": "1000000000000000000",
+                  "currency": "{{currency}}"
+                },
+                "create_limit": 0,
+                "create_probability": 0
+              },
+              {
+                "type": "math",
+                "input": "{{transfer_amount}}",
+                "operation": "subtraction",
+                "output_path": "sender.balance_change"
+              },
+              {
+                "type": "math",
+                "input": "{{sender.balance_change}}",
+                "operation": "multiplication",
+                "value": "-1",
+                "output_path": "sender.balance_change"
+              },
+              {
+                "type": "find_balance",
+                "not_account_identifier": [
+                  "{{sender.account_identifier}}"
+                ],
+                "minimum_balance": {
+                  "value": "0",
+                  "currency": "{{currency}}"
+                },
+                "create_limit": 100,
+                "create_probability": 50
+              },
+              {
+                "type": "set_variable",
+                "input": "{{transfer_amount}}",
+                "output_path": "receiver.balance_change"
+              },
+              {
+                "type": "math",
+                "input": "{{receiver.balance_change}}",
+                "operation": "addition",
+                "value": "0",
+                "output_path": "receiver.balance_change"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "end_conditions": {
+      "create_account": 10,
+      "transfer": 10
+    },
+    "results_output_file": "/data/construction_results.json",
+    "status_port": 9091
+  }
+}
+

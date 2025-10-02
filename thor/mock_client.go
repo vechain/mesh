@@ -269,6 +269,12 @@ func (m *MockVeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, e
 	return m.MockBlock, nil
 }
 
+func (m *MockVeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error) {
+	// Convert to hex format and use GetBlock
+	revision := fmt.Sprintf("0x%x", blockNumber)
+	return m.GetBlock(revision)
+}
+
 func (m *MockVeChainClient) GetAccount(address string) (*api.Account, error) {
 	if m.MockError != nil {
 		return nil, m.MockError

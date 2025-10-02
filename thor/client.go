@@ -16,6 +16,7 @@ import (
 // VeChainClientInterface defines a common interface
 type VeChainClientInterface interface {
 	GetBlock(revision string) (*api.JSONExpandedBlock, error)
+	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
 	GetAccount(address string) (*api.Account, error)
 	GetChainID() (int, error)
 	SubmitTransaction(vechainTx *tx.Transaction) (string, error)
@@ -44,11 +45,14 @@ func NewVeChainClient(baseURL string) *VeChainClient {
 
 // GetBlock fetches a block by its revision
 func (c *VeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, error) {
-	block, err := c.client.ExpandedBlock(revision)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get block by revision: %w", err)
-	}
-	return block, nil
+	return c.client.ExpandedBlock(revision)
+}
+
+// GetBlockByNumber fetches a block by its number
+func (c *VeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error) {
+	// Convert block number to hex format with 0x prefix
+	revision := fmt.Sprintf("0x%x", blockNumber)
+	return c.GetBlock(revision)
 }
 
 // GetAccount fetches account details by address

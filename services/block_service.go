@@ -143,7 +143,7 @@ func (b *BlockService) getBlockByIdentifier(blockIdentifier types.BlockIdentifie
 		return b.vechainClient.GetBlock(blockIdentifier.Hash)
 	} else if blockIdentifier.Index != 0 {
 		// Get block by number
-		return b.vechainClient.GetBlock(fmt.Sprintf("%x", blockIdentifier.Index))
+		return b.vechainClient.GetBlockByNumber(blockIdentifier.Index)
 	}
 	return nil, fmt.Errorf("invalid block identifier")
 }
@@ -155,7 +155,7 @@ func (b *BlockService) getBlockByPartialIdentifier(blockIdentifier types.Partial
 		return b.vechainClient.GetBlock(*blockIdentifier.Hash)
 	} else if blockIdentifier.Index != nil {
 		// Get block by number
-		return b.vechainClient.GetBlock(fmt.Sprintf("%x", *blockIdentifier.Index))
+		return b.vechainClient.GetBlockByNumber(*blockIdentifier.Index)
 	}
 	return nil, fmt.Errorf("invalid block identifier")
 }

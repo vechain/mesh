@@ -160,6 +160,7 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 		meshcommon.OperationTypeTransfer,
 		meshcommon.OperationTypeFee,
 		meshcommon.OperationTypeFeeDelegation,
+		meshcommon.OperationTypeContractCall,
 	}
 
 	// Define balance exemptions for VTHO (dynamic exemption)

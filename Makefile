@@ -1,6 +1,6 @@
 # VeChain Mesh API Makefile
 
-.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
+.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction mesh-cli-view-data
 
 # Default target
 help:
@@ -15,6 +15,12 @@ help:
 	@echo "  docker-solo-up   - Start services in solo mode"
 	@echo "  docker-solo-down - Stop solo mode services"
 	@echo "  docker-solo-logs - View solo mode logs"
+	@echo ""
+	@echo "Mesh CLI validation commands:"
+	@echo "  mesh-cli-build              - Build mesh-cli Docker image"
+	@echo "  mesh-cli-check-data         - Validate Data API implementation (requires testnet mode)"
+	@echo "  mesh-cli-check-construction - Validate Construction API implementation (requires solo mode)"
+	@echo "  mesh-cli-view-data          - View mesh-cli data validation results"
 	@echo ""
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"
@@ -238,3 +244,73 @@ docker-solo-down:
 
 docker-solo-logs:
 	NETWORK=solo docker compose logs -f
+
+# Mesh CLI validation commands
+mesh-cli-build:
+	@echo "Building mesh-cli Docker image..."
+	docker build -f Dockerfile.mesh-cli -t vechain-mesh-cli:latest .
+
+mesh-cli-check-data:
+	@if [ -z "$(ENV)" ]; then \
+		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-data ENV=solo|test|main"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-data.json" ]; then \
+		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-data.json"; \
+		exit 1; \
+	fi
+	@echo "Running mesh-cli Data API validation for $(ENV) network..."
+	@echo "Make sure mesh server is running with NETWORK=$(ENV): make docker-up NETWORK=$(ENV)"
+	@echo ""
+	@mkdir -p mesh-cli-data
+	docker run --rm \
+		--network mesh_vechain-network \
+		-v $(PWD)/config/$(ENV):/config:ro \
+		-v $(PWD)/mesh-cli-data:/data \
+		vechain-mesh-cli:latest \
+		check:data --configuration-file /config/mesh-cli-data.json
+
+mesh-cli-check-construction:
+	@if [ -z "$(ENV)" ]; then \
+		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-construction ENV=solo|test|main"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-construction.json" ]; then \
+		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-construction.json"; \
+		exit 1; \
+	fi
+	@echo "Running mesh-cli Construction API validation for $(ENV) network..."
+	@mkdir -p mesh-cli-data
+	docker run --rm \
+		--network mesh_vechain-network \
+		-v $(PWD)/config/$(ENV):/config:ro \
+		-v $(PWD)/mesh-cli-data:/data \
+		vechain-mesh-cli:latest \
+		check:construction --configuration-file /config/mesh-cli-construction.json
+
+mesh-cli-view-data:
+	@echo "Viewing mesh-cli data validation results..."
+	@if [ -f "./mesh-cli-data/data_results.json" ]; then \
+		cat ./mesh-cli-data/data_results.json | jq '.'; \
+	else \
+		echo "❌ No results file found. Run 'make mesh-cli-check-data' first."; \
+	fi
+
+
+mesh-cli-check-data-solo:
+	@$(MAKE) mesh-cli-check-data ENV=solo
+
+mesh-cli-check-construction-solo:
+	@$(MAKE) mesh-cli-check-construction ENV=solo
+
+mesh-cli-check-data-test:
+	@$(MAKE) mesh-cli-check-data ENV=test
+
+mesh-cli-check-construction-test:
+	@$(MAKE) mesh-cli-check-construction ENV=test
+
+mesh-cli-check-data-main:
+	@$(MAKE) mesh-cli-check-data ENV=main
+
+mesh-cli-check-construction-main:
+	@$(MAKE) mesh-cli-check-construction ENV=main
