@@ -49,12 +49,12 @@ jobs:
         run: make test-unit-coverage-threshold
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
+          file: ./coverage-filtered.out
           fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-e2e:
     name: E2E Tests
