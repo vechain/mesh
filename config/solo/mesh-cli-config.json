@@ -10,6 +10,20 @@
   "retry_elapsed_time": 600,
   "tip_delay": 60,
   "log_configuration": false,
+  "data": {
+    "initial_balance_fetch_disabled": false,
+    "interesting_accounts": "",
+    "bootstrap_balances": "",
+    "historical_balance_disabled": true,
+    "reconciliation_disabled": true,
+    "inactive_discrepancy_search_disabled": true,
+    "balance_tracking_disabled": true,
+    "coin_tracking_disabled": true,
+    "end_conditions": {
+      "tip": true
+    },
+    "results_output_file": "/data/data_results.json"
+  },
   "construction": {
     "offline_url": "http://mesh:8080",
     "max_offline_connections": 120,

@@ -254,8 +254,8 @@ mesh-cli-check-data:
 		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-data ENV=solo|test|main"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-data.json" ]; then \
-		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-data.json"; \
+	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-config.json" ]; then \
+		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-config.json"; \
 		exit 1; \
 	fi
 	@echo "Starting mesh-cli Data API validation for $(ENV) network..."
@@ -294,7 +294,7 @@ mesh-cli-check-data:
 		-v $(PWD)/config/$(ENV):/config:ro \
 		-v $(PWD)/mesh-cli-data:/data \
 		vechain-mesh-cli:latest \
-		check:data --configuration-file /config/mesh-cli-data.json; \
+		check:data --configuration-file /config/mesh-cli-config.json; \
 		validation_result=$$?; \
 		echo "4. Stopping $(ENV) mode services..."; \
 		if [ "$(ENV)" = "solo" ]; then \
@@ -314,8 +314,8 @@ mesh-cli-check-construction:
 		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-construction ENV=solo|test|main"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-construction.json" ]; then \
-		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-construction.json"; \
+	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-config.json" ]; then \
+		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-config.json"; \
 		exit 1; \
 	fi
 	@echo "Starting mesh-cli Construction API validation for $(ENV) network..."
@@ -355,7 +355,7 @@ mesh-cli-check-construction:
 		-v $(PWD)/config/$(ENV):/config:ro \
 		-v $(PWD)/mesh-cli-data:/data \
 		vechain-mesh-cli:latest \
-		check:construction --configuration-file /config/mesh-cli-construction.json; \
+		check:construction --configuration-file /config/mesh-cli-config.json; \
 		validation_result=$$?; \
 		echo "4. Stopping $(ENV) mode services..."; \
 		if [ "$(ENV)" = "solo" ]; then \

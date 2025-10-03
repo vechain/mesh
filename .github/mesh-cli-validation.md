@@ -118,7 +118,7 @@ docker run --rm \
   -v $(pwd)/config/solo:/config:ro \
   -v $(pwd)/mesh-cli-data:/data \
   vechain-mesh-cli:latest \
-  check:data --configuration-file /config/mesh-cli-data.json
+  check:data --configuration-file /config/mesh-cli-config.json
 ```
 
 ### Results
