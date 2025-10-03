@@ -1,6 +1,6 @@
 # VeChain Mesh API Makefile
 
-.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs
+.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
 
 # Default target
 help:
@@ -15,6 +15,14 @@ help:
 	@echo "  docker-solo-up   - Start services in solo mode"
 	@echo "  docker-solo-down - Stop solo mode services"
 	@echo "  docker-solo-logs - View solo mode logs"
+	@echo ""
+	@echo "Mesh CLI validation commands:"
+	@echo "  mesh-cli-build                    - Build mesh-cli Docker image"
+	@echo "  mesh-cli-check-data-solo          - Validate Data API on solo network (recommended)"
+	@echo "  mesh-cli-check-construction-solo  - Validate Construction API on solo network (recommended)"
+	@echo "  mesh-cli-check-data ENV=<env>     - Validate Data API for specific environment (solo|test|main)"
+	@echo "  mesh-cli-check-construction ENV=<env> - Validate Construction API for specific environment (solo|test|main)"
+	@echo "    ⚠️  Note: test and main environments are WIP"
 	@echo ""
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"
@@ -238,3 +246,135 @@ docker-solo-down:
 
 docker-solo-logs:
 	NETWORK=solo docker compose logs -f
+
+# Mesh CLI validation commands
+mesh-cli-build:
+	@echo "Building mesh-cli Docker image..."
+	docker build -f mesh-cli/Dockerfile -t vechain-mesh-cli:latest .
+
+mesh-cli-check-data:
+	@if [ -z "$(ENV)" ]; then \
+		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-data ENV=solo|test|main"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(PWD)/mesh-cli/$(ENV)/config.json" ]; then \
+		echo "❌ Error: Configuration file not found: mesh-cli/$(ENV)/config.json"; \
+		exit 1; \
+	fi
+	@echo "Starting mesh-cli Data API validation for $(ENV) network..."
+	@echo "0. Cleaning previous mesh-cli data..."
+	@rm -rf mesh-cli/data
+	@echo "1. Starting $(ENV) mode services..."
+	@if [ "$(ENV)" = "solo" ]; then \
+		$(MAKE) docker-solo-up; \
+	else \
+		NETWORK=$(ENV) $(MAKE) docker-up; \
+	fi
+	@echo "2. Waiting for services to be ready..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+			echo "✅ Mesh API server is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "❌ Timeout waiting for server to start"; \
+		if [ "$(ENV)" = "solo" ]; then \
+			$(MAKE) docker-solo-down; \
+		else \
+			$(MAKE) docker-down; \
+		fi; \
+		exit 1; \
+	fi
+	@echo "3. Running mesh-cli Data API validation..."
+	@mkdir -p mesh-cli/data
+	@bash -c 'docker run --rm \
+		--network mesh_vechain-network \
+		-v $(PWD)/mesh-cli/$(ENV):/config:ro \
+		-v $(PWD)/mesh-cli/data:/data \
+		vechain-mesh-cli:latest \
+		check:data --configuration-file /config/config.json; \
+		validation_result=$$?; \
+		echo "4. Stopping $(ENV) mode services..."; \
+		if [ "$(ENV)" = "solo" ]; then \
+			$(MAKE) docker-solo-down; \
+		else \
+			$(MAKE) docker-down; \
+		fi; \
+		if [ $$validation_result -eq 0 ]; then \
+			echo "✅ Data API validation passed!"; \
+		else \
+			echo "❌ Data API validation failed!"; \
+		fi; \
+		exit $$validation_result'
+
+mesh-cli-check-construction:
+	@if [ -z "$(ENV)" ]; then \
+		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-construction ENV=solo|test|main"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(PWD)/mesh-cli/$(ENV)/config.json" ]; then \
+		echo "❌ Error: Configuration file not found: mesh-cli/$(ENV)/config.json"; \
+		exit 1; \
+	fi
+	@echo "Starting mesh-cli Construction API validation for $(ENV) network..."
+	@echo "0. Cleaning previous mesh-cli data..."
+	@rm -rf mesh-cli/data
+	@echo "1. Starting $(ENV) mode services..."
+	@if [ "$(ENV)" = "solo" ]; then \
+		$(MAKE) docker-solo-up; \
+	else \
+		NETWORK=$(ENV) $(MAKE) docker-up; \
+	fi
+	@echo "2. Waiting for services to be ready..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+			echo "✅ Mesh API server is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "❌ Timeout waiting for server to start"; \
+		if [ "$(ENV)" = "solo" ]; then \
+			$(MAKE) docker-solo-down; \
+		else \
+			$(MAKE) docker-down; \
+		fi; \
+		exit 1; \
+	fi
+	@echo "3. Running mesh-cli Construction API validation..."
+	@echo "⚠️  Note: Construction API validation may take several minutes"
+	@mkdir -p mesh-cli/data
+	@bash -c 'docker run --rm \
+		--network mesh_vechain-network \
+		-v $(PWD)/mesh-cli/$(ENV):/config:ro \
+		-v $(PWD)/mesh-cli/data:/data \
+		vechain-mesh-cli:latest \
+		check:construction --configuration-file /config/config.json; \
+		validation_result=$$?; \
+		echo "4. Stopping $(ENV) mode services..."; \
+		if [ "$(ENV)" = "solo" ]; then \
+			$(MAKE) docker-solo-down; \
+		else \
+			$(MAKE) docker-down; \
+		fi; \
+		if [ $$validation_result -eq 0 ]; then \
+			echo "✅ Construction API validation passed!"; \
+		else \
+			echo "❌ Construction API validation failed!"; \
+		fi; \
+		exit $$validation_result'
+
+mesh-cli-check-data-solo:
+	@$(MAKE) mesh-cli-check-data ENV=solo
+
+mesh-cli-check-construction-solo:
+	@$(MAKE) mesh-cli-check-construction ENV=solo

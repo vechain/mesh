@@ -1,0 +1,69 @@
+{
+  "network": {
+    "blockchain": "vechainthor",
+    "network": "solo"
+  },
+  "online_url": "http://mesh:8080",
+  "data_directory": "/data",
+  "http_timeout": 300,
+  "max_retries": 5,
+  "retry_elapsed_time": 600,
+  "tip_delay": 60,
+  "log_configuration": false,
+  "data": {
+    "initial_balance_fetch_disabled": false,
+    "interesting_accounts": "",
+    "bootstrap_balances": "",
+    "historical_balance_disabled": true,
+    "reconciliation_disabled": true,
+    "inactive_discrepancy_search_disabled": true,
+    "balance_tracking_disabled": true,
+    "coin_tracking_disabled": true,
+    "end_conditions": {
+      "tip": true
+    },
+    "results_output_file": "/data/data_results.json"
+  },
+  "construction": {
+    "offline_url": "http://mesh:8080",
+    "max_offline_connections": 120,
+    "stale_depth": 10,
+    "broadcast_limit": 5,
+    "ignore_broadcast_failures": false,
+    "clear_broadcasts": false,
+    "broadcast_behind_tip": false,
+    "block_broadcast_limit": 5,
+    "rebroadcast_all": false,
+    "end_conditions": {
+      "transfer": 2
+    },
+    "constructor_dsl_file": "workflows.ros",
+    "quiet": false,
+    "prefunded_accounts": [
+      {
+        "privkey": "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36",
+        "account_identifier": {
+          "address": "0xf077b491b355e64048ce21e3a6fc4751eeea77fa"
+        },
+        "curve_type": "secp256k1",
+        "currency": {
+          "symbol": "VET",
+          "decimals": 18
+        }
+      },
+      {
+        "privkey": "a5e04d34f10acdb51792509407d7f50bacc85d4cc47bf7c6de9831375f9cd08e",
+        "account_identifier": {
+          "address": "0x03ff8ce995def4a41c61dd07620fcb995a6d36b9"
+        },
+        "curve_type": "secp256k1",
+        "currency": {
+          "symbol": "VET",
+          "decimals": 18
+        }
+      }
+    ],
+    "results_output_file": "/data/construction_results.json",
+    "status_port": 9091
+  }
+}

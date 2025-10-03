@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -81,7 +80,7 @@ func (e *EventsService) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Get block information
-		block, err := e.vechainClient.GetBlock(fmt.Sprintf("%d", index))
+		block, err := e.vechainClient.GetBlockByNumber(index)
 		if err != nil {
 			// If block doesn't exist, skip it
 			continue

@@ -428,9 +428,13 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	response := &types.ConstructionParseResponse{
-		Operations:               operations,
-		AccountIdentifierSigners: signers,
-		Metadata:                 metadata,
+		Operations: operations,
+		Metadata:   metadata,
+	}
+
+	// Only include signers for signed transactions
+	if request.Signed {
+		response.AccountIdentifierSigners = signers
 	}
 
 	c.responseHandler.WriteJSONResponse(w, response)
@@ -713,7 +717,7 @@ func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, pub
 	hash := vechainTx.SigningHash()
 	return &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: originAddress.Hex(),
+			Address: strings.ToLower(originAddress.Hex()),
 		},
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,
@@ -736,7 +740,7 @@ func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, 
 
 	return &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: delegatorAddress.Hex(),
+			Address: strings.ToLower(delegatorAddress.Hex()),
 		},
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,

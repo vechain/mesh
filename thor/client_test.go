@@ -36,7 +36,7 @@ func TestVeChainClient_GetBlockByNumber(t *testing.T) {
 	client := NewVeChainClient("http://localhost:8669")
 
 	// Test with a valid block number
-	_, err := client.GetBlock(fmt.Sprintf("%x", 100))
+	_, err := client.GetBlockByNumber(100)
 	if err == nil {
 		t.Errorf("GetBlockByNumber() should return error when no Thor node is available")
 	}

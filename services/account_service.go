@@ -126,7 +126,7 @@ func (a *AccountService) getBlockFromIdentifier(blockIdentifier types.PartialBlo
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
 		return a.vechainClient.GetBlock(*blockIdentifier.Hash)
 	} else if blockIdentifier.Index != nil {
-		return a.vechainClient.GetBlock(fmt.Sprintf("%x", *blockIdentifier.Index))
+		return a.vechainClient.GetBlockByNumber(*blockIdentifier.Index)
 	}
 	return nil, fmt.Errorf("invalid block identifier")
 }

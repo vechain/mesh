@@ -39,3 +39,6 @@ coverage.html
 # Profiling files
 *.prof
 *.pprof
+
+# Mesh CLI data and results
+mesh-cli/data/

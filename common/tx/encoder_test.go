@@ -438,13 +438,9 @@ func TestParseTransactionFromBytes(t *testing.T) {
 
 	// Create and encode a transaction
 	vechainTx := createTestVeChainTransaction()
-	origin := []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f}
-	delegator := []byte{}
 
 	encoded, err := encoder.EncodeTransaction(&MeshTransaction{
 		Transaction: vechainTx,
-		Origin:      origin,
-		Delegator:   delegator,
 	})
 	if err != nil {
 		t.Fatalf("EncodeUnsignedTransaction() error = %v", err)
@@ -461,8 +457,8 @@ func TestParseTransactionFromBytes(t *testing.T) {
 	if operations == nil {
 		t.Errorf("ParseTransactionFromBytes() returned nil operations")
 	}
-	if signers == nil {
-		t.Errorf("ParseTransactionFromBytes() returned nil signers")
+	if signers != nil {
+		t.Errorf("ParseTransactionFromBytes() returned signers")
 	}
 }
 
@@ -507,7 +503,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 				}(),
 				Delegator: []byte{},
 			},
-			expectedOps:     4,
+			expectedOps:     3,
 			expectedSigners: 1,
 		},
 		{
@@ -544,7 +540,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 					return addr.Bytes()
 				}(),
 			},
-			expectedOps:     4,
+			expectedOps:     3,
 			expectedSigners: 2,
 		},
 		{
@@ -575,7 +571,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations, signers := encoder.parseTransactionSignersAndOperations(tt.meshTx)
+			operations, signers := encoder.parseTransactionSignersAndOperations(tt.meshTx, true)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseTransactionSignersAndOperations() operations length = %v, want %v", len(operations), tt.expectedOps)

@@ -74,7 +74,7 @@ func (h *SigningHandler) GetAddressFromPrivateKey() (string, error) {
 	publicKey := privateKey.Public().(*ecdsa.PublicKey)
 	address := crypto.PubkeyToAddress(*publicKey)
 
-	return address.Hex(), nil
+	return strings.ToLower(address.Hex()), nil
 }
 
 // SignPayloadWithAddress signs a payload and returns both signature and derived address
