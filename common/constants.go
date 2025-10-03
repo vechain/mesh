@@ -58,6 +58,10 @@ const (
 	CallMethodInspectClauses = "inspect_clauses"
 )
 
+const (
+	VTHOContractAddress = "0x0000000000000000000000000000456e65726779"
+)
+
 var (
 	// VETCurrency represents the native VeChain token
 	VETCurrency = &types.Currency{
@@ -70,7 +74,7 @@ var (
 		Symbol:   "VTHO",
 		Decimals: 18,
 		Metadata: map[string]any{
-			"contractAddress": "0x0000000000000000000000000000456E65726779",
+			"contractAddress": VTHOContractAddress,
 		},
 	}
 )

@@ -95,7 +95,7 @@ func TestGetTokenCurrencyFromContractAddressWithClient(t *testing.T) {
 	}{
 		{
 			name:             "VTHO token",
-			contractAddr:     "0x0000000000000000000000000000456e65726779",
+			contractAddr:     meshcommon.VTHOContractAddress,
 			expectedSymbol:   "VTHO",
 			expectedDecimals: 18,
 			expectError:      false,
@@ -112,7 +112,7 @@ func TestGetTokenCurrencyFromContractAddressWithClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up mock responses for unknown tokens
-			if tt.contractAddr != "0x0000000000000000000000000000456e65726779" {
+			if tt.contractAddr != meshcommon.VTHOContractAddress {
 				// Mock symbol call (first call) and decimals call (second call)
 				mockClient.SetMockCallResults([]string{
 					"0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000045553445400000000000000000000000000000000000000000000000000000000", // Symbol: "USDT"
@@ -310,7 +310,7 @@ func TestGetTokensOperations(t *testing.T) {
 							Symbol:   "VTHO",
 							Decimals: 18,
 							Metadata: map[string]any{
-								"contractAddress": "0x0000000000000000000000000000456e65726779",
+								"contractAddress": meshcommon.VTHOContractAddress,
 							},
 						},
 					},
@@ -318,7 +318,7 @@ func TestGetTokensOperations(t *testing.T) {
 			},
 			expectedRegistered: []map[string]string{
 				{
-					"token": "0x0000000000000000000000000000456e65726779",
+					"token": meshcommon.VTHOContractAddress,
 					"value": "1000000000000000000",
 					"to":    meshtests.TestAddress1,
 				},
@@ -338,7 +338,7 @@ func TestGetTokensOperations(t *testing.T) {
 							Symbol:   "VTHO",
 							Decimals: 18,
 							Metadata: map[string]any{
-								"contractAddress": "0x0000000000000000000000000000456e65726779",
+								"contractAddress": meshcommon.VTHOContractAddress,
 							},
 						},
 					},
@@ -360,7 +360,7 @@ func TestGetTokensOperations(t *testing.T) {
 							Symbol:   "VTHO",
 							Decimals: 18,
 							Metadata: map[string]any{
-								"contractAddress": "0x0000000000000000000000000000456e65726779",
+								"contractAddress": meshcommon.VTHOContractAddress,
 							},
 						},
 					},

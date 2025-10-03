@@ -13,31 +13,20 @@ import (
 	"github.com/vechain/thor/v2/tx"
 )
 
-// VeChainClientInterface defines a common interface
-type VeChainClientInterface interface {
-	GetBlock(revision string) (*api.JSONExpandedBlock, error)
-	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
-	GetAccount(address string) (*api.Account, error)
-	GetChainID() (int, error)
-	SubmitTransaction(vechainTx *tx.Transaction) (string, error)
-	GetDynamicGasPrice() (*DynamicGasPrice, error)
-	GetSyncProgress() (float64, error)
-	GetPeers() ([]Peer, error)
-	GetMempoolTransactions(origin *thor.Address) ([]*thor.Bytes32, error)
-	GetMempoolTransaction(txID *thor.Bytes32) (*transactions.Transaction, error)
-	GetMempoolStatus() (*api.Status, error)
-	CallContract(contractAddress, callData string) (string, error)
-	GetTransaction(txID string) (*transactions.Transaction, error)
-	GetTransactionReceipt(txID string) (*api.Receipt, error)
-	InspectClauses(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error)
-}
 type VeChainClient struct {
-	client *thorclient.Client
+	client ThorClientInterface
 }
 
 // NewVeChainClient creates a new VeChain client
 func NewVeChainClient(baseURL string) *VeChainClient {
 	client := thorclient.New(baseURL)
+	return &VeChainClient{
+		client: client,
+	}
+}
+
+// NewVeChainClientWithMock creates a new VeChain client with a custom ThorClientInterface (for testing)
+func NewVeChainClientWithMock(client ThorClientInterface) *VeChainClient {
 	return &VeChainClient{
 		client: client,
 	}

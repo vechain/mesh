@@ -2,13 +2,16 @@ package thor
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	meshtests "github.com/vechain/mesh/tests"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/thorclient"
 	"github.com/vechain/thor/v2/tx"
 )
 
@@ -53,48 +56,6 @@ func TestVeChainClient_GetBlockByHash(t *testing.T) {
 	}
 }
 
-func TestVeChainClient_GetAccount(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with a valid account address
-	address := meshtests.FirstSoloAddress
-	_, err := client.GetAccount(address)
-	if err == nil {
-		t.Errorf("GetAccount() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetChainID(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// This will fail because we don't have a real Thor node running
-	_, err := client.GetChainID()
-	if err == nil {
-		t.Errorf("GetChainID() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_SubmitTransaction(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with a valid transaction - create a proper transaction
-	builder := tx.NewBuilder(tx.TypeLegacy)
-	builder.ChainTag(0x27)
-	blockRef := tx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
-	builder.BlockRef(blockRef)
-	builder.Expiration(720)
-	builder.Gas(21000)
-	builder.GasPriceCoef(128)
-	builder.Nonce(0x1234567890abcdef)
-
-	validTx := builder.Build()
-
-	_, err := client.SubmitTransaction(validTx)
-	if err == nil {
-		t.Errorf("SubmitTransaction() should return error when no Thor node is available")
-	}
-}
-
 func TestVeChainClient_GetDynamicGasPrice(t *testing.T) {
 	// Test with mock client to cover success path
 	mockClient := NewMockVeChainClient()
@@ -130,16 +91,6 @@ func TestVeChainClient_GetSyncProgress(t *testing.T) {
 	_, err = client.GetSyncProgress()
 	if err == nil {
 		t.Errorf("GetSyncProgress() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetPeers(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// This will fail because we don't have a real Thor node running
-	_, err := client.GetPeers()
-	if err == nil {
-		t.Errorf("GetPeers() should return error when no Thor node is available")
 	}
 }
 
@@ -190,38 +141,6 @@ func TestVeChainClient_GetMempoolStatus(t *testing.T) {
 	_, err := client.GetMempoolStatus()
 	if err == nil {
 		t.Errorf("GetMempoolStatus() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_CallContract(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with valid contract call parameters
-	contractAddress := "0x0000000000000000000000000000456e65726779"
-	data := "0x1234567890abcdef"
-	_, err := client.CallContract(contractAddress, data)
-	if err == nil {
-		t.Errorf("CallContract() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetTransaction(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with invalid transaction ID
-	_, err := client.GetTransaction("invalid-tx-id")
-	if err == nil {
-		t.Errorf("GetTransaction() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetTransactionReceipt(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with invalid transaction ID
-	_, err := client.GetTransactionReceipt("invalid-tx-id")
-	if err == nil {
-		t.Errorf("GetTransactionReceipt() should return error when no Thor node is available")
 	}
 }
 
@@ -486,5 +405,412 @@ func TestMockVeChainClient_SetReceipt(t *testing.T) {
 	}
 	if receipt == nil {
 		t.Errorf("GetTransactionReceipt() returned nil receipt")
+	}
+}
+
+// Tests with MockThorClient for error flows
+
+func TestVeChainClient_GetAccount_InvalidAddress(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	// Test with invalid address
+	_, err := client.GetAccount("invalid-address")
+	if err == nil {
+		t.Error("GetAccount() with invalid address should return error")
+	}
+}
+
+func TestVeChainClient_GetAccount_ClientError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetAccountFunc(func(address *thor.Address, opts ...thorclient.Option) (*api.Account, error) {
+		return nil, fmt.Errorf("client error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	// Test with valid address but client error
+	_, err := client.GetAccount(meshtests.FirstSoloAddress)
+	if err == nil {
+		t.Error("GetAccount() should return error when client fails")
+	}
+}
+
+func TestVeChainClient_GetChainID_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetChainTagFunc(func() (byte, error) {
+		return 0, fmt.Errorf("chain tag error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetChainID()
+	if err == nil {
+		t.Error("GetChainID() should return error when ChainTag fails")
+	}
+}
+
+func TestVeChainClient_SubmitTransaction_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetSendTransactionFunc(func(tx *tx.Transaction) (*api.SendTxResult, error) {
+		return nil, fmt.Errorf("submit error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	builder := tx.NewBuilder(tx.TypeLegacy)
+	builder.ChainTag(0x27)
+	validTx := builder.Build()
+
+	_, err := client.SubmitTransaction(validTx)
+	if err == nil {
+		t.Error("SubmitTransaction() should return error when SendTransaction fails")
+	}
+}
+
+func TestVeChainClient_GetDynamicGasPrice_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetFeesHistoryFunc(func(blockCount uint32, newestBlock string, rewardPercentiles []float64) (*api.FeesHistory, error) {
+		return nil, fmt.Errorf("fees history error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetDynamicGasPrice()
+	if err == nil {
+		t.Error("GetDynamicGasPrice() should return error when FeesHistory fails")
+	}
+}
+
+func TestVeChainClient_GetDynamicGasPrice_NoBaseFee(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetFeesHistoryFunc(func(blockCount uint32, newestBlock string, rewardPercentiles []float64) (*api.FeesHistory, error) {
+		return &api.FeesHistory{
+			BaseFeePerGas: []*hexutil.Big{},
+			Reward:        [][]*hexutil.Big{},
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	result, err := client.GetDynamicGasPrice()
+	if err != nil {
+		t.Errorf("GetDynamicGasPrice() error = %v, want nil", err)
+	}
+	if result.BaseFee.Cmp(big.NewInt(0)) != 0 {
+		t.Error("GetDynamicGasPrice() should return 0 base fee when no data available")
+	}
+	if result.Reward.Cmp(big.NewInt(0)) != 0 {
+		t.Error("GetDynamicGasPrice() should return 0 reward when no data available")
+	}
+}
+
+func TestVeChainClient_GetDynamicGasPrice_NoReward(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetFeesHistoryFunc(func(blockCount uint32, newestBlock string, rewardPercentiles []float64) (*api.FeesHistory, error) {
+		baseFee := (*hexutil.Big)(big.NewInt(100))
+		return &api.FeesHistory{
+			BaseFeePerGas: []*hexutil.Big{baseFee},
+			Reward:        [][]*hexutil.Big{},
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	result, err := client.GetDynamicGasPrice()
+	if err != nil {
+		t.Errorf("GetDynamicGasPrice() error = %v, want nil", err)
+	}
+	if result.BaseFee.Cmp(big.NewInt(100)) != 0 {
+		t.Error("GetDynamicGasPrice() should return correct base fee")
+	}
+	if result.Reward.Cmp(big.NewInt(0)) != 0 {
+		t.Error("GetDynamicGasPrice() should return 0 reward when no reward data available")
+	}
+}
+
+func TestVeChainClient_GetSyncProgress_GetBlockError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetExpandedBlockFunc(func(revision string) (*api.JSONExpandedBlock, error) {
+		return nil, fmt.Errorf("get block error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetSyncProgress()
+	if err == nil {
+		t.Error("GetSyncProgress() should return error when GetBlock fails")
+	}
+}
+
+func TestVeChainClient_GetSyncProgress_GetGenesisError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	callCount := 0
+	mockThorClient.SetExpandedBlockFunc(func(revision string) (*api.JSONExpandedBlock, error) {
+		callCount++
+		if callCount == 1 {
+			// Return best block successfully
+			return &api.JSONExpandedBlock{
+				JSONBlockSummary: &api.JSONBlockSummary{
+					Timestamp: 1000000,
+				},
+			}, nil
+		}
+		// Fail on genesis block
+		return nil, fmt.Errorf("genesis error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetSyncProgress()
+	if err == nil {
+		t.Error("GetSyncProgress() should return error when getting genesis block fails")
+	}
+}
+
+func TestVeChainClient_GetSyncProgress_NegativeProgress(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetExpandedBlockFunc(func(revision string) (*api.JSONExpandedBlock, error) {
+		if revision == "best" {
+			// Return a block with timestamp before genesis (shouldn't happen in reality)
+			return &api.JSONExpandedBlock{
+				JSONBlockSummary: &api.JSONBlockSummary{
+					Timestamp: 500000,
+				},
+			}, nil
+		}
+		// Genesis block
+		return &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Timestamp: 1000000,
+			},
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	progress, err := client.GetSyncProgress()
+	if err != nil {
+		t.Errorf("GetSyncProgress() error = %v, want nil", err)
+	}
+	if progress == progress { // Check if NaN (NaN != NaN)
+		t.Error("GetSyncProgress() should return NaN for negative progress")
+	}
+}
+
+func TestVeChainClient_GetPeers_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetPeersFunc(func() ([]*api.PeerStats, error) {
+		return nil, fmt.Errorf("peers error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetPeers()
+	if err == nil {
+		t.Error("GetPeers() should return error when Peers() fails")
+	}
+}
+
+func TestVeChainClient_GetMempoolTransactions_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTxPoolFunc(func(expanded bool, origin *thor.Address) (any, error) {
+		return nil, fmt.Errorf("txpool error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetMempoolTransactions(nil)
+	if err == nil {
+		t.Error("GetMempoolTransactions() should return error when TxPool fails")
+	}
+}
+
+func TestVeChainClient_GetMempoolTransactions_WrongType(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTxPoolFunc(func(expanded bool, origin *thor.Address) (any, error) {
+		// Return wrong type
+		return "wrong type", nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	result, err := client.GetMempoolTransactions(nil)
+	if err != nil {
+		t.Errorf("GetMempoolTransactions() error = %v, want nil", err)
+	}
+	if len(result) != 0 {
+		t.Error("GetMempoolTransactions() should return empty array for wrong type")
+	}
+}
+
+func TestVeChainClient_GetMempoolTransaction_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTxPoolFunc(func(expanded bool, origin *thor.Address) (any, error) {
+		return nil, fmt.Errorf("txpool error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	txID := thor.MustParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+	_, err := client.GetMempoolTransaction(&txID)
+	if err == nil {
+		t.Error("GetMempoolTransaction() should return error when TxPool fails")
+	}
+}
+
+func TestVeChainClient_GetMempoolTransaction_WrongType(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTxPoolFunc(func(expanded bool, origin *thor.Address) (any, error) {
+		return "wrong type", nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	txID := thor.MustParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+	_, err := client.GetMempoolTransaction(&txID)
+	if err == nil {
+		t.Error("GetMempoolTransaction() should return error for wrong type")
+	}
+}
+
+func TestVeChainClient_GetMempoolTransaction_NotFound(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTxPoolFunc(func(expanded bool, origin *thor.Address) (any, error) {
+		// Return empty transaction list
+		return []transactions.Transaction{}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	txID := thor.MustParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+	_, err := client.GetMempoolTransaction(&txID)
+	if err == nil {
+		t.Error("GetMempoolTransaction() should return error when transaction not found")
+	}
+}
+
+func TestVeChainClient_CallContract_InvalidAddress(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.CallContract("invalid-address", "0x1234")
+	if err == nil {
+		t.Error("CallContract() should return error for invalid address")
+	}
+}
+
+func TestVeChainClient_CallContract_InspectClausesError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetInspectClausesFunc(func(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error) {
+		return nil, fmt.Errorf("inspect clauses error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.CallContract(meshtests.FirstSoloAddress, "0x1234")
+	if err == nil {
+		t.Error("CallContract() should return error when InspectClauses fails")
+	}
+}
+
+func TestVeChainClient_CallContract_NoResults(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetInspectClausesFunc(func(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error) {
+		return []*api.CallResult{}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.CallContract(meshtests.FirstSoloAddress, "0x1234")
+	if err == nil {
+		t.Error("CallContract() should return error when no results returned")
+	}
+}
+
+func TestVeChainClient_GetTransaction_InvalidTxID(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetTransaction("invalid-txid")
+	if err == nil {
+		t.Error("GetTransaction() should return error for invalid transaction ID")
+	}
+}
+
+func TestVeChainClient_GetTransaction_ClientError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTransactionFunc(func(txHash *thor.Bytes32, opts ...thorclient.Option) (*transactions.Transaction, error) {
+		return nil, fmt.Errorf("transaction error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetTransaction("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+	if err == nil {
+		t.Error("GetTransaction() should return error when client fails")
+	}
+}
+
+func TestVeChainClient_GetTransactionReceipt_InvalidTxID(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetTransactionReceipt("invalid-txid")
+	if err == nil {
+		t.Error("GetTransactionReceipt() should return error for invalid transaction ID")
+	}
+}
+
+func TestVeChainClient_GetTransactionReceipt_ClientError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetTransactionReceiptFunc(func(txHash *thor.Bytes32, opts ...thorclient.Option) (*api.Receipt, error) {
+		return nil, fmt.Errorf("receipt error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetTransactionReceipt("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+	if err == nil {
+		t.Error("GetTransactionReceipt() should return error when client fails")
+	}
+}
+
+func TestVeChainClient_InspectClauses_Error(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetInspectClausesFunc(func(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error) {
+		return nil, fmt.Errorf("inspect error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	batchCallData := &api.BatchCallData{
+		Clauses: []*api.Clause{
+			{
+				To:   nil,
+				Data: "0x1234",
+			},
+		},
+	}
+
+	_, err := client.InspectClauses(batchCallData)
+	if err == nil {
+		t.Error("InspectClauses() should return error when client fails")
+	}
+}
+
+func TestVeChainClient_InspectClauses_Success(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetInspectClausesFunc(func(batchCallData *api.BatchCallData, options ...thorclient.Option) ([]*api.CallResult, error) {
+		return []*api.CallResult{
+			{
+				Data:      "0x5678",
+				Events:    []*api.Event{},
+				Transfers: []*api.Transfer{},
+				GasUsed:   21000,
+				Reverted:  false,
+			},
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	batchCallData := &api.BatchCallData{
+		Clauses: []*api.Clause{
+			{
+				To:   nil,
+				Data: "0x1234",
+			},
+		},
+	}
+
+	results, err := client.InspectClauses(batchCallData)
+	if err != nil {
+		t.Errorf("InspectClauses() error = %v, want nil", err)
+	}
+	if len(results) != 1 {
+		t.Error("InspectClauses() should return 1 result")
+	}
+	if results[0].Data != "0x5678" {
+		t.Error("InspectClauses() should return correct data")
 	}
 }

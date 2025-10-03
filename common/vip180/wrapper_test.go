@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
@@ -178,7 +179,7 @@ func TestVIP180Contract_TotalSupply_Error(t *testing.T) {
 
 func TestVIP180Contract_callStringMethod(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	contract, _ := NewVIP180Contract("0x0000000000000000000000000000456e65726779", mockClient)
+	contract, _ := NewVIP180Contract(meshcommon.VTHOContractAddress, mockClient)
 
 	t.Run("Successful call", func(t *testing.T) {
 		// Set up mock response for string method
@@ -206,7 +207,7 @@ func TestVIP180Contract_callStringMethod(t *testing.T) {
 
 func TestVIP180Contract_callInt32Method(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	contract, _ := NewVIP180Contract("0x0000000000000000000000000000456e65726779", mockClient)
+	contract, _ := NewVIP180Contract(meshcommon.VTHOContractAddress, mockClient)
 
 	t.Run("Successful call", func(t *testing.T) {
 		// Set up mock response for uint8 method
@@ -234,7 +235,7 @@ func TestVIP180Contract_callInt32Method(t *testing.T) {
 
 func TestVIP180Contract_callBigIntMethod(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	contract, _ := NewVIP180Contract("0x0000000000000000000000000000456e65726779", mockClient)
+	contract, _ := NewVIP180Contract(meshcommon.VTHOContractAddress, mockClient)
 
 	t.Run("Successful call", func(t *testing.T) {
 		// Set up mock response for uint256 method
@@ -258,4 +259,107 @@ func TestVIP180Contract_callBigIntMethod(t *testing.T) {
 			t.Errorf("callBigIntMethod() error = nil, want error")
 		}
 	})
+}
+
+// Test decode error cases
+func TestVIP180Contract_DecodeStringResult_InvalidHex(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with invalid hex
+	mockClient.SetMockCallResult("0xINVALID_HEX")
+
+	_, err := contract.Symbol()
+	if err == nil {
+		t.Errorf("Symbol() with invalid hex error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_DecodeInt32Result_InvalidHex(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with invalid hex
+	mockClient.SetMockCallResult("0xZZZZ")
+
+	_, err := contract.Decimals()
+	if err == nil {
+		t.Errorf("Decimals() with invalid hex error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_DecodeBigIntResult_InvalidHex(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with invalid hex
+	mockClient.SetMockCallResult("0xGGGG")
+
+	_, err := contract.TotalSupply()
+	if err == nil {
+		t.Errorf("TotalSupply() with invalid hex error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_BalanceOf_InvalidAddress(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with invalid address
+	_, err := contract.BalanceOf("invalid-address")
+	if err == nil {
+		t.Errorf("BalanceOf() with invalid address error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_DecodeStringResult_InvalidDecode(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with valid hex but invalid ABI encoding (too short)
+	mockClient.SetMockCallResult("0x00")
+
+	_, err := contract.Symbol()
+	if err == nil {
+		t.Errorf("Symbol() with invalid ABI encoding error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_DecodeInt32Result_InvalidDecode(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with valid hex but invalid ABI encoding (empty)
+	mockClient.SetMockCallResult("0x")
+
+	_, err := contract.Decimals()
+	if err == nil {
+		t.Errorf("Decimals() with invalid ABI encoding error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_DecodeBigIntResult_InvalidDecode(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with valid hex but invalid ABI encoding (too short)
+	mockClient.SetMockCallResult("0x00")
+
+	_, err := contract.TotalSupply()
+	if err == nil {
+		t.Errorf("TotalSupply() with invalid ABI encoding error = nil, want error")
+	}
+}
+
+func TestVIP180Contract_BalanceOf_InvalidDecodedResult(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	contract, _ := NewVIP180Contract("0x1234567890123456789012345678901234567890", mockClient)
+
+	// Test with valid hex but invalid ABI encoding
+	mockClient.SetMockCallResult("0x01")
+
+	_, err := contract.BalanceOf(meshtests.FirstSoloAddress)
+	if err == nil {
+		t.Errorf("BalanceOf() with invalid ABI encoding error = nil, want error")
+	}
 }
