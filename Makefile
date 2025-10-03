@@ -375,15 +375,3 @@ mesh-cli-check-data-solo:
 
 mesh-cli-check-construction-solo:
 	@$(MAKE) mesh-cli-check-construction ENV=solo
-
-mesh-cli-check-data-test:
-	@$(MAKE) mesh-cli-check-data ENV=test
-
-mesh-cli-check-construction-test:
-	@$(MAKE) mesh-cli-check-construction ENV=test
-
-mesh-cli-check-data-main:
-	@$(MAKE) mesh-cli-check-data ENV=main
-
-mesh-cli-check-construction-main:
-	@$(MAKE) mesh-cli-check-construction ENV=main

@@ -8,7 +8,7 @@ This document explains how to use Coinbase's `mesh-cli` tool to validate the VeC
 
 ## Quick Start
 
-### Build mesh-cli (first time only)
+### Build mesh-cli
 
 ```bash
 make mesh-cli-build
@@ -36,7 +36,7 @@ make mesh-cli-check-construction-solo
 | `make mesh-cli-check-data ENV=<env>` | Validate Data API for specific environment |
 | `make mesh-cli-check-construction ENV=<env>` | Validate Construction API for specific environment |
 
-**Supported environments:** `solo`, `test`, `main`
+**Supported environments:** `solo` (ready), `test` ⚠️ (WIP), `main` ⚠️ (WIP)
 
 ## What Gets Validated
 
@@ -50,8 +50,8 @@ Validates the complete transaction construction flow: derive → preprocess → 
 
 Configuration files are located in environment-specific directories:
 - `config/solo/` - Local development (recommended for testing)
-- `config/test/` - Testnet configuration  
-- `config/main/` - Mainnet configuration
+- `config/test/` - Testnet configuration ⚠️ (WIP)
+- `config/main/` - Mainnet configuration ⚠️ (WIP)
 
 The configuration files are already set up and ready to use. No manual configuration needed for basic validation.
 
