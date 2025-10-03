@@ -47,7 +47,6 @@ make mesh-cli-check-construction-solo
 | `make mesh-cli-build` | Build mesh-cli Docker image |
 | `make mesh-cli-check-data ENV=<env>` | Validate Data API for specific environment |
 | `make mesh-cli-check-construction ENV=<env>` | Validate Construction API for specific environment |
-| `make mesh-cli-view-data` | View validation results in JSON format |
 
 ### Convenience Commands (Environment-Specific)
 
@@ -58,7 +57,6 @@ make mesh-cli-check-construction-solo
 | `make mesh-cli-check-data-test` | Validate Data API on testnet |
 | `make mesh-cli-check-construction-test` | Validate Construction API on testnet |
 | `make mesh-cli-check-data-main` | Validate Data API on mainnet |
-| `make mesh-cli-check-construction-main` | Validate Construction API on mainnet |
 
 ## Validation Types
 
@@ -411,15 +409,7 @@ Or run directly with Docker:
 
 ### Viewing Detailed Logs
 
-View results file directly:
-
-```bash
-# View results using jq
-cat mesh-cli-data/data_results.json | jq '.'
-
-# Or use the make command
-make mesh-cli-view-data
-```
+The reults of the execution can be reviewed here `mesh-cli-data/data_results.json`
 
 
 
