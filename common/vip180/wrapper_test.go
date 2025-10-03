@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
@@ -178,7 +179,7 @@ func TestVIP180Contract_TotalSupply_Error(t *testing.T) {
 
 func TestVIP180Contract_callStringMethod(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	contract, _ := NewVIP180Contract("0x0000000000000000000000000000456e65726779", mockClient)
+	contract, _ := NewVIP180Contract(meshcommon.VTHOContractAddress, mockClient)
 
 	t.Run("Successful call", func(t *testing.T) {
 		// Set up mock response for string method
@@ -206,7 +207,7 @@ func TestVIP180Contract_callStringMethod(t *testing.T) {
 
 func TestVIP180Contract_callInt32Method(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	contract, _ := NewVIP180Contract("0x0000000000000000000000000000456e65726779", mockClient)
+	contract, _ := NewVIP180Contract(meshcommon.VTHOContractAddress, mockClient)
 
 	t.Run("Successful call", func(t *testing.T) {
 		// Set up mock response for uint8 method
@@ -234,7 +235,7 @@ func TestVIP180Contract_callInt32Method(t *testing.T) {
 
 func TestVIP180Contract_callBigIntMethod(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	contract, _ := NewVIP180Contract("0x0000000000000000000000000000456e65726779", mockClient)
+	contract, _ := NewVIP180Contract(meshcommon.VTHOContractAddress, mockClient)
 
 	t.Run("Successful call", func(t *testing.T) {
 		// Set up mock response for uint256 method

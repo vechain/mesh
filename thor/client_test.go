@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
@@ -197,7 +198,7 @@ func TestVeChainClient_CallContract(t *testing.T) {
 	client := NewVeChainClient("http://localhost:8669")
 
 	// Test with valid contract call parameters
-	contractAddress := "0x0000000000000000000000000000456e65726779"
+	contractAddress := meshcommon.VTHOContractAddress
 	data := "0x1234567890abcdef"
 	_, err := client.CallContract(contractAddress, data)
 	if err == nil {
