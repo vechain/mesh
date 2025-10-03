@@ -59,7 +59,7 @@ test-unit-coverage:
 	@go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=81.5
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=83.6
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."

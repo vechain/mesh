@@ -46,7 +46,9 @@ jobs:
         run: go mod download
 
       - name: Run unit tests with coverage threshold
-        run: make test-unit-coverage-threshold
+        run: |
+          echo "Coverage is calculated differently from codecov, expect this one to be higher"
+          make test-unit-coverage-threshold
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

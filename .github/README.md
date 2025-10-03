@@ -15,7 +15,7 @@
 
 A Coinbase Mesh API implementation for the VeChain blockchain, built in Go.
 
-The current implementation is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
+This repo is based on the reference implementation from [vechain/rosetta](https://github.com/vechain/rosetta) but is being reviewed and refactored to improve efficiency, code organization, and maintainability.
 
 ## Features
 
