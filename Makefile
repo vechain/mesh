@@ -259,6 +259,8 @@ mesh-cli-check-data:
 		exit 1; \
 	fi
 	@echo "Starting mesh-cli Data API validation for $(ENV) network..."
+	@echo "0. Cleaning previous mesh-cli data..."
+	@rm -rf mesh-cli-data
 	@echo "1. Starting $(ENV) mode services..."
 	@if [ "$(ENV)" = "solo" ]; then \
 		$(MAKE) docker-solo-up; \
@@ -317,6 +319,8 @@ mesh-cli-check-construction:
 		exit 1; \
 	fi
 	@echo "Starting mesh-cli Construction API validation for $(ENV) network..."
+	@echo "0. Cleaning previous mesh-cli data..."
+	@rm -rf mesh-cli-data
 	@echo "1. Starting $(ENV) mode services..."
 	@if [ "$(ENV)" = "solo" ]; then \
 		$(MAKE) docker-solo-up; \
