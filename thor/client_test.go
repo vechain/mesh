@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
-	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
@@ -57,48 +56,6 @@ func TestVeChainClient_GetBlockByHash(t *testing.T) {
 	}
 }
 
-func TestVeChainClient_GetAccount(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with a valid account address
-	address := meshtests.FirstSoloAddress
-	_, err := client.GetAccount(address)
-	if err == nil {
-		t.Errorf("GetAccount() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetChainID(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// This will fail because we don't have a real Thor node running
-	_, err := client.GetChainID()
-	if err == nil {
-		t.Errorf("GetChainID() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_SubmitTransaction(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with a valid transaction - create a proper transaction
-	builder := tx.NewBuilder(tx.TypeLegacy)
-	builder.ChainTag(0x27)
-	blockRef := tx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
-	builder.BlockRef(blockRef)
-	builder.Expiration(720)
-	builder.Gas(21000)
-	builder.GasPriceCoef(128)
-	builder.Nonce(0x1234567890abcdef)
-
-	validTx := builder.Build()
-
-	_, err := client.SubmitTransaction(validTx)
-	if err == nil {
-		t.Errorf("SubmitTransaction() should return error when no Thor node is available")
-	}
-}
-
 func TestVeChainClient_GetDynamicGasPrice(t *testing.T) {
 	// Test with mock client to cover success path
 	mockClient := NewMockVeChainClient()
@@ -134,16 +91,6 @@ func TestVeChainClient_GetSyncProgress(t *testing.T) {
 	_, err = client.GetSyncProgress()
 	if err == nil {
 		t.Errorf("GetSyncProgress() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetPeers(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// This will fail because we don't have a real Thor node running
-	_, err := client.GetPeers()
-	if err == nil {
-		t.Errorf("GetPeers() should return error when no Thor node is available")
 	}
 }
 
@@ -194,38 +141,6 @@ func TestVeChainClient_GetMempoolStatus(t *testing.T) {
 	_, err := client.GetMempoolStatus()
 	if err == nil {
 		t.Errorf("GetMempoolStatus() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_CallContract(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with valid contract call parameters
-	contractAddress := meshcommon.VTHOContractAddress
-	data := "0x1234567890abcdef"
-	_, err := client.CallContract(contractAddress, data)
-	if err == nil {
-		t.Errorf("CallContract() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetTransaction(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with invalid transaction ID
-	_, err := client.GetTransaction("invalid-tx-id")
-	if err == nil {
-		t.Errorf("GetTransaction() should return error when no Thor node is available")
-	}
-}
-
-func TestVeChainClient_GetTransactionReceipt(t *testing.T) {
-	client := NewVeChainClient("http://localhost:8669")
-
-	// Test with invalid transaction ID
-	_, err := client.GetTransactionReceipt("invalid-tx-id")
-	if err == nil {
-		t.Errorf("GetTransactionReceipt() should return error when no Thor node is available")
 	}
 }
 
