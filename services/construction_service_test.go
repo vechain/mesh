@@ -1123,3 +1123,256 @@ func TestConstructionService_calculateGas(t *testing.T) {
 		t.Errorf("calculateGas() with clause missing 'to' = %d, want %d", gas, expected)
 	}
 }
+func TestConstructionService_ConstructionDerive_EmptyPublicKey(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionDeriveRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		PublicKey: &types.PublicKey{
+			Bytes:     []byte{}, // Empty bytes
+			CurveType: "secp256k1",
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionDeriveEndpoint, requestBody)
+
+	service.ConstructionDerive(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionDerive() with empty public key status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionDerive_InvalidPublicKey(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionDeriveRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		PublicKey: &types.PublicKey{
+			Bytes:     []byte{0x01, 0x02, 0x03}, // Invalid public key
+			CurveType: "secp256k1",
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionDeriveEndpoint, requestBody)
+
+	service.ConstructionDerive(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionDerive() with invalid public key status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionPreprocess_MultipleOrigins(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionPreprocessRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account:             &types.AccountIdentifier{Address: meshtests.FirstSoloAddress},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 1},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account:             &types.AccountIdentifier{Address: meshtests.TestAddress1},
+				Amount: &types.Amount{
+					Value:    "1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 2},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account:             &types.AccountIdentifier{Address: "0x2222222222222222222222222222222222222222"}, // Different origin
+				Amount: &types.Amount{
+					Value:    "-500000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionPreprocessEndpoint, requestBody)
+
+	service.ConstructionPreprocess(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionPreprocess() with multiple origins status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionPreprocess_NoOrigins(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionPreprocessRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account:             &types.AccountIdentifier{Address: meshtests.TestAddress1},
+				Amount: &types.Amount{
+					Value:    "1000000000000000000", // Only positive amount, no sender
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionPreprocessEndpoint, requestBody)
+
+	service.ConstructionPreprocess(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionPreprocess() without origins status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionPreprocess_NoTransferOperations(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionPreprocessRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeFee,
+				Account:             &types.AccountIdentifier{Address: meshtests.FirstSoloAddress},
+				Amount: &types.Amount{
+					Value:    "-1000",
+					Currency: meshcommon.VTHOCurrency,
+				},
+			},
+		},
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionPreprocessEndpoint, requestBody)
+
+	service.ConstructionPreprocess(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionPreprocess() without transfer operations status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionParse_InvalidTransactionHex(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionParseRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Signed:            false,
+		Transaction:       "0xINVALID_HEX",
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionParseEndpoint, requestBody)
+
+	service.ConstructionParse(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionParse() with invalid hex status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionParse_InvalidTransactionBytes(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionParseRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Signed:            false,
+		Transaction:       "0x0102030405", // Invalid transaction bytes
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionParseEndpoint, requestBody)
+
+	service.ConstructionParse(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionParse() with invalid transaction bytes status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionHash_InvalidTransactionHex(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionHashRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		SignedTransaction: "0xINVALID_HEX",
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionHashEndpoint, requestBody)
+
+	service.ConstructionHash(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionHash() with invalid hex status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionHash_InvalidTransactionBytes(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionHashRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		SignedTransaction: "0x0102030405", // Invalid transaction bytes
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionHashEndpoint, requestBody)
+
+	service.ConstructionHash(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionHash() with invalid transaction bytes status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionSubmit_InvalidTransactionHex(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionSubmitRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		SignedTransaction: "0xINVALID_HEX",
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionSubmitEndpoint, requestBody)
+
+	service.ConstructionSubmit(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionSubmit() with invalid hex status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConstructionService_ConstructionSubmit_InvalidTransactionBytes(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := types.ConstructionSubmitRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		SignedTransaction: "0x0102030405", // Invalid transaction bytes
+	}
+
+	requestBody, _ := json.Marshal(request)
+	w, req := makeHTTPRequest("POST", meshcommon.ConstructionSubmitEndpoint, requestBody)
+
+	service.ConstructionSubmit(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ConstructionSubmit() with invalid transaction bytes status code = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
