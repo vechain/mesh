@@ -39,9 +39,9 @@
       },
       {
         "privkey": "a5e04d34f10acdb51792509407d7f50bacc85d4cc47bf7c6de9831375f9cd08e",
-      "account_identifier": {
-        "address": "0x03ff8ce995def4a41c61dd07620fcb995a6d36b9"
-      },
+        "account_identifier": {
+          "address": "0x03ff8ce995def4a41c61dd07620fcb995a6d36b9"
+        },
         "curve_type": "secp256k1",
         "currency": {
           "symbol": "VET",
