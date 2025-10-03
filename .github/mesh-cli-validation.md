@@ -4,7 +4,7 @@ This document explains how to use Coinbase's `mesh-cli` tool to validate the VeC
 
 ## Overview
 
-`mesh-cli` is Coinbase's official tool for validating Mesh/Rosetta API implementations. It verifies that endpoints comply with the specification and that data is consistent across different API calls.
+`mesh-cli` is [Coinbase's official tool](https://docs.cdp.coinbase.com/mesh/testing/the-mesh-cli-tool) for validating Mesh/Rosetta API implementations. It verifies that endpoints comply with the specification and that data is consistent across different API calls.
 
 ## Quick Start
 
@@ -49,9 +49,9 @@ Validates the complete transaction construction flow: derive → preprocess → 
 ## Configuration
 
 Configuration files are located in environment-specific directories:
-- `config/solo/` - Local development (recommended for testing)
-- `config/test/` - Testnet configuration ⚠️ (WIP)
-- `config/main/` - Mainnet configuration ⚠️ (WIP)
+- `mesh-cli/solo/` - Local development (recommended for testing)
+- `mesh-cli/test/` - Testnet configuration ⚠️ (WIP)
+- `mesh-cli/main/` - Mainnet configuration ⚠️ (WIP)
 
 The configuration files are already set up and ready to use. No manual configuration needed for basic validation.
 
