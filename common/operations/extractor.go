@@ -96,20 +96,22 @@ func (e *OperationsExtractor) GetTokenCurrencyFromContractAddress(contractAddres
 // GetVETOperations extracts VET transfer operations from a list of operations
 func (e *OperationsExtractor) GetVETOperations(operations []*types.Operation) []map[string]string {
 	var result []map[string]string
+
 	for _, op := range operations {
 		if op.Type == meshcommon.OperationTypeTransfer && op.Amount != nil && op.Amount.Currency != nil {
-			// Check if it's a VET operation (positive amount and VET currency)
 			if op.Amount.Currency.Symbol == meshcommon.VETCurrency.Symbol {
 				amount, ok := new(big.Int).SetString(op.Amount.Value, 10)
 				if ok && amount.Cmp(big.NewInt(0)) > 0 {
+					// Only extract positive amounts (receiver operations)
 					result = append(result, map[string]string{
 						"value": op.Amount.Value,
-						"to":    op.Account.Address,
+						"to":    strings.ToLower(op.Account.Address),
 					})
 				}
 			}
 		}
 	}
+
 	return result
 }
 
@@ -126,7 +128,7 @@ func (e *OperationsExtractor) GetTokensOperations(operations []*types.Operation)
 							registered = append(registered, map[string]string{
 								"token": addr,
 								"value": op.Amount.Value,
-								"to":    op.Account.Address,
+								"to":    strings.ToLower(op.Account.Address),
 							})
 						}
 					}

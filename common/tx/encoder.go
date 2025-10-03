@@ -176,10 +176,14 @@ func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *Me
 	clauseData := make([]meshoperations.ClauseData, len(clauses))
 	for i, clause := range clauses {
 		// Convert tx.Clause to api.Clause for the adapter
+		dataStr := ""
+		if len(clause.Data()) > 0 {
+			dataStr = fmt.Sprintf("0x%x", clause.Data())
+		}
 		apiClause := &api.Clause{
 			To:    clause.To(),
 			Value: (*math.HexOrDecimal256)(clause.Value()),
-			Data:  fmt.Sprintf("0x%x", clause.Data()),
+			Data:  dataStr,
 		}
 		clauseData[i] = meshoperations.ClauseAdapter{Clause: apiClause}
 	}

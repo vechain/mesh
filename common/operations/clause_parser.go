@@ -137,7 +137,7 @@ func (e *ClauseParser) isVIP180Transfer(clause ClauseData, value *big.Int) bool 
 
 // hasContractInteraction checks if a clause has contract interaction
 func (e *ClauseParser) hasContractInteraction(clause ClauseData) bool {
-	return len(clause.GetData()) > 0 || (clause.GetTo() != nil && !clause.GetTo().IsZero())
+	return len(clause.GetData()) > 0
 }
 
 // parseVIP180Transfer parses VIP180 token transfer operations

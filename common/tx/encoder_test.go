@@ -503,7 +503,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 				}(),
 				Delegator: []byte{},
 			},
-			expectedOps:     4,
+			expectedOps:     3,
 			expectedSigners: 1,
 		},
 		{
@@ -540,7 +540,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 					return addr.Bytes()
 				}(),
 			},
-			expectedOps:     4,
+			expectedOps:     3,
 			expectedSigners: 2,
 		},
 		{
