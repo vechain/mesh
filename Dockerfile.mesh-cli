@@ -1,6 +1,3 @@
-# Dockerfile for mesh-cli
-# This builds the Coinbase mesh-cli tool for validating Mesh API implementations
-
 FROM golang:1.24-bullseye AS builder
 
 WORKDIR /app
