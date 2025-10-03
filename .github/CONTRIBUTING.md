@@ -1,8 +1,6 @@
-# Contributing to <!-- Your Project Name -->
+# Contributing to VeChain Mesh API
 
-<!-- Find and replace elements that start with '<!--' and remove this line -->
-
-First of all, thank you for considering to contribute to <!-- Your Project Name -->! Your help is invaluable to improve the project and make it more useful for the community. This document will guide you through the contribution process and make it easier for you to get started.
+First of all, thank you for considering to contribute to VeChain Mesh API! Your help is invaluable to improve the project and make it more useful for the community. This document will guide you through the contribution process and make it easier for you to get started.
 
 ## Table of Contents
 
@@ -25,7 +23,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ### Reporting Bugs
 
-If you find a bug, please create a new issue <!-- in the [issue tracker](https://github.com/vechainfoundation/your_repository_name/issues) -->. When submitting a bug report, please include:
+If you find a bug, please create a new issue in the [issue tracker](https://github.com/vechain/mesh/issues). When submitting a bug report, please include:
 
 - A clear and descriptive title.
 - A detailed description of the issue, including the steps to reproduce the bug.
@@ -34,7 +32,7 @@ If you find a bug, please create a new issue <!-- in the [issue tracker](https:/
 
 ### Suggesting Enhancements
 
-If you have an idea for a new feature or improvement, please create a new issue <!-- in the [issue tracker](https://github.com/vechainfoundation/your_repository_name/issues) -->. When suggesting an enhancement, please include:
+If you have an idea for a new feature or improvement, please create a new issue in the [issue tracker](https://github.com/vechain/mesh/issues). When suggesting an enhancement, please include:
 
 - A clear and descriptive title.
 - A detailed description of the proposed feature, including examples of how it should work.
@@ -82,6 +80,6 @@ If the project uses a specific code formatter or linter, please ensure your cont
 - [GitHub Help: Creating a pull request from a fork](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)
 - [Git Branching and Merging](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging)
 
-Once again, thank you for your interest in contributing to <!-- Your Project Name -->! Your support and collaboration are crucial to the success and growth of this project. If you have any questions or need additional guidance, please don't hesitate to reach out to the maintainers.
+Once again, thank you for your interest in contributing to VeChain Mesh API! Your support and collaboration are crucial to the success and growth of this project. If you have any questions or need additional guidance, please don't hesitate to reach out to the maintainers.
 
 Happy coding!

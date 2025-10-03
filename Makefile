@@ -1,6 +1,9 @@
 # VeChain Mesh API Makefile
 
-.PHONY: help build test-unit test-unit-coverage test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
+GO_PACKAGES_TEST = $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts)
+COVERAGE_EXCLUDE_PATTERN = /_test\.go\|/_mock\.go\|/main\.go
+
+.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
 
 # Default target
 help:
@@ -27,7 +30,6 @@ help:
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"
 	@echo "  test-unit - Run unit tests (excludes e2e tests)"
-	@echo "  test-unit-coverage - Run unit tests with coverage report"
 	@echo "  test-unit-coverage-threshold - Run unit tests and check coverage threshold"
 	@echo "  test-unit-coverage-threshold-custom - Run unit tests with custom threshold (use THRESHOLD=75)"
 	@echo "  test-unit-coverage-html - Run unit tests and generate HTML coverage report"
@@ -48,15 +50,7 @@ build:
 	go build -o mesh-server .
 
 test-unit:
-	go test $(shell go list ./... | grep -v /tests | grep -v /scripts)
-
-test-unit-coverage:
-	@echo "Generating coverage report..."
-	@if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts); then \
-		echo "❌ Tests failed! Cannot generate coverage report."; \
-		exit 1; \
-	fi
-	@go tool cover -func=coverage.out | grep -v "_test.go\|mock_client.go|main.go"
+	go test $(GO_PACKAGES_TEST)
 
 test-unit-coverage-threshold:
 	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=83.6
@@ -67,11 +61,11 @@ test-unit-coverage-threshold-custom:
 		echo "❌ Please specify THRESHOLD (e.g., make test-unit-coverage-threshold-custom THRESHOLD=75)"; \
 		exit 1; \
 	fi; \
-	if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts); then \
+	if ! go test -coverprofile=coverage.out $(GO_PACKAGES_TEST); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi; \
-	grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out; \
+	grep -v "$(COVERAGE_EXCLUDE_PATTERN)" coverage.out > coverage_filtered.out; \
 	coverage=$$(go tool cover -func=coverage_filtered.out | tail -1 | grep -o '[0-9]*\.[0-9]*%' | sed 's/%//'); \
 	threshold=$(THRESHOLD); \
 	echo "Current coverage: $$coverage%"; \
@@ -85,12 +79,12 @@ test-unit-coverage-threshold-custom:
 
 test-unit-coverage-html:
 	@echo "Generating HTML coverage report..."
-	@if ! go test -coverprofile=coverage.out $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts); then \
+	@if ! go test -coverprofile=coverage.out $(GO_PACKAGES_TEST); then \
 		echo "❌ Tests failed! Cannot generate coverage report."; \
 		exit 1; \
 	fi
 	@echo "Filtering out files not required from coverage report..."
-	@grep -v "/_test\.go\|/mock_client\.go\|/main\.go" coverage.out > coverage_filtered.out
+	@grep -v "$(COVERAGE_EXCLUDE_PATTERN)" coverage.out > coverage_filtered.out
 	@go tool cover -html=coverage_filtered.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 	@echo "Open coverage.html in your browser to view detailed coverage"
