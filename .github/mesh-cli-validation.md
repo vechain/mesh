@@ -115,14 +115,14 @@ If you need to run mesh-cli directly:
 # Data API validation
 docker run --rm \
   --network mesh_vechain-network \
-  -v $(pwd)/config/solo:/config:ro \
-  -v $(pwd)/mesh-cli-data:/data \
+  -v $(pwd)/mesh-cli/solo:/config:ro \
+  -v $(pwd)/mesh-cli/data:/data \
   vechain-mesh-cli:latest \
-  check:data --configuration-file /config/mesh-cli-config.json
+  check:data --configuration-file /config/config.json
 ```
 
 ### Results
 
 Validation results are saved to:
-- Data API: `mesh-cli-data/data_results.json`
-- Construction API: `mesh-cli-data/construction_results.json`
+- Data API: `mesh-cli/data/data_results.json`
+- Construction API: `mesh-cli/data/construction_results.json`

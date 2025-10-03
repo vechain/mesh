@@ -247,20 +247,20 @@ docker-solo-logs:
 # Mesh CLI validation commands
 mesh-cli-build:
 	@echo "Building mesh-cli Docker image..."
-	docker build -f Dockerfile.mesh-cli -t vechain-mesh-cli:latest .
+	docker build -f mesh-cli/Dockerfile -t vechain-mesh-cli:latest .
 
 mesh-cli-check-data:
 	@if [ -z "$(ENV)" ]; then \
 		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-data ENV=solo|test|main"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-config.json" ]; then \
-		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-config.json"; \
+	@if [ ! -f "$(PWD)/mesh-cli/$(ENV)/config.json" ]; then \
+		echo "❌ Error: Configuration file not found: mesh-cli/$(ENV)/config.json"; \
 		exit 1; \
 	fi
 	@echo "Starting mesh-cli Data API validation for $(ENV) network..."
 	@echo "0. Cleaning previous mesh-cli data..."
-	@rm -rf mesh-cli-data
+	@rm -rf mesh-cli/data
 	@echo "1. Starting $(ENV) mode services..."
 	@if [ "$(ENV)" = "solo" ]; then \
 		$(MAKE) docker-solo-up; \
@@ -288,13 +288,13 @@ mesh-cli-check-data:
 		exit 1; \
 	fi
 	@echo "3. Running mesh-cli Data API validation..."
-	@mkdir -p mesh-cli-data
+	@mkdir -p mesh-cli/data
 	@bash -c 'docker run --rm \
 		--network mesh_vechain-network \
-		-v $(PWD)/config/$(ENV):/config:ro \
-		-v $(PWD)/mesh-cli-data:/data \
+		-v $(PWD)/mesh-cli/$(ENV):/config:ro \
+		-v $(PWD)/mesh-cli/data:/data \
 		vechain-mesh-cli:latest \
-		check:data --configuration-file /config/mesh-cli-config.json; \
+		check:data --configuration-file /config/config.json; \
 		validation_result=$$?; \
 		echo "4. Stopping $(ENV) mode services..."; \
 		if [ "$(ENV)" = "solo" ]; then \
@@ -314,13 +314,13 @@ mesh-cli-check-construction:
 		echo "❌ Error: ENV parameter is required. Use: make mesh-cli-check-construction ENV=solo|test|main"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(PWD)/config/$(ENV)/mesh-cli-config.json" ]; then \
-		echo "❌ Error: Configuration file not found: config/$(ENV)/mesh-cli-config.json"; \
+	@if [ ! -f "$(PWD)/mesh-cli/$(ENV)/config.json" ]; then \
+		echo "❌ Error: Configuration file not found: mesh-cli/$(ENV)/config.json"; \
 		exit 1; \
 	fi
 	@echo "Starting mesh-cli Construction API validation for $(ENV) network..."
 	@echo "0. Cleaning previous mesh-cli data..."
-	@rm -rf mesh-cli-data
+	@rm -rf mesh-cli/data
 	@echo "1. Starting $(ENV) mode services..."
 	@if [ "$(ENV)" = "solo" ]; then \
 		$(MAKE) docker-solo-up; \
@@ -349,13 +349,13 @@ mesh-cli-check-construction:
 	fi
 	@echo "3. Running mesh-cli Construction API validation..."
 	@echo "⚠️  Note: Construction API validation may take several minutes"
-	@mkdir -p mesh-cli-data
+	@mkdir -p mesh-cli/data
 	@bash -c 'docker run --rm \
 		--network mesh_vechain-network \
-		-v $(PWD)/config/$(ENV):/config:ro \
-		-v $(PWD)/mesh-cli-data:/data \
+		-v $(PWD)/mesh-cli/$(ENV):/config:ro \
+		-v $(PWD)/mesh-cli/data:/data \
 		vechain-mesh-cli:latest \
-		check:construction --configuration-file /config/mesh-cli-config.json; \
+		check:construction --configuration-file /config/config.json; \
 		validation_result=$$?; \
 		echo "4. Stopping $(ENV) mode services..."; \
 		if [ "$(ENV)" = "solo" ]; then \

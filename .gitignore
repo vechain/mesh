@@ -41,5 +41,4 @@ coverage.html
 *.pprof
 
 # Mesh CLI data and results
-mesh-cli-data/
-*_results.json
+mesh-cli/data/
