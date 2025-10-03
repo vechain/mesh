@@ -1,4 +1,8 @@
-# VeChain Mesh API Implementation
+<div align="center">
+
+# VeChain Mesh API
+
+</div>
 
 <p align="center">
     <a href="https://golang.org"><img src="https://img.shields.io/badge/go-1.24.5-blue"/></a>
