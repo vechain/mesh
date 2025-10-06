@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 // Config represents the configuration for a Thor node
@@ -68,7 +70,7 @@ func (ts *Server) AttachToPublicNetworkAndStart() error {
 		"--network", ts.config.NetworkType,
 		"--api-addr", ts.config.APIAddr,
 		"--p2p-port", strconv.Itoa(ts.config.P2PPort),
-		"--data-dir", "/tmp/thor_data",
+		"--data-dir", meshcommon.DataDirectory,
 	}
 
 	// Create the command
@@ -107,7 +109,7 @@ func (ts *Server) StartSoloNode() error {
 	args := []string{
 		"solo", // Solo mode command
 		"--api-addr", ts.config.APIAddr,
-		"--data-dir", "/tmp/thor_solo_data",
+		"--data-dir", meshcommon.DataDirectory,
 		"--api-enable-txpool", // Enable txpool API
 	}
 

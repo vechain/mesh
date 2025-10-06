@@ -47,6 +47,11 @@ const (
 	BlockchainName = "vechainthor"
 )
 
+// Data directory
+const (
+	DataDirectory = "/tmp/thor_data"
+)
+
 // Transaction types
 const (
 	TransactionTypeLegacy  = "legacy"
