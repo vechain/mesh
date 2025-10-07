@@ -587,19 +587,11 @@ func (c *ConstructionService) getBasicTransactionInfo() (*api.JSONExpandedBlock,
 	return bestBlock, chainTag, nil
 }
 
-// calculateGas calculates gas based on operations and applies a 20% buffer
+// calculateGas calculates gas based on clauses and applies a 20% buffer
 func (c *ConstructionService) calculateGas(options map[string]any) (uint64, error) {
-	const baseGas = uint64(21000)
-	const gasBuffer = 1.2
-
-	applyBuffer := func(gas uint64) uint64 {
-		return uint64(float64(gas) * gasBuffer)
-	}
-
-	// If no clauses provided, return base gas with buffer
 	clausesRaw, ok := options["clauses"]
 	if !ok {
-		return applyBuffer(baseGas), nil
+		return 0, fmt.Errorf("clauses are required for gas calculation")
 	}
 
 	txClauses, err := c.clauseParser.ParseClausesFromOptions(clausesRaw)
@@ -607,9 +599,8 @@ func (c *ConstructionService) calculateGas(options map[string]any) (uint64, erro
 		return 0, fmt.Errorf("failed to parse clauses: %w", err)
 	}
 
-	// If clauses array is empty, return base gas with buffer
 	if len(txClauses) == 0 {
-		return applyBuffer(baseGas), nil
+		return 0, fmt.Errorf("at least one clause is required for a valid transaction")
 	}
 
 	intrinsicGas, err := tx.IntrinsicGas(txClauses...)
@@ -617,7 +608,7 @@ func (c *ConstructionService) calculateGas(options map[string]any) (uint64, erro
 		return 0, fmt.Errorf("failed to calculate intrinsic gas: %w", err)
 	}
 
-	return applyBuffer(intrinsicGas), nil
+	return uint64(float64(intrinsicGas) * 1.2), nil
 }
 
 // buildMetadata builds metadata based on transaction type

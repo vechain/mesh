@@ -342,6 +342,13 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
+			"clauses": []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
 		},
 	}
 
@@ -382,6 +389,13 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeDynamic,
+			"clauses": []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
 		},
 	}
 
@@ -1053,15 +1067,16 @@ func TestConstructionService_calculateGas(t *testing.T) {
 		validate    func(*testing.T, uint64)
 	}{
 		{
-			name:        "no clauses - returns base gas with 20% buffer",
+			name:        "no clauses - returns error (transaction must have clauses)",
 			options:     map[string]any{},
-			expectError: false,
-			validate: func(t *testing.T, gas uint64) {
-				expected := uint64(21000 * 1.2)
-				if gas != expected {
-					t.Errorf("Expected %d, got %d", expected, gas)
-				}
+			expectError: true,
+		},
+		{
+			name: "empty clauses array - returns error (at least one clause required)",
+			options: map[string]any{
+				"clauses": []any{},
 			},
+			expectError: true,
 		},
 		{
 			name: "single clause without data - uses IntrinsicGas with 20% buffer",
@@ -1120,19 +1135,6 @@ func TestConstructionService_calculateGas(t *testing.T) {
 			expectError: false,
 			validate: func(t *testing.T, gas uint64) {
 				expected := uint64(37000 * 1.2)
-				if gas != expected {
-					t.Errorf("Expected %d, got %d", expected, gas)
-				}
-			},
-		},
-		{
-			name: "empty clauses array - returns base gas with buffer",
-			options: map[string]any{
-				"clauses": []any{},
-			},
-			expectError: false,
-			validate: func(t *testing.T, gas uint64) {
-				expected := uint64(21000 * 1.2)
 				if gas != expected {
 					t.Errorf("Expected %d, got %d", expected, gas)
 				}
