@@ -1126,6 +1126,19 @@ func TestConstructionService_calculateGas(t *testing.T) {
 			},
 		},
 		{
+			name: "empty clauses array - returns base gas with buffer",
+			options: map[string]any{
+				"clauses": []any{},
+			},
+			expectError: false,
+			validate: func(t *testing.T, gas uint64) {
+				expected := uint64(21000 * 1.2)
+				if gas != expected {
+					t.Errorf("Expected %d, got %d", expected, gas)
+				}
+			},
+		},
+		{
 			name: "invalid clauses format - returns error",
 			options: map[string]any{
 				"clauses": "invalid_format",
