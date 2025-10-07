@@ -108,7 +108,7 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 	}
 
 	// Get fee delegator from metadata
-	delegator := c.getFeeDelegatorAccount(request.Metadata)
+	delegator := c.operationsExtractor.GetFeeDelegatorAccount(request.Metadata)
 
 	// Get VET and token operations
 	vetOpers := c.operationsExtractor.GetVETOperations(request.Operations)
@@ -244,7 +244,7 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 	txOrigin := origins[0]
 
 	// Check fee delegation
-	txDelegator := c.getFeeDelegatorAccount(request.Metadata)
+	txDelegator := c.operationsExtractor.GetFeeDelegatorAccount(request.Metadata)
 	hasFeeDelegation := txDelegator != ""
 
 	// Validate origin address matches first public key
@@ -683,7 +683,7 @@ func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, r
 	var payloads []*types.SigningPayload
 
 	// Check for fee delegation
-	hasFeeDelegation := c.hasFeeDelegation(request.Operations)
+	hasFeeDelegation := c.operationsExtractor.HasFeeDelegation(request.Operations)
 
 	// Get origin address for first payload
 	if len(request.PublicKeys) > 0 {
@@ -704,16 +704,6 @@ func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, r
 	}
 
 	return payloads, nil
-}
-
-// hasFeeDelegation checks if there are fee delegation operations
-func (c *ConstructionService) hasFeeDelegation(operations []*types.Operation) bool {
-	for _, op := range operations {
-		if op.Type == meshcommon.OperationTypeFeeDelegation {
-			return true
-		}
-	}
-	return false
 }
 
 // createOriginPayload creates the origin signing payload
@@ -755,12 +745,4 @@ func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, 
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,
 	}, nil
-}
-
-// getFeeDelegatorAccount extracts fee delegator account from metadata
-func (c *ConstructionService) getFeeDelegatorAccount(metadata map[string]any) string {
-	if delegator, ok := metadata["fee_delegator_account"].(string); ok {
-		return strings.ToLower(delegator)
-	}
-	return ""
 }

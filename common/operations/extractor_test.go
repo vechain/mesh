@@ -423,3 +423,133 @@ func TestGetTokensOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestHasFeeDelegation(t *testing.T) {
+	extractor := NewOperationsExtractor()
+
+	tests := []struct {
+		name       string
+		operations []*types.Operation
+		expected   bool
+	}{
+		{
+			name:       "empty operations",
+			operations: []*types.Operation{},
+			expected:   false,
+		},
+		{
+			name: "has fee delegation operation",
+			operations: []*types.Operation{
+				{
+					Type: meshcommon.OperationTypeFeeDelegation,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "no fee delegation operation",
+			operations: []*types.Operation{
+				{
+					Type: meshcommon.OperationTypeTransfer,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+				},
+				{
+					Type: meshcommon.OperationTypeFee,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.FirstSoloAddress,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "multiple operations with one fee delegation",
+			operations: []*types.Operation{
+				{
+					Type: meshcommon.OperationTypeTransfer,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+				},
+				{
+					Type: meshcommon.OperationTypeFeeDelegation,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.FirstSoloAddress,
+					},
+				},
+				{
+					Type: meshcommon.OperationTypeFee,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractor.HasFeeDelegation(tt.operations)
+			if result != tt.expected {
+				t.Errorf("HasFeeDelegation() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetFeeDelegatorAccount(t *testing.T) {
+	extractor := NewOperationsExtractor()
+
+	tests := []struct {
+		name     string
+		metadata map[string]any
+		expected string
+	}{
+		{
+			name: "valid fee delegator account",
+			metadata: map[string]any{
+				"fee_delegator_account": meshtests.TestAddress1,
+			},
+			expected: meshtests.TestAddress1,
+		},
+		{
+			name:     "missing fee delegator account",
+			metadata: map[string]any{},
+			expected: "",
+		},
+		{
+			name:     "nil metadata",
+			metadata: nil,
+			expected: "",
+		},
+		{
+			name: "fee delegator account with uppercase (should be lowercased)",
+			metadata: map[string]any{
+				"fee_delegator_account": "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+			},
+			expected: "0xabcdef1234567890abcdef1234567890abcdef12",
+		},
+		{
+			name: "wrong type for fee delegator account",
+			metadata: map[string]any{
+				"fee_delegator_account": 12345,
+			},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractor.GetFeeDelegatorAccount(tt.metadata)
+			if result != tt.expected {
+				t.Errorf("GetFeeDelegatorAccount() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

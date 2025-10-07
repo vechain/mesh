@@ -1030,33 +1030,6 @@ func TestConstructionService_createDelegatorPayload(t *testing.T) {
 	}
 }
 
-func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
-	service := createMockConstructionService()
-
-	// Test with valid fee delegator account
-	metadata := map[string]any{
-		"fee_delegator_account": meshtests.TestAddress1,
-	}
-
-	account := service.getFeeDelegatorAccount(metadata)
-	if account != meshtests.TestAddress1 {
-		t.Errorf("getFeeDelegatorAccount() = %v, want %s", account, meshtests.TestAddress1)
-	}
-
-	// Test with missing fee delegator account
-	metadataEmpty := map[string]any{}
-	accountEmpty := service.getFeeDelegatorAccount(metadataEmpty)
-	if accountEmpty != "" {
-		t.Errorf("getFeeDelegatorAccount() with empty metadata = %v, want empty string", accountEmpty)
-	}
-
-	// Test with nil metadata
-	accountNil := service.getFeeDelegatorAccount(nil)
-	if accountNil != "" {
-		t.Errorf("getFeeDelegatorAccount() with nil metadata = %v, want empty string", accountNil)
-	}
-}
-
 func TestConstructionService_calculateGas(t *testing.T) {
 	service := createMockConstructionService()
 

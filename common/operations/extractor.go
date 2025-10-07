@@ -138,3 +138,24 @@ func (e *OperationsExtractor) GetTokensOperations(operations []*types.Operation)
 	}
 	return registered
 }
+
+// HasFeeDelegation checks if there are fee delegation operations
+func (e *OperationsExtractor) HasFeeDelegation(operations []*types.Operation) bool {
+	for _, op := range operations {
+		if op.Type == meshcommon.OperationTypeFeeDelegation {
+			return true
+		}
+	}
+	return false
+}
+
+// GetFeeDelegatorAccount extracts fee delegator account from metadata
+func (e *OperationsExtractor) GetFeeDelegatorAccount(metadata map[string]any) string {
+	if metadata == nil {
+		return ""
+	}
+	if delegator, ok := metadata["fee_delegator_account"].(string); ok {
+		return strings.ToLower(delegator)
+	}
+	return ""
+}
