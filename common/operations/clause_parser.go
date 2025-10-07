@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -12,6 +13,7 @@ import (
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/tx"
 )
 
 // The rationale for this is to support both api.JSONClause and api.Clause
@@ -247,4 +249,58 @@ func (e *ClauseParser) ParseOperationsFromAPIClauses(clauses api.Clauses, origin
 		clauseData[i] = ClauseAdapter{Clause: clause}
 	}
 	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
+}
+
+// ParseClausesFromOptions parses clauses from map format to Thor tx.Clause objects
+func (e *ClauseParser) ParseClausesFromOptions(clausesRaw any) ([]*tx.Clause, error) {
+	// Check if clauses is a list
+	clausesList, ok := clausesRaw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("clauses must be an array")
+	}
+
+	// Convert map clauses to tx.Clause objects
+	var txClauses []*tx.Clause
+	for i, clauseRaw := range clausesList {
+		clauseMap, ok := clauseRaw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("clause at index %d must be an object", i)
+		}
+
+		// Parse "to" address
+		var toAddr *thor.Address
+		if toStr, ok := clauseMap["to"].(string); ok && toStr != "" {
+			addr, err := thor.ParseAddress(toStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid 'to' address at index %d: %w", i, err)
+			}
+			toAddr = &addr
+		}
+
+		// Parse "value"
+		value := new(big.Int)
+		if valueStr, ok := clauseMap["value"].(string); ok {
+			if _, ok := value.SetString(valueStr, 0); !ok {
+				return nil, fmt.Errorf("invalid 'value' at index %d: %s", i, valueStr)
+			}
+		}
+
+		// Parse "data"
+		var data []byte
+		if dataStr, ok := clauseMap["data"].(string); ok && dataStr != "" && dataStr != "0x" {
+			// Remove 0x prefix if present
+			dataStr = dataStr[2:]
+			var err error
+			data, err = hex.DecodeString(dataStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid 'data' hex string at index %d: %w", i, err)
+			}
+		}
+
+		// Create clause
+		clause := tx.NewClause(toAddr).WithValue(value).WithData(data)
+		txClauses = append(txClauses, clause)
+	}
+
+	return txClauses, nil
 }

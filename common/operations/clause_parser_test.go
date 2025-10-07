@@ -12,6 +12,7 @@ import (
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
+	"github.com/vechain/thor/v2/tx"
 )
 
 // Test helper functions for clause parser tests
@@ -684,6 +685,236 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("ParseTransactionOperationsFromTransactionClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
+			}
+		})
+	}
+}
+
+func TestClauseParser_ParseClausesFromOptions(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	tests := []struct {
+		name          string
+		clausesRaw    any
+		expectError   bool
+		expectedCount int
+		validateFunc  func(*testing.T, []*tx.Clause)
+	}{
+		{
+			name:          "empty clauses array",
+			clausesRaw:    []any{},
+			expectError:   false,
+			expectedCount: 0,
+		},
+		{
+			name: "single valid clause with all fields",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
+			expectError:   false,
+			expectedCount: 1,
+			validateFunc: func(t *testing.T, clauses []*tx.Clause) {
+				if clauses[0].To() == nil {
+					t.Error("Expected non-nil 'to' address")
+				}
+				if clauses[0].Value().Cmp(big.NewInt(1000000000000000000)) != 0 {
+					t.Errorf("Expected value 1000000000000000000, got %v", clauses[0].Value())
+				}
+				if len(clauses[0].Data()) != 0 {
+					t.Errorf("Expected empty data, got %d bytes", len(clauses[0].Data()))
+				}
+			},
+		},
+		{
+			name: "clause with hex data",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "0",
+					"data":  "0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a",
+				},
+			},
+			expectError:   false,
+			expectedCount: 1,
+			validateFunc: func(t *testing.T, clauses []*tx.Clause) {
+				if len(clauses[0].Data()) == 0 {
+					t.Error("Expected non-empty data")
+				}
+			},
+		},
+		{
+			name: "clause without 'to' (contract creation)",
+			clausesRaw: []any{
+				map[string]any{
+					"value": "0",
+					"data":  "0x608060405234801561001057600080fd5b50",
+				},
+			},
+			expectError:   false,
+			expectedCount: 1,
+			validateFunc: func(t *testing.T, clauses []*tx.Clause) {
+				if clauses[0].To() != nil {
+					t.Error("Expected nil 'to' address for contract creation")
+				}
+			},
+		},
+		{
+			name: "multiple clauses",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+				map[string]any{
+					"to":    meshtests.FirstSoloAddress,
+					"value": "2000000000000000000",
+					"data":  "0x",
+				},
+			},
+			expectError:   false,
+			expectedCount: 2,
+		},
+		{
+			name: "clause with zero value",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "0",
+					"data":  "0x",
+				},
+			},
+			expectError:   false,
+			expectedCount: 1,
+			validateFunc: func(t *testing.T, clauses []*tx.Clause) {
+				if clauses[0].Value().Cmp(big.NewInt(0)) != 0 {
+					t.Errorf("Expected value 0, got %v", clauses[0].Value())
+				}
+			},
+		},
+		{
+			name:        "invalid input - not an array",
+			clausesRaw:  "invalid",
+			expectError: true,
+		},
+		{
+			name: "invalid input - clause not an object",
+			clausesRaw: []any{
+				"invalid",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid 'to' address",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    "invalid_address",
+					"value": "0",
+					"data":  "0x",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid 'value'",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "not_a_number",
+					"data":  "0x",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid 'data' - odd length hex",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "0",
+					"data":  "0x123",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid 'data' - non-hex characters",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "0",
+					"data":  "0xZZZZ",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "clause with large value",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000000000000",
+					"data":  "0x",
+				},
+			},
+			expectError:   false,
+			expectedCount: 1,
+			validateFunc: func(t *testing.T, clauses []*tx.Clause) {
+				expected := new(big.Int)
+				expected.SetString("1000000000000000000000000000", 10)
+				if clauses[0].Value().Cmp(expected) != 0 {
+					t.Errorf("Expected large value, got %v", clauses[0].Value())
+				}
+			},
+		},
+		{
+			name: "clause with hex value format",
+			clausesRaw: []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "0x0de0b6b3a7640000",
+					"data":  "0x",
+				},
+			},
+			expectError:   false,
+			expectedCount: 1,
+			validateFunc: func(t *testing.T, clauses []*tx.Clause) {
+				expected := big.NewInt(1000000000000000000)
+				if clauses[0].Value().Cmp(expected) != 0 {
+					t.Errorf("Expected hex value parsed correctly, got %v", clauses[0].Value())
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clauses, err := parser.ParseClausesFromOptions(tt.clausesRaw)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if len(clauses) != tt.expectedCount {
+				t.Errorf("Expected %d clauses, got %d", tt.expectedCount, len(clauses))
+				return
+			}
+
+			if tt.validateFunc != nil {
+				tt.validateFunc(t, clauses)
 			}
 		})
 	}

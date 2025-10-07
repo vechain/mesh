@@ -34,10 +34,12 @@ type ConstructionService struct {
 	bytesHandler        *meshcrypto.BytesHandler
 	operationsExtractor *meshoperations.OperationsExtractor
 	vip180Encoder       *vip180.VIP180Encoder
+	clauseParser        *meshoperations.ClauseParser
 }
 
 // NewConstructionService creates a new construction service
 func NewConstructionService(vechainClient meshthor.VeChainClientInterface, config *config.Config) *ConstructionService {
+	operationsExtractor := meshoperations.NewOperationsExtractor()
 	return &ConstructionService{
 		requestHandler:      meshhttp.NewRequestHandler(),
 		responseHandler:     meshhttp.NewResponseHandler(),
@@ -46,8 +48,9 @@ func NewConstructionService(vechainClient meshthor.VeChainClientInterface, confi
 		builder:             meshtx.NewTransactionBuilder(),
 		config:              config,
 		bytesHandler:        meshcrypto.NewBytesHandler(),
-		operationsExtractor: meshoperations.NewOperationsExtractor(),
+		operationsExtractor: operationsExtractor,
 		vip180Encoder:       vip180.NewVIP180Encoder(),
+		clauseParser:        meshoperations.NewClauseParser(vechainClient, operationsExtractor),
 	}
 }
 
@@ -188,7 +191,13 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	transactionType := c.operationsExtractor.GetStringFromOptions(request.Options, "transactionType")
 
 	// Calculate gas and create blockRef
-	gas := c.calculateGas(request.Options)
+	gas, err := c.calculateGas(request.Options)
+	if err != nil {
+		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
+		return
+	}
 	blockRef := bestBlock.ID[:8]
 	nonce, err := c.bytesHandler.GenerateNonce()
 	if err != nil {
@@ -199,7 +208,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	}
 
 	// Build metadata based on transaction type
-	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), int64(chainTag), gas, nonce)
+	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), uint64(chainTag), gas, nonce)
 	if err != nil {
 		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
@@ -208,7 +217,7 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 	}
 
 	// Calculate fee and build response
-	fee := new(big.Int).Mul(big.NewInt(gas), gasPrice)
+	fee := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
 	response := &types.ConstructionMetadataResponse{
 		Metadata: metadata,
 		SuggestedFee: []*types.Amount{
@@ -579,30 +588,34 @@ func (c *ConstructionService) getBasicTransactionInfo() (*api.JSONExpandedBlock,
 }
 
 // calculateGas calculates gas based on operations
-func (c *ConstructionService) calculateGas(options map[string]any) int64 {
-	gas := int64(20000) // Base gas
+func (c *ConstructionService) calculateGas(options map[string]any) (uint64, error) {
+	baseGas := uint64(21000)
 
-	if clauses, ok := options["clauses"].([]any); ok {
-		for _, clause := range clauses {
-			if clauseMap, ok := clause.(map[string]any); ok {
-				if to, ok := clauseMap["to"].(string); ok {
-					// VTHO contract requires more gas
-					if strings.EqualFold(to, meshcommon.VTHOCurrency.Metadata["contractAddress"].(string)) {
-						gas += 50000
-					} else {
-						gas += 10000
-					}
-				}
-			}
+	// Parse clauses from options
+	clausesRaw, ok := options["clauses"]
+	if !ok {
+		return uint64(float64(baseGas) * 1.2), nil
+	}
+
+	// Use clause parser to convert map clauses to tx.Clause objects
+	txClauses, err := c.clauseParser.ParseClausesFromOptions(clausesRaw)
+	if err != nil {
+		return 0, err
+	}
+
+	// Calculate intrinsic gas for all clauses
+	if len(txClauses) > 0 {
+		intrinsicGas, err := tx.IntrinsicGas(txClauses...)
+		if err == nil {
+			return uint64(float64(intrinsicGas) * 1.2), nil
 		}
 	}
 
-	// Add 20% buffer
-	return int64(float64(gas) * 1.2)
+	return 0, fmt.Errorf("failed to calculate gas")
 }
 
 // buildMetadata builds metadata based on transaction type
-func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	if transactionType == meshcommon.TransactionTypeLegacy {
 		return c.buildLegacyMetadata(blockRef, chainTag, gas, nonce)
 	}
@@ -610,7 +623,7 @@ func (c *ConstructionService) buildMetadata(transactionType, blockRef string, ch
 }
 
 // buildLegacyMetadata builds metadata for legacy transactions
-func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	// Generate random gasPriceCoef (0-255)
 	randomBytes := make([]byte, 1)
 	if _, err := rand.Read(randomBytes); err != nil {
@@ -631,7 +644,7 @@ func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas
 }
 
 // buildDynamicMetadata builds metadata for dynamic fee transactions
-func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, gas int64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	// Get dynamic gas price from network
 	dynamicGasPrice, err := c.vechainClient.GetDynamicGasPrice()
 	if err != nil {

@@ -1046,81 +1046,114 @@ func TestConstructionService_getFeeDelegatorAccount(t *testing.T) {
 func TestConstructionService_calculateGas(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Test with no clauses (base gas only)
-	options := map[string]any{}
-	gas := service.calculateGas(options)
-	expected := int64(20000 * 1.2) // Base gas + 20% buffer
-	if gas != expected {
-		t.Errorf("calculateGas() with no clauses = %d, want %d", gas, expected)
-	}
-
-	// Test with VTHO contract clause
-	options = map[string]any{
-		"clauses": []any{
-			map[string]any{
-				"to": meshcommon.VTHOCurrency.Metadata["contractAddress"].(string),
+	tests := []struct {
+		name        string
+		options     map[string]any
+		expectError bool
+		validate    func(*testing.T, uint64)
+	}{
+		{
+			name:        "no clauses - returns base gas with 20% buffer",
+			options:     map[string]any{},
+			expectError: false,
+			validate: func(t *testing.T, gas uint64) {
+				expected := uint64(21000 * 1.2)
+				if gas != expected {
+					t.Errorf("Expected %d, got %d", expected, gas)
+				}
 			},
 		},
-	}
-	gas = service.calculateGas(options)
-	expected = int64((20000 + 50000) * 1.2) // Base + VTHO gas + 20% buffer
-	if gas != expected {
-		t.Errorf("calculateGas() with VTHO clause = %d, want %d", gas, expected)
-	}
-
-	// Test with regular contract clause
-	options = map[string]any{
-		"clauses": []any{
-			map[string]any{
-				"to": "0x1234567890123456789012345678901234567890",
+		{
+			name: "single clause without data - uses IntrinsicGas with 20% buffer",
+			options: map[string]any{
+				"clauses": []any{
+					map[string]any{
+						"to":    "0x1234567890123456789012345678901234567890",
+						"value": "0",
+						"data":  "0x",
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, gas uint64) {
+				expected := uint64(21000 * 1.2)
+				if gas != expected {
+					t.Errorf("Expected %d, got %d", expected, gas)
+				}
 			},
 		},
-	}
-	gas = service.calculateGas(options)
-	expected = int64((20000 + 10000) * 1.2) // Base + regular gas + 20% buffer
-	if gas != expected {
-		t.Errorf("calculateGas() with regular clause = %d, want %d", gas, expected)
-	}
-
-	// Test with multiple clauses
-	options = map[string]any{
-		"clauses": []any{
-			map[string]any{
-				"to": meshcommon.VTHOCurrency.Metadata["contractAddress"].(string),
+		{
+			name: "clause with data - gas increases due to data cost",
+			options: map[string]any{
+				"clauses": []any{
+					map[string]any{
+						"to":    "0x1234567890123456789012345678901234567890",
+						"value": "0",
+						"data":  "0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890000000000000000000000000000000000000000000000000000000000000000a",
+					},
+				},
 			},
-			map[string]any{
-				"to": "0x1234567890123456789012345678901234567890",
-			},
-		},
-	}
-	gas = service.calculateGas(options)
-	expected = int64((20000 + 50000 + 10000) * 1.2) // Base + VTHO + regular + 20% buffer
-	if gas != expected {
-		t.Errorf("calculateGas() with multiple clauses = %d, want %d", gas, expected)
-	}
-
-	// Test with invalid clauses format
-	options = map[string]any{
-		"clauses": "invalid_format",
-	}
-	gas = service.calculateGas(options)
-	expected = int64(20000 * 1.2) // Base gas only + 20% buffer
-	if gas != expected {
-		t.Errorf("calculateGas() with invalid clauses = %d, want %d", gas, expected)
-	}
-
-	// Test with clause missing 'to' field
-	options = map[string]any{
-		"clauses": []any{
-			map[string]any{
-				"value": "1000000000000000000",
+			expectError: false,
+			validate: func(t *testing.T, gas uint64) {
+				baseGas := uint64(21000 * 1.2)
+				if gas <= baseGas {
+					t.Errorf("Gas with data (%d) should be > base gas (%d)", gas, baseGas)
+				}
 			},
 		},
+		{
+			name: "multiple clauses - gas scales with clause count",
+			options: map[string]any{
+				"clauses": []any{
+					map[string]any{
+						"to":    "0x1234567890123456789012345678901234567890",
+						"value": "0",
+						"data":  "0x",
+					},
+					map[string]any{
+						"to":    "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+						"value": "0",
+						"data":  "0x",
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, gas uint64) {
+				expected := uint64(37000 * 1.2)
+				if gas != expected {
+					t.Errorf("Expected %d, got %d", expected, gas)
+				}
+			},
+		},
+		{
+			name: "invalid clauses format - returns error",
+			options: map[string]any{
+				"clauses": "invalid_format",
+			},
+			expectError: true,
+		},
 	}
-	gas = service.calculateGas(options)
-	expected = int64(20000 * 1.2) // Base gas only + 20% buffer
-	if gas != expected {
-		t.Errorf("calculateGas() with clause missing 'to' = %d, want %d", gas, expected)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gas, err := service.calculateGas(tt.options)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if tt.validate != nil {
+				tt.validate(t, gas)
+			}
+		})
 	}
 }
 func TestConstructionService_ConstructionDerive_EmptyPublicKey(t *testing.T) {
