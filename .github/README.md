@@ -7,7 +7,7 @@
 <p align="center">
     <a href="https://golang.org"><img src="https://img.shields.io/badge/go-1.24.5-blue"/></a>
     <a href="https://github.com/vechain/mesh/blob/main/.github/LICENSE.md"><img src="https://img.shields.io/badge/License-MIT-blue.svg"/></a>
-    <img src="https://github.com/vechain/mesh/actions/workflows/ci.yml/badge.svg" />
+    <a href="https://github.com/vechain/mesh/actions/workflows/ci.yml"><img src="https://github.com/vechain/mesh/actions/workflows/ci.yml/badge.svg" /></a>
     <a href="https://codecov.io/gh/vechain/mesh"><img src="https://codecov.io/gh/vechain/mesh/graph/badge.svg?token=ePeuSCBZRS"/></a>
 </p>
 

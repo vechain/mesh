@@ -1,7 +1,7 @@
 # VeChain Mesh API Makefile
 
 GO_PACKAGES_TEST = $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts)
-COVERAGE_EXCLUDE_PATTERN = /_test\.go\|/_mock\.go\|/main\.go
+COVERAGE_EXCLUDE_PATTERN = _test\.go\|_mock\.go\|/main\.go
 
 .PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
 
@@ -53,7 +53,7 @@ test-unit:
 	go test $(GO_PACKAGES_TEST)
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=83.8
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=84.3
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."
