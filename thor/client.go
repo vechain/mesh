@@ -39,9 +39,7 @@ func (c *VeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, error
 
 // GetBlockByNumber fetches a block by its number
 func (c *VeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error) {
-	// Convert block number to hex format with 0x prefix
-	revision := fmt.Sprintf("0x%x", blockNumber)
-	return c.GetBlock(revision)
+	return c.GetBlock(fmt.Sprintf("%d", blockNumber))
 }
 
 // GetAccount fetches account details by address at the latest block

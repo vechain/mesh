@@ -53,7 +53,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		if request.BlockIdentifier.Hash != nil && *request.BlockIdentifier.Hash != "" {
 			revision = *request.BlockIdentifier.Hash
 		} else if request.BlockIdentifier.Index != nil {
-			revision = fmt.Sprintf("0x%x", *request.BlockIdentifier.Index)
+			revision = fmt.Sprintf("%d", *request.BlockIdentifier.Index)
 		} else {
 			a.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
 			return

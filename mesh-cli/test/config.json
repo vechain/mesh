@@ -5,12 +5,12 @@
     },
     "online_url": "http://mesh:8080",
     "data_directory": "/data",
-    "http_timeout": 300,
-    "max_retries": 15,
-    "retry_elapsed_time": 90,
-    "max_online_connections": 100,
-    "max_sync_concurrency": 32,
-    "tip_delay": 300,
+    "http_timeout": 600,
+    "max_retries": 20,
+    "retry_elapsed_time": 180,
+    "tip_delay": 1800,
+    "max_sync_concurrency": 8,
+    "max_online_connections": 50,
     "log_configuration": false,
     "construction": {
         "offline_url":"http://mesh:8080",
@@ -167,15 +167,14 @@
     "data": {
         "results_output_file":"/data/data_results.json",
         "pruning_block_disabled":true,
-        "active_reconciliation_concurrency": 8,
-        "inactive_reconciliation_concurrency": 4,
-        "inactive_reconciliation_frequency": 250,
-        "reconciler_active_backlog": 10000,
+        "active_reconciliation_concurrency": 2,
+        "inactive_reconciliation_concurrency": 2,
+        "inactive_reconciliation_frequency": 1000,
         "bootstrap_balances": "bootstrap_balances.json",
         "log_blocks": false,
         "log_transactions": false,
         "end_conditions": {
-            "index": 25000
+            "index": 30000
         }
     }
 }
