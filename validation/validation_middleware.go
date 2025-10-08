@@ -125,7 +125,13 @@ func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Reque
 		return false
 	}
 
-	// Check network
+	// In offline mode, we're more lenient with network validation since no node is running
+	// We only require blockchain to match
+	if v.runMode != meshcommon.OnlineMode {
+		return true
+	}
+
+	// In online mode, check network strictly
 	if request.NetworkIdentifier.Network != v.networkIdentifier.Network {
 		http.Error(w, fmt.Sprintf("Invalid network: expected %s, got %s",
 			v.networkIdentifier.Network, request.NetworkIdentifier.Network), http.StatusBadRequest)

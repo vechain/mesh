@@ -158,8 +158,8 @@ test-e2e-offline-full:
 	@echo "Starting offline mode e2e test cycle..."
 	@echo "1. Building mesh server..."
 	@go build -o mesh-server .
-	@echo "2. Starting mesh server in offline mode..."
-	@MODE=offline NETWORK=solo PORT=8080 ./mesh-server > /tmp/mesh-offline.log 2>&1 & \
+	@echo "2. Starting mesh server in offline mode (no Thor node)..."
+	@MODE=offline PORT=8080 ./mesh-server > /tmp/mesh-offline.log 2>&1 & \
 	echo $$! > /tmp/mesh-offline.pid
 	@echo "3. Waiting for server to be ready..."
 	@timeout=30; \
