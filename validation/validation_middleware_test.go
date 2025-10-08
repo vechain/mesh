@@ -131,6 +131,86 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 	}
 }
 
+func TestValidationMiddleware_CheckNetworkOfflineMode(t *testing.T) {
+	// Test CheckNetwork behavior in offline mode
+	networkIdentifier := &types.NetworkIdentifier{
+		Blockchain: meshcommon.BlockchainName,
+		Network:    "test",
+	}
+	runMode := meshcommon.OfflineMode
+	middleware := NewValidationMiddleware(networkIdentifier, runMode)
+
+	tests := []struct {
+		name        string
+		request     types.NetworkRequest
+		expectError bool
+	}{
+		{
+			name: "offline mode - matching network",
+			request: types.NetworkRequest{
+				NetworkIdentifier: &types.NetworkIdentifier{
+					Blockchain: meshcommon.BlockchainName,
+					Network:    "test",
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "offline mode - different network but same blockchain (should pass)",
+			request: types.NetworkRequest{
+				NetworkIdentifier: &types.NetworkIdentifier{
+					Blockchain: meshcommon.BlockchainName,
+					Network:    "solo", // Different network but should pass in offline mode
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "offline mode - another different network (should pass)",
+			request: types.NetworkRequest{
+				NetworkIdentifier: &types.NetworkIdentifier{
+					Blockchain: meshcommon.BlockchainName,
+					Network:    "main", // Different network but should pass in offline mode
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "offline mode - invalid blockchain (should fail)",
+			request: types.NetworkRequest{
+				NetworkIdentifier: &types.NetworkIdentifier{
+					Blockchain: "ethereum",
+					Network:    "test",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "offline mode - nil network identifier (should fail)",
+			request: types.NetworkRequest{
+				NetworkIdentifier: nil,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requestBody, _ := json.Marshal(tt.request)
+			req := httptest.NewRequest("POST", "/test", bytes.NewBuffer(requestBody))
+			w := httptest.NewRecorder()
+
+			result := middleware.CheckNetwork(w, req, requestBody)
+			if tt.expectError && result {
+				t.Errorf("CheckNetwork() expected error but got success")
+			}
+			if !tt.expectError && !result {
+				t.Errorf("CheckNetwork() expected success but got error: %s", w.Body.String())
+			}
+		})
+	}
+}
+
 func TestValidationMiddleware_CheckRunMode(t *testing.T) {
 	networkIdentifier := &types.NetworkIdentifier{
 		Blockchain: meshcommon.BlockchainName,

@@ -62,8 +62,6 @@ func TestOfflineMode(t *testing.T) {
 	t.Run("OfflineTransactionFlow", func(t *testing.T) {
 		testOfflineTransactionFlow(t, client, networkIdentifier, config)
 	})
-
-	t.Log("✅ All offline mode tests completed successfully!")
 }
 
 // testOfflineTransactionFlow tests the complete offline transaction construction flow
@@ -267,6 +265,4 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 
 		t.Logf("✅ /construction/submit correctly fails with: %s", bodyStr)
 	})
-
-	t.Log("✅ All online-only endpoint failure tests passed!")
 }
