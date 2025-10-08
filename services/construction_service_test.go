@@ -24,7 +24,7 @@ func createMockConstructionService() *ConstructionService {
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
 		Network:      "test",
-		Mode:         "online",
+		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000",
 	}
 	return NewConstructionService(mockClient, config)
@@ -61,7 +61,7 @@ func TestNewConstructionService(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
 		Network:      "test",
-		Mode:         "online",
+		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000", // 1 VTHO
 	}
 	service := NewConstructionService(mockClient, config)

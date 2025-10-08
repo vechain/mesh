@@ -87,7 +87,7 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	}
 
 	// Set environment variables
-	err = os.Setenv("MODE", "offline")
+	err = os.Setenv("MODE", meshcommon.OfflineMode)
 	if err != nil {
 		t.Fatalf("Failed to set MODE environment variable: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	}
 
 	// Verify environment variables override
-	if config.Mode != "offline" {
+	if config.Mode != meshcommon.OfflineMode {
 		t.Errorf("NewConfig() Mode = %v, want offline", config.Mode)
 	}
 	if config.Network != "test" {
@@ -236,7 +236,7 @@ func TestConfigGetters(t *testing.T) {
 	config := &Config{
 		MeshVersion: "1.0.0",
 		Port:        8080,
-		Mode:        "online",
+		Mode:        meshcommon.OnlineMode,
 		Network:     "solo",
 		NodeAPI:     "http://localhost:8669",
 		ChainTag:    0xf6,
@@ -264,7 +264,7 @@ func TestConfigGetters(t *testing.T) {
 
 	// Test GetRunMode
 	mode := config.GetRunMode()
-	if mode != "online" {
+	if mode != meshcommon.OnlineMode {
 		t.Errorf("GetRunMode() = %v, want online", mode)
 	}
 
@@ -305,8 +305,8 @@ func TestIsOnlineMode(t *testing.T) {
 		mode     string
 		expected bool
 	}{
-		{"online mode", "online", true},
-		{"offline mode", "offline", false},
+		{"online mode", meshcommon.OnlineMode, true},
+		{"offline mode", meshcommon.OfflineMode, false},
 		{"empty mode", "", false},
 		{"invalid mode", "invalid", false},
 	}
@@ -324,7 +324,7 @@ func TestIsOnlineMode(t *testing.T) {
 
 func TestLoadFromEnv(t *testing.T) {
 	// Set environment variables
-	err := os.Setenv("MODE", "offline")
+	err := os.Setenv("MODE", meshcommon.OfflineMode)
 	if err != nil {
 		t.Fatalf("Failed to set MODE environment variable: %v", err)
 	}
@@ -352,7 +352,7 @@ func TestLoadFromEnv(t *testing.T) {
 	}()
 
 	config := &Config{
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 		Network: "solo",
 		Port:    8080,
 	}
@@ -360,7 +360,7 @@ func TestLoadFromEnv(t *testing.T) {
 	config.loadFromEnv()
 
 	// Verify environment variables were loaded
-	if config.Mode != "offline" {
+	if config.Mode != meshcommon.OfflineMode {
 		t.Errorf("loadFromEnv() Mode = %v, want offline", config.Mode)
 	}
 	if config.Network != "test" {
@@ -455,7 +455,7 @@ func TestPrintConfig(t *testing.T) {
 		ServiceName: "Test Service",
 		Port:        8080,
 		MeshVersion: "1.0.0",
-		Mode:        "online",
+		Mode:        meshcommon.OnlineMode,
 		NodeAPI:     "http://localhost:8669",
 		NodeVersion: "1.0.0",
 		Network:     "main",
@@ -489,7 +489,7 @@ func TestPrintConfig(t *testing.T) {
 		"Test Service",
 		"8080",
 		"1.0.0",
-		"online",
+		meshcommon.OnlineMode,
 		"http://localhost:8669",
 		"main",
 		"0x27",

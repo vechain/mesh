@@ -18,7 +18,7 @@ func TestNewVeChainMeshServer(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 	}
 
 	server, err := NewVeChainMeshServer(config)
@@ -54,7 +54,7 @@ func TestVeChainMeshServer_HealthCheck(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 	}
 
 	server, err := NewVeChainMeshServer(config)
@@ -86,7 +86,7 @@ func TestVeChainMeshServer_Start(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 		Port:    8080,
 	}
 
@@ -119,7 +119,7 @@ func TestVeChainMeshServer_Stop(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 		Port:    8080,
 	}
 
@@ -139,7 +139,7 @@ func TestVeChainMeshServer_NetworkEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 	}
 
 	server, err := NewVeChainMeshServer(config)
@@ -163,7 +163,7 @@ func TestVeChainMeshServer_AccountEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 	}
 
 	server, err := NewVeChainMeshServer(config)
@@ -188,7 +188,7 @@ func TestVeChainMeshServer_ConstructionEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 	}
 
 	server, err := NewVeChainMeshServer(config)
@@ -213,7 +213,7 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
 		Network: "test",
-		Mode:    "online",
+		Mode:    meshcommon.OnlineMode,
 	}
 
 	server, err := NewVeChainMeshServer(config)

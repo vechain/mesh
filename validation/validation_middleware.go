@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 	meshoperations "github.com/vechain/mesh/common/operations"
 )
 
@@ -145,8 +146,8 @@ func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Reque
 
 // CheckRunMode validates the run mode
 func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Request) bool {
-	// In Mesh, run mode is typically "online" or "offline"
-	if v.runMode != "online" {
+	// In Mesh, run mode is typically meshcommon.OnlineMode or meshcommon.OfflineMode
+	if v.runMode != meshcommon.OnlineMode {
 		http.Error(w, fmt.Sprintf("Invalid run mode: this endpoint requires online mode, got %s", v.runMode), http.StatusBadRequest)
 		return false
 	}
@@ -165,7 +166,7 @@ func (v *ValidationMiddleware) CheckModeNetwork(w http.ResponseWriter, r *http.R
 	}
 
 	// For online mode, we need to ensure the network is accessible
-	if v.runMode == "online" && !isValidNetwork {
+	if v.runMode == meshcommon.OnlineMode && !isValidNetwork {
 		http.Error(w, "Network not accessible in online mode", http.StatusBadRequest)
 		return false
 	}

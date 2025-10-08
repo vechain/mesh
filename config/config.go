@@ -130,7 +130,7 @@ func (c *Config) GetMeshVersion() string {
 
 // IsOnlineMode returns true if running in online mode
 func (c *Config) IsOnlineMode() bool {
-	return c.Mode == "online"
+	return c.Mode == meshcommon.OnlineMode
 }
 
 // PrintConfig prints the current configuration

@@ -17,7 +17,7 @@ func TestNewValidationMiddleware(t *testing.T) {
 		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
-	runMode := "online"
+	runMode := meshcommon.OnlineMode
 
 	middleware := NewValidationMiddleware(networkIdentifier, runMode)
 
@@ -41,7 +41,7 @@ func TestValidationMiddleware_CheckNetwork(t *testing.T) {
 			Network: "subnet1",
 		},
 	}
-	runMode := "online"
+	runMode := meshcommon.OnlineMode
 	middleware := NewValidationMiddleware(networkIdentifier, runMode)
 
 	tests := []struct {
@@ -144,12 +144,12 @@ func TestValidationMiddleware_CheckRunMode(t *testing.T) {
 	}{
 		{
 			name:        "valid online mode",
-			runMode:     "online",
+			runMode:     meshcommon.OnlineMode,
 			expectError: false,
 		},
 		{
 			name:        "invalid offline mode",
-			runMode:     "offline",
+			runMode:     meshcommon.OfflineMode,
 			expectError: true,
 		},
 	}
@@ -181,31 +181,31 @@ func TestValidationMiddleware_CheckModeNetwork(t *testing.T) {
 		{
 			name:        "valid test network",
 			network:     "test",
-			runMode:     "online",
+			runMode:     meshcommon.OnlineMode,
 			expectError: false,
 		},
 		{
 			name:        "valid main network",
 			network:     "main",
-			runMode:     "online",
+			runMode:     meshcommon.OnlineMode,
 			expectError: false,
 		},
 		{
 			name:        "valid solo network",
 			network:     "solo",
-			runMode:     "online",
+			runMode:     meshcommon.OnlineMode,
 			expectError: false,
 		},
 		{
 			name:        "invalid network",
 			network:     "invalid",
-			runMode:     "online",
+			runMode:     meshcommon.OnlineMode,
 			expectError: true,
 		},
 		{
 			name:        "invalid network with offline mode",
 			network:     "invalid",
-			runMode:     "offline",
+			runMode:     meshcommon.OfflineMode,
 			expectError: true,
 		},
 	}
@@ -236,7 +236,7 @@ func TestValidationMiddleware_CheckAccount(t *testing.T) {
 		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
-	runMode := "online"
+	runMode := meshcommon.OnlineMode
 	middleware := NewValidationMiddleware(networkIdentifier, runMode)
 
 	tests := []struct {
@@ -344,7 +344,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
-	runMode := "online"
+	runMode := meshcommon.OnlineMode
 	middleware := NewValidationMiddleware(networkIdentifier, runMode)
 
 	tests := []struct {
@@ -575,7 +575,7 @@ func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
-	runMode := "online"
+	runMode := meshcommon.OnlineMode
 	middleware := NewValidationMiddleware(networkIdentifier, runMode)
 
 	tests := []struct {
@@ -615,7 +615,7 @@ func TestValidationMiddleware_ValidateRequest(t *testing.T) {
 				},
 			},
 			validations: []ValidationType{ValidationRunMode},
-			expectError: false, // This will pass because we're using "online" mode
+			expectError: false, // This will pass because we're using meshcommon.OnlineMode mode
 		},
 	}
 
@@ -642,7 +642,7 @@ func TestValidationMiddleware_ValidateEndpoint(t *testing.T) {
 		Blockchain: meshcommon.BlockchainName,
 		Network:    "test",
 	}
-	runMode := "online"
+	runMode := meshcommon.OnlineMode
 	middleware := NewValidationMiddleware(networkIdentifier, runMode)
 
 	// Test with a valid request

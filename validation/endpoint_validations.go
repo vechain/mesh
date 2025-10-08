@@ -58,7 +58,7 @@ var EndpointValidationSetsOffline = map[string][]ValidationType{
 // GetValidationsForEndpoint returns the validation set for a specific endpoint based on run mode
 func GetValidationsForEndpoint(endpoint string, runMode string) []ValidationType {
 	// If in offline mode, check if endpoint supports offline
-	if runMode != "online" {
+	if runMode != meshcommon.OnlineMode {
 		if validations, exists := EndpointValidationSetsOffline[endpoint]; exists {
 			return validations
 		}

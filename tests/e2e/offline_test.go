@@ -12,22 +12,15 @@ import (
 )
 
 // TestOfflineMode tests that offline endpoints work correctly without Thor node connection
-// and that online-only endpoints properly reject requests in offline mode
 func TestOfflineMode(t *testing.T) {
 	// This test should be run with MODE=offline environment variable
-	// The test will verify that:
-	// 1. Offline-supported endpoints work correctly
-	// 2. Online-only endpoints return appropriate errors
 
 	config := GetTestConfig()
-	// Override base URL to point to offline server (should be configured externally)
-	// For now, we'll use the same URL but test will verify behavior
 	client := NewHTTPClient(config.BaseURL, config.TimeoutSeconds)
 	networkIdentifier := CreateTestNetworkIdentifier(config.Network)
 
 	t.Log("Testing offline mode endpoints...")
 
-	// Test 1: Network List (should work in offline mode)
 	t.Run("NetworkList_Offline", func(t *testing.T) {
 		t.Log("Testing /network/list in offline mode")
 		resp, err := testNetworkList(client)
@@ -40,7 +33,6 @@ func TestOfflineMode(t *testing.T) {
 		t.Log("✅ /network/list works in offline mode")
 	})
 
-	// Test 2: Network Options (should work in offline mode)
 	t.Run("NetworkOptions_Offline", func(t *testing.T) {
 		t.Log("Testing /network/options in offline mode")
 		resp, err := testNetworkOptions(client, networkIdentifier)
@@ -53,7 +45,6 @@ func TestOfflineMode(t *testing.T) {
 		t.Log("✅ /network/options works in offline mode")
 	})
 
-	// Test 3: Construction Derive (should work in offline mode)
 	t.Run("ConstructionDerive_Offline", func(t *testing.T) {
 		t.Log("Testing /construction/derive in offline mode")
 		publicKey := CreateTestPublicKey()
@@ -67,7 +58,6 @@ func TestOfflineMode(t *testing.T) {
 		t.Logf("✅ /construction/derive works in offline mode: derived address %s", resp.AccountIdentifier.Address)
 	})
 
-	// Test 4: Complete offline transaction construction flow
 	t.Run("OfflineTransactionFlow", func(t *testing.T) {
 		testOfflineTransactionFlow(t, client, networkIdentifier, config)
 	})
@@ -80,7 +70,6 @@ func TestOfflineMode(t *testing.T) {
 func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *types.NetworkIdentifier, config *TestConfig) {
 	t.Log("Testing complete offline transaction construction flow...")
 
-	// Step 1: Construction Preprocess
 	t.Log("Step 1: Testing /construction/preprocess")
 	operations := CreateTransferOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
 	_, err := testConstructionPreprocess(client, networkIdentifier, nil, config, meshcommon.TransactionTypeLegacy)
@@ -89,9 +78,8 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	}
 	t.Log("✅ Preprocess successful")
 
-	// Step 2: Construction Payloads (with metadata provided offline)
+	// metadata provided offline
 	t.Log("Step 2: Testing /construction/payloads with offline metadata")
-	// In offline mode, we need to provide the metadata ourselves
 	offlineMetadata := map[string]any{
 		"blockRef":        "0x0000000000000000",       // Mock block ref
 		"chainTag":        float64(config.ChainTag()), // Chain tag for the network
@@ -106,7 +94,7 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 		Metadata: offlineMetadata,
 		SuggestedFee: []*types.Amount{
 			{
-				Value:    "-210000000000000000", // Mock fee
+				Value:    "-210000000000000000",
 				Currency: meshcommon.VTHOCurrency,
 			},
 		},
@@ -128,7 +116,6 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	}
 	t.Log("✅ Payloads successful")
 
-	// Step 3: Construction Parse (unsigned)
 	t.Log("Step 3: Testing /construction/parse (unsigned)")
 	parseUnsignedResp, err := testConstructionParse(client, networkIdentifier, []byte(payloadsResp.UnsignedTransaction), false)
 	if err != nil {
@@ -139,7 +126,6 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	}
 	t.Logf("✅ Parse (unsigned) successful: %d operations", len(parseUnsignedResp.Operations))
 
-	// Step 4: Sign the payload
 	t.Log("Step 4: Signing payload offline")
 	payloadHex := fmt.Sprintf("%x", payloadsResp.Payloads[0].Bytes)
 	signature, err := meshcrypto.NewSigningHandler(config.SenderPrivateKey).SignPayload(payloadHex)
@@ -148,7 +134,6 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	}
 	t.Log("✅ Signature generated")
 
-	// Step 5: Construction Combine
 	t.Log("Step 5: Testing /construction/combine")
 	combineResp, err := testConstructionCombine(client, networkIdentifier, payloadsResp, signature)
 	if err != nil {
@@ -159,7 +144,6 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	}
 	t.Log("✅ Combine successful")
 
-	// Step 6: Construction Parse (signed)
 	t.Log("Step 6: Testing /construction/parse (signed)")
 	parseSignedResp, err := testConstructionParse(client, networkIdentifier, []byte(combineResp.SignedTransaction), true)
 	if err != nil {
@@ -171,7 +155,6 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	t.Logf("✅ Parse (signed) successful: %d operations, %d signers",
 		len(parseSignedResp.Operations), len(parseSignedResp.AccountIdentifierSigners))
 
-	// Step 7: Construction Hash
 	t.Log("Step 7: Testing /construction/hash")
 	hashResp, err := testConstructionHash(client, networkIdentifier, combineResp)
 	if err != nil {
@@ -258,7 +241,6 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 
 	t.Log("Testing that online-only endpoints fail in offline mode...")
 
-	// Test Network Status (should fail in offline mode)
 	t.Run("NetworkStatus_ShouldFail", func(t *testing.T) {
 		t.Log("Testing /network/status should fail in offline mode")
 		request := &types.NetworkRequest{
@@ -275,7 +257,6 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 		t.Log("✅ /network/status correctly fails in offline mode")
 	})
 
-	// Test Account Balance (should fail in offline mode)
 	t.Run("AccountBalance_ShouldFail", func(t *testing.T) {
 		t.Log("Testing /account/balance should fail in offline mode")
 		request := &types.AccountBalanceRequest{
@@ -298,7 +279,6 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 		t.Log("✅ /account/balance correctly fails in offline mode")
 	})
 
-	// Test Construction Submit (should fail in offline mode)
 	t.Run("ConstructionSubmit_ShouldFail", func(t *testing.T) {
 		t.Log("Testing /construction/submit should fail in offline mode")
 		request := &types.ConstructionSubmitRequest{
