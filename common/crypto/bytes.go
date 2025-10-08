@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -42,17 +41,4 @@ func (h *BytesHandler) DecodeHexStringWithPrefix(hexStr string) ([]byte, error) 
 	cleanHex := strings.TrimPrefix(hexStr, "0x")
 
 	return hex.DecodeString(cleanHex)
-}
-
-// HexToDecimal converts hex string to decimal string
-func (h *BytesHandler) HexToDecimal(hexStr string) (string, error) {
-	cleanHex := strings.TrimPrefix(hexStr, "0x")
-
-	bigInt := new(big.Int)
-	bigInt, ok := bigInt.SetString(cleanHex, 16)
-	if !ok {
-		return "", fmt.Errorf("invalid hex string: %s", hexStr)
-	}
-
-	return bigInt.String(), nil
 }

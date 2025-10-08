@@ -282,6 +282,13 @@ func (m *MockVeChainClient) GetAccount(address string) (*api.Account, error) {
 	return m.MockAccount, nil
 }
 
+func (m *MockVeChainClient) GetAccountAtRevision(address string, revision string) (*api.Account, error) {
+	if m.MockError != nil {
+		return nil, m.MockError
+	}
+	return m.MockAccount, nil
+}
+
 func (m *MockVeChainClient) GetChainID() (int, error) {
 	if m.MockError != nil {
 		return 0, m.MockError

@@ -15,7 +15,6 @@ import (
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
-	"github.com/vechain/thor/v2/thor"
 )
 
 func TestNewAccountService(t *testing.T) {
@@ -446,7 +445,7 @@ func TestAccountService_getVETBalance(t *testing.T) {
 		mockClient.SetMockAccount(mockAccount)
 
 		// Test getting VET balance
-		amount, err := service.getVETBalance(meshtests.FirstSoloAddress)
+		amount, err := service.getVETBalance(meshtests.FirstSoloAddress, "best")
 		if err != nil {
 			t.Errorf("getVETBalance() error = %v, want nil", err)
 		}
@@ -460,95 +459,12 @@ func TestAccountService_getVETBalance(t *testing.T) {
 		mockClient.SetMockError(fmt.Errorf("account not found"))
 
 		// Test error case
-		amount, err := service.getVETBalance(meshtests.FirstSoloAddress)
+		amount, err := service.getVETBalance(meshtests.FirstSoloAddress, "best")
 		if err == nil {
 			t.Errorf("getVETBalance() should return error when account not found")
 		}
 		if amount != nil {
 			t.Errorf("getVETBalance() should return nil amount when error occurs")
-		}
-	})
-}
-
-func TestAccountService_getBlockFromIdentifier(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewAccountService(mockClient)
-
-	t.Run("Get block by number", func(t *testing.T) {
-		// Set up mock block
-		mockBlock := &api.JSONExpandedBlock{
-			JSONBlockSummary: &api.JSONBlockSummary{
-				Number: 100,
-				ID:     thor.Bytes32{},
-			},
-		}
-		mockClient.SetMockBlock(mockBlock)
-
-		// Test getting block by number
-		index := int64(100)
-		blockIdentifier := types.PartialBlockIdentifier{
-			Index: &index,
-		}
-		block, err := service.getBlockFromIdentifier(blockIdentifier)
-		if err != nil {
-			t.Errorf("getBlockFromIdentifier() error = %v, want nil", err)
-		}
-		if block == nil {
-			t.Errorf("getBlockFromIdentifier() returned nil block")
-		}
-	})
-
-	t.Run("Get block by hash", func(t *testing.T) {
-		// Set up mock block
-		mockBlock := &api.JSONExpandedBlock{
-			JSONBlockSummary: &api.JSONBlockSummary{
-				Number: 100,
-				ID:     thor.Bytes32{},
-			},
-		}
-		mockClient.SetMockBlock(mockBlock)
-
-		// Test getting block by hash
-		hash := "0x1234567890abcdef"
-		blockIdentifier := types.PartialBlockIdentifier{
-			Hash: &hash,
-		}
-		block, err := service.getBlockFromIdentifier(blockIdentifier)
-		if err != nil {
-			t.Errorf("getBlockFromIdentifier() error = %v, want nil", err)
-		}
-		if block == nil {
-			t.Errorf("getBlockFromIdentifier() returned nil block")
-		}
-	})
-
-	t.Run("Error case - invalid identifier", func(t *testing.T) {
-		// Test with empty identifier
-		blockIdentifier := types.PartialBlockIdentifier{}
-		block, err := service.getBlockFromIdentifier(blockIdentifier)
-		if err == nil {
-			t.Errorf("getBlockFromIdentifier() should return error for invalid identifier")
-		}
-		if block != nil {
-			t.Errorf("getBlockFromIdentifier() should return nil block for invalid identifier")
-		}
-	})
-
-	t.Run("Error case - block not found", func(t *testing.T) {
-		// Set up mock error
-		mockClient.SetMockError(fmt.Errorf("block not found"))
-
-		// Test error case
-		index := int64(999999)
-		blockIdentifier := types.PartialBlockIdentifier{
-			Index: &index,
-		}
-		block, err := service.getBlockFromIdentifier(blockIdentifier)
-		if err == nil {
-			t.Errorf("getBlockFromIdentifier() should return error when block not found")
-		}
-		if block != nil {
-			t.Errorf("getBlockFromIdentifier() should return nil block when error occurs")
 		}
 	})
 }

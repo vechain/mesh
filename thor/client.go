@@ -44,15 +44,25 @@ func (c *VeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBl
 	return c.GetBlock(revision)
 }
 
-// GetAccount fetches account details by address
+// GetAccount fetches account details by address at the latest block
 func (c *VeChainClient) GetAccount(address string) (*api.Account, error) {
+	return c.GetAccountAtRevision(address, "")
+}
+
+// GetAccountAtRevision fetches account details by address at a specific block revision
+func (c *VeChainClient) GetAccountAtRevision(address string, revision string) (*api.Account, error) {
 	addr, err := thor.ParseAddress(address)
 	if err != nil {
 		return nil, fmt.Errorf("invalid address: %w", err)
 	}
 
-	// Get account information
-	account, err := c.client.Account(&addr)
+	// Get account information with optional revision
+	var account *api.Account
+	if revision != "" {
+		account, err = c.client.Account(&addr, thorclient.Revision(revision))
+	} else {
+		account, err = c.client.Account(&addr)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}

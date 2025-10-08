@@ -86,35 +86,3 @@ func TestDecodeHexStringWithPrefix(t *testing.T) {
 		}
 	}
 }
-
-func TestHexToDecimal(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-		hasError bool
-	}{
-		{"0x1", "1", false},
-		{"0xa", "10", false},
-		{"0xff", "255", false},
-		{"0x100", "256", false},
-		{"invalid", "", true},
-		{"", "", true},
-	}
-
-	handler := NewBytesHandler()
-	for _, tt := range tests {
-		result, err := handler.HexToDecimal(tt.input)
-		if tt.hasError {
-			if err == nil {
-				t.Errorf("HexToDecimal(%s) expected error, got nil", tt.input)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("HexToDecimal(%s) unexpected error: %v", tt.input, err)
-			}
-			if result != tt.expected {
-				t.Errorf("HexToDecimal(%s) = %s, expected %s", tt.input, result, tt.expected)
-			}
-		}
-	}
-}
