@@ -92,11 +92,9 @@ jobs:
             validation: data
           - env: solo
             validation: construction
-          # Test: data + construction
+          # Test: data (construction not included since it has to wait for the network to be synced)
           - env: test
             validation: data
-          - env: test
-            validation: construction
           # Main: data only
           - env: main
             validation: data

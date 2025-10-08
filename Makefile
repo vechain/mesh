@@ -379,7 +379,6 @@ mesh-cli-check-construction:
 	fi
 	@echo "Starting mesh-cli Construction API validation for $(ENV) network..."
 	@echo "0. Cleaning previous mesh-cli data..."
-	@docker volume rm mesh_thor-data || true
 	@rm -rf mesh-cli/data
 	@echo "1. Starting $(ENV) mode services..."
 	@if [ "$(ENV)" = "solo" ]; then \
