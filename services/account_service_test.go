@@ -452,7 +452,8 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 		{
 			name: "get balance error",
 			setupMock: func(m *meshthor.MockVeChainClient) {
-				m.SetMockError(fmt.Errorf("failed to get account from node"))
+				// Set up mock block to succeed, but account to fail
+				m.SetMockAccountError(fmt.Errorf("failed to get account from node"))
 			},
 			currencies: []*types.Currency{
 				{Symbol: "VET", Decimals: 18},

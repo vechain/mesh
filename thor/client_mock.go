@@ -36,8 +36,9 @@ type MockVeChainClient struct {
 	MockInspectClauses []*api.CallResult
 
 	// Simulated errors
-	MockError      error
-	MockBlockError error
+	MockError        error
+	MockBlockError   error
+	MockAccountError error
 }
 
 // NewMockVeChainClient creates a new mock client
@@ -280,6 +281,9 @@ func (m *MockVeChainClient) GetBlockByNumber(blockNumber int64) (*api.JSONExpand
 }
 
 func (m *MockVeChainClient) GetAccount(address string) (*api.Account, error) {
+	if m.MockAccountError != nil {
+		return nil, m.MockAccountError
+	}
 	if m.MockError != nil {
 		return nil, m.MockError
 	}
@@ -287,6 +291,9 @@ func (m *MockVeChainClient) GetAccount(address string) (*api.Account, error) {
 }
 
 func (m *MockVeChainClient) GetAccountAtRevision(address string, revision string) (*api.Account, error) {
+	if m.MockAccountError != nil {
+		return nil, m.MockAccountError
+	}
 	if m.MockError != nil {
 		return nil, m.MockError
 	}
@@ -379,6 +386,11 @@ func (m *MockVeChainClient) SetMockError(err error) {
 // SetMockBlockError configures a simulated block error
 func (m *MockVeChainClient) SetMockBlockError(err error) {
 	m.MockBlockError = err
+}
+
+// SetMockAccountError configures a simulated account error
+func (m *MockVeChainClient) SetMockAccountError(err error) {
+	m.MockAccountError = err
 }
 
 // SetMockAccount configures the simulated account

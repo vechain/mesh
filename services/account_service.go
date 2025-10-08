@@ -60,13 +60,23 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// Get block information first to ensure atomicity
+	block, err := a.vechainClient.GetBlock(revision)
+	if err != nil {
+		a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
+		return
+	}
+	blockRevision := block.ID.String()
+
 	// Determine which currencies to query
 	currenciesToQuery := a.getCurrenciesToQuery(request.Currencies)
 
 	// Get balances for each currency at the specified block
 	var balances []*types.Amount
 	for _, currency := range currenciesToQuery {
-		balance, err := a.getBalanceForCurrency(request.AccountIdentifier.Address, currency, revision)
+		balance, err := a.getBalanceForCurrency(request.AccountIdentifier.Address, currency, blockRevision)
 		if err != nil {
 			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetAccount, map[string]any{
 				"error":    err.Error(),
@@ -77,15 +87,6 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		if balance != nil {
 			balances = append(balances, balance)
 		}
-	}
-
-	// Get block information for the response
-	block, err := a.vechainClient.GetBlock(revision)
-	if err != nil {
-		a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
-			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
 	}
 
 	response := &types.AccountBalanceResponse{
