@@ -52,6 +52,15 @@ var (
 		ValidationRunMode,
 	}
 
+	// NetworkListOfflineValidations includes validations needed for network/list in offline mode
+	NetworkListOfflineValidations = []ValidationType{}
+
+	// NetworkOfflineValidations includes validations needed for network endpoints in offline mode
+	NetworkOfflineValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationModeNetwork,
+	}
+
 	// ConstructionValidations includes validations needed for construction endpoints
 	ConstructionValidations = []ValidationType{
 		ValidationNetwork,
@@ -59,10 +68,23 @@ var (
 		ValidationModeNetwork,
 	}
 
+	// ConstructionOfflineValidations includes validations needed for construction endpoints in offline mode
+	ConstructionOfflineValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationModeNetwork,
+	}
+
 	// ConstructionPayloadsValidations includes specific validations for construction/payloads
 	ConstructionPayloadsValidations = []ValidationType{
 		ValidationNetwork,
 		ValidationRunMode,
+		ValidationModeNetwork,
+		ValidationConstructionPayloads,
+	}
+
+	// ConstructionPayloadsOfflineValidations includes specific validations for construction/payloads in offline mode
+	ConstructionPayloadsOfflineValidations = []ValidationType{
+		ValidationNetwork,
 		ValidationModeNetwork,
 		ValidationConstructionPayloads,
 	}
@@ -284,6 +306,6 @@ func (v *ValidationMiddleware) ValidateRequest(w http.ResponseWriter, r *http.Re
 
 // ValidateEndpoint performs validations for a specific endpoint
 func (v *ValidationMiddleware) ValidateEndpoint(w http.ResponseWriter, r *http.Request, requestData []byte, endpoint string) bool {
-	validations := GetValidationsForEndpoint(endpoint)
+	validations := GetValidationsForEndpoint(endpoint, v.runMode)
 	return v.ValidateRequest(w, r, requestData, validations)
 }
