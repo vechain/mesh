@@ -28,8 +28,6 @@ func TestSolo(t *testing.T) {
 			testTransactionFlow(t, client, networkIdentifier, config, transactionType)
 		})
 	}
-
-	t.Log("✅ All test steps completed successfully!")
 }
 
 // testTransactionFlow tests the complete transaction flow for a specific transaction type
@@ -240,6 +238,4 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 	t.Logf("Block transaction response: transaction hash = %s, operations count = %d",
 		blockTxResp.Transaction.TransactionIdentifier.Hash,
 		len(blockTxResp.Transaction.Operations))
-
-	t.Logf("✅ All steps completed successfully for %s transaction!", transactionType)
 }

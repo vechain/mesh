@@ -47,8 +47,6 @@ func TestVIP180Solo(t *testing.T) {
 	if err := testVIP180Transfer(t, client, networkIdentifier, config); err != nil {
 		t.Fatalf("Failed to test VIP180 transfer: %v", err)
 	}
-
-	t.Log("✅ All VIP180 E2E test steps completed successfully!")
 }
 
 // deployVIP180Contract deploys the VIP180 contract using Thor Solo API

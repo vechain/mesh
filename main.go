@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	meshcommon "github.com/vechain/mesh/common"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/thor"
 )
@@ -39,7 +40,7 @@ func loadConfiguration() *meshconfig.Config {
 
 // startThorNode starts the Thor node if in online mode
 func startThorNode(cfg *meshconfig.Config) *thor.Server {
-	if cfg.Mode != "online" {
+	if cfg.Mode != meshcommon.OnlineMode {
 		return nil
 	}
 

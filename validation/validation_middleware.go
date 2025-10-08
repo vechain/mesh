@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 	meshoperations "github.com/vechain/mesh/common/operations"
 )
 
@@ -52,6 +53,15 @@ var (
 		ValidationRunMode,
 	}
 
+	// NetworkListOfflineValidations includes validations needed for network/list in offline mode
+	NetworkListOfflineValidations = []ValidationType{}
+
+	// NetworkOfflineValidations includes validations needed for network endpoints in offline mode
+	NetworkOfflineValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationModeNetwork,
+	}
+
 	// ConstructionValidations includes validations needed for construction endpoints
 	ConstructionValidations = []ValidationType{
 		ValidationNetwork,
@@ -59,10 +69,23 @@ var (
 		ValidationModeNetwork,
 	}
 
+	// ConstructionOfflineValidations includes validations needed for construction endpoints in offline mode
+	ConstructionOfflineValidations = []ValidationType{
+		ValidationNetwork,
+		ValidationModeNetwork,
+	}
+
 	// ConstructionPayloadsValidations includes specific validations for construction/payloads
 	ConstructionPayloadsValidations = []ValidationType{
 		ValidationNetwork,
 		ValidationRunMode,
+		ValidationModeNetwork,
+		ValidationConstructionPayloads,
+	}
+
+	// ConstructionPayloadsOfflineValidations includes specific validations for construction/payloads in offline mode
+	ConstructionPayloadsOfflineValidations = []ValidationType{
+		ValidationNetwork,
 		ValidationModeNetwork,
 		ValidationConstructionPayloads,
 	}
@@ -102,7 +125,13 @@ func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Reque
 		return false
 	}
 
-	// Check network
+	// In offline mode, we're more lenient with network validation since no node is running
+	// We only require blockchain to match
+	if v.runMode != meshcommon.OnlineMode {
+		return true
+	}
+
+	// In online mode, check network strictly
 	if request.NetworkIdentifier.Network != v.networkIdentifier.Network {
 		http.Error(w, fmt.Sprintf("Invalid network: expected %s, got %s",
 			v.networkIdentifier.Network, request.NetworkIdentifier.Network), http.StatusBadRequest)
@@ -123,8 +152,8 @@ func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Reque
 
 // CheckRunMode validates the run mode
 func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Request) bool {
-	// In Mesh, run mode is typically "online" or "offline"
-	if v.runMode != "online" {
+	// In Mesh, run mode is "online" or "offline"
+	if v.runMode != meshcommon.OnlineMode {
 		http.Error(w, fmt.Sprintf("Invalid run mode: this endpoint requires online mode, got %s", v.runMode), http.StatusBadRequest)
 		return false
 	}
@@ -139,12 +168,6 @@ func (v *ValidationMiddleware) CheckModeNetwork(w http.ResponseWriter, r *http.R
 
 	if !isValidNetwork {
 		http.Error(w, fmt.Sprintf("Unsupported network: %s", v.networkIdentifier.Network), http.StatusBadRequest)
-		return false
-	}
-
-	// For online mode, we need to ensure the network is accessible
-	if v.runMode == "online" && !isValidNetwork {
-		http.Error(w, "Network not accessible in online mode", http.StatusBadRequest)
 		return false
 	}
 
@@ -284,6 +307,6 @@ func (v *ValidationMiddleware) ValidateRequest(w http.ResponseWriter, r *http.Re
 
 // ValidateEndpoint performs validations for a specific endpoint
 func (v *ValidationMiddleware) ValidateEndpoint(w http.ResponseWriter, r *http.Request, requestData []byte, endpoint string) bool {
-	validations := GetValidationsForEndpoint(endpoint)
+	validations := GetValidationsForEndpoint(endpoint, v.runMode)
 	return v.ValidateRequest(w, r, requestData, validations)
 }

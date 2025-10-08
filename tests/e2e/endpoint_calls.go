@@ -79,6 +79,26 @@ func testNetworkStatus(client *HTTPClient, networkIdentifier *types.NetworkIdent
 	return &response, nil
 }
 
+// testConstructionDerive tests the construction/derive endpoint
+func testConstructionDerive(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, publicKey *types.PublicKey) (*types.ConstructionDeriveResponse, error) {
+	request := &types.ConstructionDeriveRequest{
+		NetworkIdentifier: networkIdentifier,
+		PublicKey:         publicKey,
+	}
+
+	resp, err := client.Post(meshcommon.ConstructionDeriveEndpoint, request)
+	if err != nil {
+		return nil, err
+	}
+
+	var deriveResp types.ConstructionDeriveResponse
+	if err := ParseResponse(resp, &deriveResp); err != nil {
+		return nil, err
+	}
+
+	return &deriveResp, nil
+}
+
 // testConstructionPreprocess tests the /construction/preprocess endpoint
 func testConstructionPreprocess(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, operations []*types.Operation, config *TestConfig, transactionType string) (*types.ConstructionPreprocessResponse, error) {
 	if operations == nil {
@@ -155,6 +175,34 @@ func testConstructionMetadata(client *HTTPClient, networkIdentifier *types.Netwo
 	return &response, nil
 }
 
+// testConstructionPayloadsWithMetadata tests construction/payloads with provided metadata
+func testConstructionPayloadsWithMetadata(
+	client *HTTPClient,
+	networkIdentifier *types.NetworkIdentifier,
+	operations []*types.Operation,
+	publicKeys []*types.PublicKey,
+	metadata map[string]any,
+) (*types.ConstructionPayloadsResponse, error) {
+	request := &types.ConstructionPayloadsRequest{
+		NetworkIdentifier: networkIdentifier,
+		Operations:        operations,
+		PublicKeys:        publicKeys,
+		Metadata:          metadata,
+	}
+
+	resp, err := client.Post(meshcommon.ConstructionPayloadsEndpoint, request)
+	if err != nil {
+		return nil, err
+	}
+
+	var payloadsResp types.ConstructionPayloadsResponse
+	if err := ParseResponse(resp, &payloadsResp); err != nil {
+		return nil, err
+	}
+
+	return &payloadsResp, nil
+}
+
 // testConstructionPayloads tests the /construction/payloads endpoint
 func testConstructionPayloads(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, metadataResp *types.ConstructionMetadataResponse, config *TestConfig, transactionType string) (*types.ConstructionPayloadsResponse, error) {
 	var operations []*types.Operation
@@ -165,29 +213,17 @@ func testConstructionPayloads(client *HTTPClient, networkIdentifier *types.Netwo
 		operations = CreateDynamicTransactionOperations(config.SenderAddress, config.RecipientAddress, config.TransferAmount)
 	}
 
-	request := &types.ConstructionPayloadsRequest{
-		NetworkIdentifier: networkIdentifier,
-		Operations:        operations,
-		Metadata:          metadataResp.Metadata,
-		PublicKeys:        []*types.PublicKey{CreateTestPublicKey()},
-	}
-
-	resp, err := client.Post(meshcommon.ConstructionPayloadsEndpoint, request)
+	response, err := testConstructionPayloadsWithMetadata(client, networkIdentifier, operations, []*types.PublicKey{CreateTestPublicKey()}, metadataResp.Metadata)
 	if err != nil {
 		return nil, err
 	}
 
-	var response types.ConstructionPayloadsResponse
-	if err := ParseResponse(resp, &response); err != nil {
-		return nil, err
-	}
-
 	// Validate response
-	if err := ValidateConstructionPayloadsResponse(&response); err != nil {
+	if err := ValidateConstructionPayloadsResponse(response); err != nil {
 		return nil, err
 	}
 
-	return &response, nil
+	return response, nil
 }
 
 // testConstructionCombine tests the /construction/combine endpoint

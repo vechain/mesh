@@ -77,7 +77,7 @@ func createTestConfig() *config.Config {
 	return &config.Config{
 		NodeAPI:      "http://localhost:8669",
 		Network:      "test",
-		Mode:         "online",
+		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000",
 	}
 }

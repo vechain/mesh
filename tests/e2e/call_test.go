@@ -178,6 +178,4 @@ func TestCallService_InspectClausesWithVIP180(t *testing.T) {
 	} else {
 		t.Errorf("Clause 3 (symbol call) should have data field, got %v", result3["data"])
 	}
-
-	t.Log("✓ All three clauses executed successfully with expected results")
 }

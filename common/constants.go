@@ -2,6 +2,11 @@ package common
 
 import "github.com/coinbase/rosetta-sdk-go/types"
 
+const (
+	OfflineMode = "offline"
+	OnlineMode  = "online"
+)
+
 // Endpoints
 const (
 	AccountBalanceEndpoint         = "/account/balance"
