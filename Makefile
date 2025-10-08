@@ -25,7 +25,6 @@ help:
 	@echo "  mesh-cli-check-construction-solo  - Validate Construction API on solo network (recommended)"
 	@echo "  mesh-cli-check-data ENV=<env>     - Validate Data API for specific environment (solo|test|main)"
 	@echo "  mesh-cli-check-construction ENV=<env> - Validate Construction API for specific environment (solo|test|main)"
-	@echo "    ⚠️  Note: test and main environments are WIP"
 	@echo ""
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"

@@ -36,7 +36,7 @@ make mesh-cli-check-construction-solo
 | `make mesh-cli-check-data ENV=<env>` | Validate Data API for specific environment |
 | `make mesh-cli-check-construction ENV=<env>` | Validate Construction API for specific environment |
 
-**Supported environments:** `solo` (ready), `test` ⚠️ (WIP), `main` ⚠️ (WIP)
+**Supported environments:** `solo` (ready), `test`, `main`
 
 ## What Gets Validated
 
