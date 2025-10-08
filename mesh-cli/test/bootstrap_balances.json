@@ -7,6 +7,16 @@
             "symbol": "VET",
             "decimals": 18
         },
-        "value": "37480094800010010000100000010"
+        "value": "50000000000000000000000000000"
+    },
+    {
+        "account_identifier": {
+            "address": "0xb4094c25f86d628fdd571afc4077f0d0196afb48"
+        },
+        "currency": {
+            "symbol": "VET",
+            "decimals": 18
+        },
+        "value": "25000000000000000000000000"
     }
 ]
