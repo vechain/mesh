@@ -2,15 +2,14 @@ package services
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
-	meshcrypto "github.com/vechain/mesh/common/crypto"
 	meshhttp "github.com/vechain/mesh/common/http"
 	"github.com/vechain/mesh/common/vip180"
 	meshthor "github.com/vechain/mesh/thor"
-	"github.com/vechain/thor/v2/api"
 )
 
 // AccountService handles account-related endpoints
@@ -18,7 +17,6 @@ type AccountService struct {
 	requestHandler  *meshhttp.RequestHandler
 	responseHandler *meshhttp.ResponseHandler
 	vechainClient   meshthor.VeChainClientInterface
-	bytesHandler    *meshcrypto.BytesHandler
 }
 
 // NewAccountService creates a new account service
@@ -27,7 +25,6 @@ func NewAccountService(vechainClient meshthor.VeChainClientInterface) *AccountSe
 		requestHandler:  meshhttp.NewRequestHandler(),
 		responseHandler: meshhttp.NewResponseHandler(),
 		vechainClient:   vechainClient,
-		bytesHandler:    meshcrypto.NewBytesHandler(),
 	}
 }
 
@@ -50,13 +47,36 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// Determine revision from request or use "best"
+	revision := "best"
+	if request.BlockIdentifier != nil {
+		if request.BlockIdentifier.Hash != nil && *request.BlockIdentifier.Hash != "" {
+			revision = *request.BlockIdentifier.Hash
+		} else if request.BlockIdentifier.Index != nil {
+			revision = fmt.Sprintf("%d", *request.BlockIdentifier.Index)
+		} else {
+			a.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Get block information first to ensure atomicity
+	block, err := a.vechainClient.GetBlock(revision)
+	if err != nil {
+		a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
+			"error": err.Error(),
+		}), http.StatusBadRequest)
+		return
+	}
+	blockRevision := block.ID.String()
+
 	// Determine which currencies to query
 	currenciesToQuery := a.getCurrenciesToQuery(request.Currencies)
 
-	// Get balances for each currency
+	// Get balances for each currency at the specified block
 	var balances []*types.Amount
 	for _, currency := range currenciesToQuery {
-		balance, err := a.getBalanceForCurrency(request.AccountIdentifier.Address, currency)
+		balance, err := a.getBalanceForCurrency(request.AccountIdentifier.Address, currency, blockRevision)
 		if err != nil {
 			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetAccount, map[string]any{
 				"error":    err.Error(),
@@ -66,26 +86,6 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 		}
 		if balance != nil {
 			balances = append(balances, balance)
-		}
-	}
-
-	// Get block identifier (use request block_identifier or default to best block)
-	var block *api.JSONExpandedBlock
-	if request.BlockIdentifier != nil {
-		block, err = a.getBlockFromIdentifier(*request.BlockIdentifier)
-		if err != nil {
-			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
-				"error": err.Error(),
-			}), http.StatusBadRequest)
-			return
-		}
-	} else {
-		block, err = a.vechainClient.GetBlock("best")
-		if err != nil {
-			a.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToGetBestBlock, map[string]any{
-				"error": err.Error(),
-			}), http.StatusInternalServerError)
-			return
 		}
 	}
 
@@ -121,16 +121,6 @@ func (a *AccountService) validateCurrencies(currencies []*types.Currency) error 
 	return nil
 }
 
-// getBlockFromIdentifier gets a block by its identifier
-func (a *AccountService) getBlockFromIdentifier(blockIdentifier types.PartialBlockIdentifier) (*api.JSONExpandedBlock, error) {
-	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
-		return a.vechainClient.GetBlock(*blockIdentifier.Hash)
-	} else if blockIdentifier.Index != nil {
-		return a.vechainClient.GetBlockByNumber(*blockIdentifier.Index)
-	}
-	return nil, fmt.Errorf("invalid block identifier")
-}
-
 // getCurrenciesToQuery determines which currencies to query based on request
 func (a *AccountService) getCurrenciesToQuery(requestCurrencies []*types.Currency) []*types.Currency {
 	if len(requestCurrencies) == 0 {
@@ -143,16 +133,16 @@ func (a *AccountService) getCurrenciesToQuery(requestCurrencies []*types.Currenc
 	return requestCurrencies
 }
 
-// getBalanceForCurrency gets the balance for a specific currency
-func (a *AccountService) getBalanceForCurrency(address string, currency *types.Currency) (*types.Amount, error) {
+// getBalanceForCurrency gets the balance for a specific currency at a specific block revision
+func (a *AccountService) getBalanceForCurrency(address string, currency *types.Currency, revision string) (*types.Amount, error) {
 	// Handle VET currency
 	if currency.Symbol == meshcommon.VETCurrency.Symbol {
-		return a.getVETBalance(address)
+		return a.getVETBalance(address, revision)
 	}
 
 	// Handle VTHO currency
 	if currency.Symbol == meshcommon.VTHOCurrency.Symbol {
-		return a.getVTHOBalance(address)
+		return a.getVTHOBalance(address, revision)
 	}
 
 	// Handle VIP180 tokens
@@ -183,43 +173,32 @@ func (a *AccountService) getBalanceForCurrency(address string, currency *types.C
 	return nil, fmt.Errorf("unsupported currency: %s", currency.Symbol)
 }
 
-// getVETBalance gets the VET balance for an account
-func (a *AccountService) getVETBalance(address string) (*types.Amount, error) {
-	account, err := a.vechainClient.GetAccount(address)
+// getVETBalance gets the VET balance for an account at a specific block revision
+func (a *AccountService) getVETBalance(address string, revision string) (*types.Amount, error) {
+	account, err := a.vechainClient.GetAccountAtRevision(address, revision)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}
 
-	balanceBytes, err := account.Balance.MarshalText()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal VET balance: %w", err)
-	}
-	vetBalance, err := a.bytesHandler.HexToDecimal(string(balanceBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert VET balance: %w", err)
-	}
+	vetBalance := (*big.Int)(account.Balance)
 
 	return &types.Amount{
-		Value:    vetBalance,
+		Value:    vetBalance.String(),
 		Currency: meshcommon.VETCurrency,
 	}, nil
 }
 
-// getVTHOBalance gets the VTHO balance for an account
-func (a *AccountService) getVTHOBalance(address string) (*types.Amount, error) {
-	account, err := a.vechainClient.GetAccount(address)
+// getVTHOBalance gets the VTHO balance for an account at a specific block revision
+func (a *AccountService) getVTHOBalance(address string, revision string) (*types.Amount, error) {
+	account, err := a.vechainClient.GetAccountAtRevision(address, revision)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}
 
-	energyBytes, _ := account.Energy.MarshalText()
-	vthoBalance, err := a.bytesHandler.HexToDecimal(string(energyBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert VTHO balance: %w", err)
-	}
+	vthoBalance := (*big.Int)(account.Energy)
 
 	return &types.Amount{
-		Value:    vthoBalance,
+		Value:    vthoBalance.String(),
 		Currency: meshcommon.VTHOCurrency,
 	}, nil
 }

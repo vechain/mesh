@@ -13,6 +13,7 @@ type VeChainClientInterface interface {
 	GetBlock(revision string) (*api.JSONExpandedBlock, error)
 	GetBlockByNumber(blockNumber int64) (*api.JSONExpandedBlock, error)
 	GetAccount(address string) (*api.Account, error)
+	GetAccountAtRevision(address string, revision string) (*api.Account, error)
 	GetChainID() (int, error)
 	SubmitTransaction(vechainTx *tx.Transaction) (string, error)
 	GetDynamicGasPrice() (*DynamicGasPrice, error)

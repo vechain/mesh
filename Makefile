@@ -25,7 +25,6 @@ help:
 	@echo "  mesh-cli-check-construction-solo  - Validate Construction API on solo network (recommended)"
 	@echo "  mesh-cli-check-data ENV=<env>     - Validate Data API for specific environment (solo|test|main)"
 	@echo "  mesh-cli-check-construction ENV=<env> - Validate Construction API for specific environment (solo|test|main)"
-	@echo "    ⚠️  Note: test and main environments are WIP"
 	@echo ""
 	@echo "Development commands:"
 	@echo "  build - Build the Go binary"
@@ -55,7 +54,7 @@ test-unit:
 	go test $(GO_PACKAGES_TEST)
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=84.3
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=84.9
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."
@@ -318,6 +317,7 @@ mesh-cli-check-data:
 	fi
 	@echo "Starting mesh-cli Data API validation for $(ENV) network..."
 	@echo "0. Cleaning previous mesh-cli data..."
+	@docker volume rm mesh_thor-data || true
 	@rm -rf mesh-cli/data
 	@echo "1. Starting $(ENV) mode services..."
 	@if [ "$(ENV)" = "solo" ]; then \

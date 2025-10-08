@@ -36,7 +36,7 @@ make mesh-cli-check-construction-solo
 | `make mesh-cli-check-data ENV=<env>` | Validate Data API for specific environment |
 | `make mesh-cli-check-construction ENV=<env>` | Validate Construction API for specific environment |
 
-**Supported environments:** `solo` (ready), `test` ⚠️ (WIP), `main` ⚠️ (WIP)
+**Supported environments:** `solo` (ready), `test`, `main`
 
 ## What Gets Validated
 
@@ -50,8 +50,8 @@ Validates the complete transaction construction flow: derive → preprocess → 
 
 Configuration files are located in environment-specific directories:
 - `mesh-cli/solo/` - Local development (recommended for testing)
-- `mesh-cli/test/` - Testnet configuration ⚠️ (WIP)
-- `mesh-cli/main/` - Mainnet configuration ⚠️ (WIP)
+- `mesh-cli/test/` - Testnet configuration
+- `mesh-cli/main/` - Mainnet configuration
 
 The configuration files are already set up and ready to use. No manual configuration needed for basic validation.
 

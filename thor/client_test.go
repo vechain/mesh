@@ -3,6 +3,7 @@ package thor
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -812,5 +813,140 @@ func TestVeChainClient_InspectClauses_Success(t *testing.T) {
 	}
 	if results[0].Data != "0x5678" {
 		t.Error("InspectClauses() should return correct data")
+	}
+}
+
+func TestVeChainClient_GetAccountAtRevision_WithBlockHash(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	expectedBalance := big.NewInt(1000000000000000000)
+	expectedEnergy := big.NewInt(500000000000000000)
+	blockRevision := "0x00003abbf8435573e0c50fed42647160eabbe140a87efbe0ffab8ef895b7686e"
+
+	balance := math.HexOrDecimal256(*expectedBalance)
+	energy := math.HexOrDecimal256(*expectedEnergy)
+
+	mockThorClient.SetAccountFunc(func(address *thor.Address, opts ...thorclient.Option) (*api.Account, error) {
+		return &api.Account{
+			Balance: &balance,
+			Energy:  &energy,
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	account, err := client.GetAccountAtRevision(meshtests.FirstSoloAddress, blockRevision)
+	if err != nil {
+		t.Errorf("GetAccountAtRevision() error = %v, want nil", err)
+	}
+	if account == nil {
+		t.Fatal("GetAccountAtRevision() should return account")
+	}
+
+	actualBalance := (*big.Int)(account.Balance)
+	actualEnergy := (*big.Int)(account.Energy)
+
+	if actualBalance.Cmp(expectedBalance) != 0 {
+		t.Errorf("GetAccountAtRevision() balance = %v, want %v", actualBalance, expectedBalance)
+	}
+	if actualEnergy.Cmp(expectedEnergy) != 0 {
+		t.Errorf("GetAccountAtRevision() energy = %v, want %v", actualEnergy, expectedEnergy)
+	}
+}
+
+func TestVeChainClient_GetAccountAtRevision_WithBlockNumber(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	expectedBalance := big.NewInt(2000000000000000000)
+	expectedEnergy := big.NewInt(1000000000000000000)
+	blockRevision := "0x3abb" // Block number in hex
+
+	balance := math.HexOrDecimal256(*expectedBalance)
+	energy := math.HexOrDecimal256(*expectedEnergy)
+
+	mockThorClient.SetAccountFunc(func(address *thor.Address, opts ...thorclient.Option) (*api.Account, error) {
+		return &api.Account{
+			Balance: &balance,
+			Energy:  &energy,
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	account, err := client.GetAccountAtRevision(meshtests.FirstSoloAddress, blockRevision)
+	if err != nil {
+		t.Errorf("GetAccountAtRevision() error = %v, want nil", err)
+	}
+	if account == nil {
+		t.Fatal("GetAccountAtRevision() should return account")
+	}
+
+	actualBalance := (*big.Int)(account.Balance)
+	actualEnergy := (*big.Int)(account.Energy)
+
+	if actualBalance.Cmp(expectedBalance) != 0 {
+		t.Errorf("GetAccountAtRevision() balance = %v, want %v", actualBalance, expectedBalance)
+	}
+	if actualEnergy.Cmp(expectedEnergy) != 0 {
+		t.Errorf("GetAccountAtRevision() energy = %v, want %v", actualEnergy, expectedEnergy)
+	}
+}
+
+func TestVeChainClient_GetAccountAtRevision_EmptyRevision(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	expectedBalance := big.NewInt(3000000000000000000)
+	expectedEnergy := big.NewInt(1500000000000000000)
+
+	balance := math.HexOrDecimal256(*expectedBalance)
+	energy := math.HexOrDecimal256(*expectedEnergy)
+
+	mockThorClient.SetAccountFunc(func(address *thor.Address, opts ...thorclient.Option) (*api.Account, error) {
+		// Verify that no revision option is passed (should call latest)
+		return &api.Account{
+			Balance: &balance,
+			Energy:  &energy,
+		}, nil
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	// Call with empty revision - should fetch latest block
+	account, err := client.GetAccountAtRevision(meshtests.FirstSoloAddress, "")
+	if err != nil {
+		t.Errorf("GetAccountAtRevision() error = %v, want nil", err)
+	}
+	if account == nil {
+		t.Fatal("GetAccountAtRevision() should return account")
+	}
+
+	actualBalance := (*big.Int)(account.Balance)
+	actualEnergy := (*big.Int)(account.Energy)
+
+	if actualBalance.Cmp(expectedBalance) != 0 {
+		t.Errorf("GetAccountAtRevision() balance = %v, want %v", actualBalance, expectedBalance)
+	}
+	if actualEnergy.Cmp(expectedEnergy) != 0 {
+		t.Errorf("GetAccountAtRevision() energy = %v, want %v", actualEnergy, expectedEnergy)
+	}
+}
+
+func TestVeChainClient_GetAccountAtRevision_InvalidAddress(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetAccountAtRevision("invalid-address", "0x3abb")
+	if err == nil {
+		t.Error("GetAccountAtRevision() with invalid address should return error")
+	}
+}
+
+func TestVeChainClient_GetAccountAtRevision_ClientError(t *testing.T) {
+	mockThorClient := NewMockThorClient()
+	mockThorClient.SetAccountFunc(func(address *thor.Address, opts ...thorclient.Option) (*api.Account, error) {
+		return nil, fmt.Errorf("client error")
+	})
+	client := NewVeChainClientWithMock(mockThorClient)
+
+	_, err := client.GetAccountAtRevision(meshtests.FirstSoloAddress, "0x3abb")
+	if err == nil {
+		t.Error("GetAccountAtRevision() should return error when client fails")
+	}
+	if !strings.Contains(err.Error(), "failed to get account") {
+		t.Errorf("GetAccountAtRevision() error = %v, want error containing 'failed to get account'", err)
 	}
 }
