@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -159,14 +160,13 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 
 // TestOnlineOnlyEndpointsFailInOfflineMode tests that online-only endpoints fail appropriately in offline mode
 func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
-	// This test should be run with MODE=offline environment variable
-	t.Skip("This test requires offline mode configuration - run manually with MODE=offline")
-
 	config := GetTestConfig()
 	client := NewHTTPClient(config.BaseURL, config.TimeoutSeconds)
 	networkIdentifier := CreateTestNetworkIdentifier(config.Network)
 
 	t.Log("Testing that online-only endpoints fail in offline mode...")
+
+	expectedErrorSubstring := "this endpoint requires online mode"
 
 	t.Run("NetworkStatus_ShouldFail", func(t *testing.T) {
 		t.Log("Testing /network/status should fail in offline mode")
@@ -175,13 +175,29 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 		}
 
 		resp, err := client.Post(meshcommon.NetworkStatusEndpoint, request)
-		if err == nil {
-			var statusResp types.NetworkStatusResponse
-			if err := ParseResponse(resp, &statusResp); err == nil {
-				t.Fatal("Network status should fail in offline mode, but succeeded")
-			}
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
 		}
-		t.Log("✅ /network/status correctly fails in offline mode")
+
+		if resp.StatusCode == http.StatusOK {
+			t.Fatal("Network status should fail in offline mode, but returned 200 OK")
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read response body: %v", err)
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Fatalf("Failed to close response body: %v", err)
+		}
+
+		bodyStr := string(body)
+		if !strings.Contains(bodyStr, expectedErrorSubstring) {
+			t.Fatalf("Expected error message containing '%s', but got: %s", expectedErrorSubstring, bodyStr)
+		}
+
+		t.Logf("✅ /network/status correctly fails with: %s", bodyStr)
 	})
 
 	t.Run("AccountBalance_ShouldFail", func(t *testing.T) {
@@ -194,16 +210,29 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 		}
 
 		resp, err := client.Post(meshcommon.AccountBalanceEndpoint, request)
-		if err == nil {
-			body := make([]byte, 0)
-			if _, readErr := resp.Body.Read(body); readErr == nil {
-				t.Log("Response body:", string(body))
-			}
-			if resp.StatusCode == http.StatusOK {
-				t.Fatal("Account balance should fail in offline mode, but succeeded")
-			}
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
 		}
-		t.Log("✅ /account/balance correctly fails in offline mode")
+
+		if resp.StatusCode == http.StatusOK {
+			t.Fatal("Account balance should fail in offline mode, but returned 200 OK")
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read response body: %v", err)
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Fatalf("Failed to close response body: %v", err)
+		}
+
+		bodyStr := string(body)
+		if !strings.Contains(bodyStr, expectedErrorSubstring) {
+			t.Fatalf("Expected error message containing '%s', but got: %s", expectedErrorSubstring, bodyStr)
+		}
+
+		t.Logf("✅ /account/balance correctly fails with: %s", bodyStr)
 	})
 
 	t.Run("ConstructionSubmit_ShouldFail", func(t *testing.T) {
@@ -214,13 +243,29 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 		}
 
 		resp, err := client.Post(meshcommon.ConstructionSubmitEndpoint, request)
-		if err == nil {
-			var submitResp types.TransactionIdentifierResponse
-			if err := ParseResponse(resp, &submitResp); err == nil {
-				t.Fatal("Construction submit should fail in offline mode, but succeeded")
-			}
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
 		}
-		t.Log("✅ /construction/submit correctly fails in offline mode")
+
+		if resp.StatusCode == http.StatusOK {
+			t.Fatal("Construction submit should fail in offline mode, but returned 200 OK")
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read response body: %v", err)
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Fatalf("Failed to close response body: %v", err)
+		}
+
+		bodyStr := string(body)
+		if !strings.Contains(bodyStr, expectedErrorSubstring) {
+			t.Fatalf("Expected error message containing '%s', but got: %s", expectedErrorSubstring, bodyStr)
+		}
+
+		t.Logf("✅ /construction/submit correctly fails with: %s", bodyStr)
 	})
 
 	t.Log("✅ All online-only endpoint failure tests passed!")

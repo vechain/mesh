@@ -150,9 +150,9 @@ test-e2e-vip180:
 	go test -v -run TestVIP180Solo ./tests/e2e/...
 
 test-e2e-offline:
-	@echo "Running offline mode e2e test..."
+	@echo "Running offline mode e2e tests..."
 	@echo "Make sure the mesh server is running in offline mode: MODE=offline go run main.go"
-	go test -v -run TestOfflineMode ./tests/e2e/...
+	go test -v -run "^(TestOfflineMode|TestOnlineOnlyEndpointsFailInOfflineMode)" ./tests/e2e/...
 
 test-e2e-offline-full:
 	@echo "Starting offline mode e2e test cycle..."
@@ -181,7 +181,7 @@ test-e2e-offline-full:
 		exit 1; \
 	fi
 	@echo "4. Running offline mode e2e tests..."
-	@bash -c 'go test -v -run TestOfflineMode ./tests/e2e/...; \
+	@bash -c 'go test -v -run "^(TestOfflineMode|TestOnlineOnlyEndpointsFailInOfflineMode)" ./tests/e2e/...; \
 	test_result=$$?; \
 	echo "5. Stopping offline mode server..."; \
 	if [ -f /tmp/mesh-offline.pid ]; then \
@@ -191,9 +191,9 @@ test-e2e-offline-full:
 	rm -f /tmp/mesh-offline.log; \
 	rm -f mesh-server; \
 	if [ $$test_result -eq 0 ]; then \
-		echo "✅ Offline mode e2e test passed!"; \
+		echo "✅ Offline mode e2e tests passed!"; \
 	else \
-		echo "❌ Offline mode e2e test failed!"; \
+		echo "❌ Offline mode e2e tests failed!"; \
 	fi; \
 	exit $$test_result'
 

@@ -152,7 +152,7 @@ func (v *ValidationMiddleware) CheckNetwork(w http.ResponseWriter, r *http.Reque
 
 // CheckRunMode validates the run mode
 func (v *ValidationMiddleware) CheckRunMode(w http.ResponseWriter, r *http.Request) bool {
-	// In Mesh, run mode is typically meshcommon.OnlineMode or meshcommon.OfflineMode
+	// In Mesh, run mode is "online" or "offline"
 	if v.runMode != meshcommon.OnlineMode {
 		http.Error(w, fmt.Sprintf("Invalid run mode: this endpoint requires online mode, got %s", v.runMode), http.StatusBadRequest)
 		return false
@@ -168,12 +168,6 @@ func (v *ValidationMiddleware) CheckModeNetwork(w http.ResponseWriter, r *http.R
 
 	if !isValidNetwork {
 		http.Error(w, fmt.Sprintf("Unsupported network: %s", v.networkIdentifier.Network), http.StatusBadRequest)
-		return false
-	}
-
-	// For online mode, we need to ensure the network is accessible
-	if v.runMode == meshcommon.OnlineMode && !isValidNetwork {
-		http.Error(w, "Network not accessible in online mode", http.StatusBadRequest)
 		return false
 	}
 
