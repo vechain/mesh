@@ -82,11 +82,24 @@ jobs:
         run: make test-e2e-full
 
   mesh-cli-validation:
-    name: Mesh CLI Validation
+    name: Mesh CLI Validation (${{ matrix.env }} - ${{ matrix.validation }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        validation: [data, construction]
+        include:
+          # Solo: data + construction
+          - env: solo
+            validation: data
+          - env: solo
+            validation: construction
+          # Test: data + construction
+          - env: test
+            validation: data
+          - env: test
+            validation: construction
+          # Main: data only
+          - env: main
+            validation: data
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -106,5 +119,5 @@ jobs:
       - name: Build mesh-cli Docker image
         run: make mesh-cli-build
 
-      - name: Run mesh-cli ${{ matrix.validation }} validation
-        run: make mesh-cli-check-${{ matrix.validation }} ENV=solo
+      - name: Run mesh-cli ${{ matrix.validation }} validation on ${{ matrix.env }}
+        run: make mesh-cli-check-${{ matrix.validation }} ENV=${{ matrix.env }}
