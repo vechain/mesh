@@ -7,25 +7,24 @@
   "data_directory": "/data",
   "http_timeout": 300,
   "max_retries": 15,
-  "tip_delay": 60,
+  "retry_elapsed_time": 90,
+  "max_online_connections": 100,
+  "max_sync_concurrency": 32,
+  "tip_delay": 300,
   "log_configuration": false,
   "data": {
     "results_output_file": "/data/data_results.json",
     "pruning_block_disabled": true,
     "initial_balance_fetch_disabled": false,
-    "active_reconciliation_concurrency": 10,
-    "inactive_reconciliation_concurrency": 10,
+    "active_reconciliation_concurrency": 8,
+    "inactive_reconciliation_concurrency": 4,
     "inactive_reconciliation_frequency": 250,
+    "reconciler_active_backlog": 10000,
     "bootstrap_balances": "bootstrap_balances.json",
     "log_blocks": false,
     "log_transactions": false,
     "end_conditions": {
-      "index": 35000,
-      "tip": true,
-      "reconciliation_coverage": {
-        "coverage": 0.95,
-        "from_tip": true
-      }
+      "index": 35000
     }
   }
 }

@@ -85,6 +85,7 @@ jobs:
     name: Mesh CLI Validation (${{ matrix.env }} - ${{ matrix.validation }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Solo: data + construction
