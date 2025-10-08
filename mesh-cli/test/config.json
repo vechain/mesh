@@ -164,15 +164,15 @@
     "data": {
         "results_output_file":"/data/data_results.json",
         "pruning_block_disabled":true,
-        "initial_balance_fetch_disabled":false,
         "active_reconciliation_concurrency": 10,
         "inactive_reconciliation_concurrency": 10,
         "inactive_reconciliation_frequency": 10,
         "bootstrap_balances": "bootstrap_balances.json",
+        "exempt_accounts": "exempt_accounts.json",
         "log_blocks": false,
         "log_transactions": false,
         "end_conditions": {
-            "index": 15050,
+            "index": 15036,
             "tip":true,
             "reconciliation_coverage": {
                 "coverage": 0.95,
