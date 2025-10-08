@@ -3,7 +3,7 @@
 GO_PACKAGES_TEST = $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts)
 COVERAGE_EXCLUDE_PATTERN = _test\.go\|_mock\.go\|/main\.go
 
-.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
+.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-offline test-e2e-offline-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
 
 # Default target
 help:
@@ -35,7 +35,9 @@ help:
 	@echo "  test-unit-coverage-html - Run unit tests and generate HTML coverage report"
 	@echo "  test-e2e - Run e2e tests (requires solo mode server)"
 	@echo "  test-e2e-verbose - Run e2e tests with verbose output"
-	@echo "  test-e2e-full - Full e2e test cycle (start solo, test, stop solo)"
+	@echo "  test-e2e-full - Full e2e test cycle (online + offline modes)"
+	@echo "  test-e2e-offline - Run offline mode e2e test (requires offline mode server)"
+	@echo "  test-e2e-offline-full - Full offline mode e2e test cycle (start, test, stop)"
 	@echo "  test-e2e-vip180 - Run VIP180 e2e test (requires solo mode server)"
 	@echo "  test-e2e-vip180-full - Full VIP180 e2e test cycle (start solo, test, stop solo)"
 	@echo "  test-e2e-call - Run Call service e2e test (requires solo mode server)"
@@ -101,6 +103,9 @@ test-e2e-verbose:
 
 test-e2e-full:
 	@echo "Starting full e2e test cycle..."
+	@echo "════════════════════════════════════════════════════════════════"
+	@echo "PHASE 1: Online Mode Tests (with Thor node)"
+	@echo "════════════════════════════════════════════════════════════════"
 	@echo "1. Starting solo mode services..."
 	@$(MAKE) docker-solo-up
 	@echo "2. Waiting for services to be ready..."
@@ -119,22 +124,78 @@ test-e2e-full:
 		$(MAKE) docker-solo-down; \
 		exit 1; \
 	fi
-	@echo "3. Running e2e tests..."
+	@echo "3. Running online e2e tests..."
 	@bash -c '$(MAKE) test-e2e; \
 	test_result=$$?; \
 	echo "4. Stopping solo mode services..."; \
 	$(MAKE) docker-solo-down; \
-	if [ $$test_result -eq 0 ]; then \
-		echo "✅ All e2e tests passed!"; \
-	else \
-		echo "❌ Some e2e tests failed!"; \
+	if [ $$test_result -ne 0 ]; then \
+		echo "❌ Online e2e tests failed!"; \
+		exit $$test_result; \
 	fi; \
-	exit $$test_result'
+	echo "✅ Online e2e tests passed!"'
+	@echo ""
+	@echo "════════════════════════════════════════════════════════════════"
+	@echo "PHASE 2: Offline Mode Tests (without Thor node)"
+	@echo "════════════════════════════════════════════════════════════════"
+	@$(MAKE) test-e2e-offline-full
+	@echo ""
+	@echo "════════════════════════════════════════════════════════════════"
+	@echo "✅ ALL E2E TESTS PASSED (online + offline)!"
+	@echo "════════════════════════════════════════════════════════════════"
 
 test-e2e-vip180:
 	@echo "Running VIP180 e2e test..."
 	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
 	go test -v -run TestVIP180Solo ./tests/e2e/...
+
+test-e2e-offline:
+	@echo "Running offline mode e2e test..."
+	@echo "Make sure the mesh server is running in offline mode: MODE=offline go run main.go"
+	go test -v -run TestOfflineMode ./tests/e2e/...
+
+test-e2e-offline-full:
+	@echo "Starting offline mode e2e test cycle..."
+	@echo "1. Building mesh server..."
+	@go build -o mesh-server .
+	@echo "2. Starting mesh server in offline mode..."
+	@MODE=offline NETWORK=solo PORT=8080 ./mesh-server > /tmp/mesh-offline.log 2>&1 & \
+	echo $$! > /tmp/mesh-offline.pid
+	@echo "3. Waiting for server to be ready..."
+	@timeout=30; \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+			echo "✅ Mesh API server (offline mode) is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting for offline server... ($$timeout seconds remaining)"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "❌ Timeout waiting for offline server to start"; \
+		if [ -f /tmp/mesh-offline.pid ]; then \
+			kill $$(cat /tmp/mesh-offline.pid) 2>/dev/null || true; \
+			rm -f /tmp/mesh-offline.pid; \
+		fi; \
+		exit 1; \
+	fi
+	@echo "4. Running offline mode e2e tests..."
+	@bash -c 'go test -v -run TestOfflineMode ./tests/e2e/...; \
+	test_result=$$?; \
+	echo "5. Stopping offline mode server..."; \
+	if [ -f /tmp/mesh-offline.pid ]; then \
+		kill $$(cat /tmp/mesh-offline.pid) 2>/dev/null || true; \
+		rm -f /tmp/mesh-offline.pid; \
+	fi; \
+	rm -f /tmp/mesh-offline.log; \
+	rm -f mesh-server; \
+	if [ $$test_result -eq 0 ]; then \
+		echo "✅ Offline mode e2e test passed!"; \
+	else \
+		echo "❌ Offline mode e2e test failed!"; \
+	fi; \
+	exit $$test_result'
 
 test-e2e-call:
 	@echo "Running Call service e2e test..."
