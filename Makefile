@@ -92,14 +92,14 @@ test-unit-coverage-html:
 	@echo "Open coverage.html in your browser to view detailed coverage"
 
 test-e2e:
-	@echo "Running e2e tests..."
+	@echo "Running online e2e tests..."
 	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
-	go test -v ./tests/e2e/...
+	go test -v -skip "Offline" ./tests/e2e/...
 
 test-e2e-verbose:
-	@echo "Running e2e tests with verbose output..."
+	@echo "Running online e2e tests with verbose output..."
 	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
-	go test -v -count=1 ./tests/e2e/...
+	go test -v -count=1 -skip "Offline" ./tests/e2e/...
 
 test-e2e-full:
 	@echo "Starting full e2e test cycle..."
