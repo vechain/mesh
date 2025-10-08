@@ -81,23 +81,12 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	// metadata provided offline
 	t.Log("Step 2: Testing /construction/payloads with offline metadata")
 	offlineMetadata := map[string]any{
-		"blockRef":        "0x0000000000000000",       // Mock block ref
-		"chainTag":        float64(config.ChainTag()), // Chain tag for the network
-		"gas":             float64(21000),             // Standard transfer gas
-		"nonce":           "0x12345678",               // Mock nonce
+		"blockRef":        "0x0000000000000000", // Mock block ref
+		"chainTag":        float64(0xf6),        // Chain tag for the network  (solo)
+		"gas":             float64(21000),       // Standard transfer gas
+		"nonce":           "0x12345678",         // Mock nonce
 		"transactionType": meshcommon.TransactionTypeLegacy,
 		"gasPriceCoef":    float64(0), // Legacy transaction field
-	}
-
-	// Create metadata response manually
-	metadataResp := &types.ConstructionMetadataResponse{
-		Metadata: offlineMetadata,
-		SuggestedFee: []*types.Amount{
-			{
-				Value:    "-210000000000000000",
-				Currency: meshcommon.VTHOCurrency,
-			},
-		},
 	}
 
 	publicKey := CreateTestPublicKey()
@@ -106,7 +95,7 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 		networkIdentifier,
 		operations,
 		[]*types.PublicKey{publicKey},
-		metadataResp.Metadata,
+		offlineMetadata,
 	)
 	if err != nil {
 		t.Fatalf("Construction payloads failed: %v", err)
@@ -166,68 +155,6 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	t.Logf("✅ Hash successful: %s", hashResp.TransactionIdentifier.Hash)
 
 	t.Log("✅ Complete offline transaction flow successful!")
-}
-
-// Helper function to get chain tag from config
-func (c *TestConfig) ChainTag() int {
-	switch c.Network {
-	case "main", "mainnet":
-		return 0x4a
-	case "test", "testnet":
-		return 0x27
-	case "solo":
-		return 0xf6
-	default:
-		return 0xf6
-	}
-}
-
-// testConstructionDerive tests the construction/derive endpoint
-func testConstructionDerive(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, publicKey *types.PublicKey) (*types.ConstructionDeriveResponse, error) {
-	request := &types.ConstructionDeriveRequest{
-		NetworkIdentifier: networkIdentifier,
-		PublicKey:         publicKey,
-	}
-
-	resp, err := client.Post(meshcommon.ConstructionDeriveEndpoint, request)
-	if err != nil {
-		return nil, err
-	}
-
-	var deriveResp types.ConstructionDeriveResponse
-	if err := ParseResponse(resp, &deriveResp); err != nil {
-		return nil, err
-	}
-
-	return &deriveResp, nil
-}
-
-// testConstructionPayloadsWithMetadata tests construction/payloads with provided metadata
-func testConstructionPayloadsWithMetadata(
-	client *HTTPClient,
-	networkIdentifier *types.NetworkIdentifier,
-	operations []*types.Operation,
-	publicKeys []*types.PublicKey,
-	metadata map[string]any,
-) (*types.ConstructionPayloadsResponse, error) {
-	request := &types.ConstructionPayloadsRequest{
-		NetworkIdentifier: networkIdentifier,
-		Operations:        operations,
-		PublicKeys:        publicKeys,
-		Metadata:          metadata,
-	}
-
-	resp, err := client.Post(meshcommon.ConstructionPayloadsEndpoint, request)
-	if err != nil {
-		return nil, err
-	}
-
-	var payloadsResp types.ConstructionPayloadsResponse
-	if err := ParseResponse(resp, &payloadsResp); err != nil {
-		return nil, err
-	}
-
-	return &payloadsResp, nil
 }
 
 // TestOnlineOnlyEndpointsFailInOfflineMode tests that online-only endpoints fail appropriately in offline mode
