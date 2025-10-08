@@ -83,8 +83,9 @@ func NewVeChainMeshServer(cfg *meshconfig.Config) (*VeChainMeshServer, error) {
 	meshServer := &VeChainMeshServer{
 		router: router,
 		server: &http.Server{
-			Addr:    fmt.Sprintf(":%d", cfg.GetPort()),
-			Handler: router,
+			Addr:        fmt.Sprintf(":%d", cfg.GetPort()),
+			Handler:     router,
+			ReadTimeout: 5 * time.Second,
 		},
 		validationMiddleware: validationMiddlewareFunc,
 		networkService:       networkService,
