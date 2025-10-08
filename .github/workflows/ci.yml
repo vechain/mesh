@@ -88,15 +88,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Solo: data + construction
           - env: solo
             validation: data
           - env: solo
             validation: construction
-          # Test: data (construction not included since it has to wait for the network to be synced)
-          - env: test
-            validation: data
-          # Main: data only
           - env: main
             validation: data
     steps:
