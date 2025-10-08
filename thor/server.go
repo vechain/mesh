@@ -67,6 +67,7 @@ func (ts *Server) AttachToPublicNetworkAndStart() error {
 
 	// Build command arguments
 	args := []string{
+		"--disable-pruner",
 		"--network", ts.config.NetworkType,
 		"--api-addr", ts.config.APIAddr,
 		"--p2p-port", strconv.Itoa(ts.config.P2PPort),
