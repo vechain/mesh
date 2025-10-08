@@ -48,7 +48,7 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Determine revision from request or use "best"
-	var revision string
+	revision := "best"
 	if request.BlockIdentifier != nil {
 		if request.BlockIdentifier.Hash != nil && *request.BlockIdentifier.Hash != "" {
 			revision = *request.BlockIdentifier.Hash
@@ -58,8 +58,6 @@ func (a *AccountService) AccountBalance(w http.ResponseWriter, r *http.Request) 
 			a.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
 			return
 		}
-	} else {
-		revision = "best"
 	}
 
 	// Determine which currencies to query

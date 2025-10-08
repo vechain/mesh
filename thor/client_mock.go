@@ -36,7 +36,8 @@ type MockVeChainClient struct {
 	MockInspectClauses []*api.CallResult
 
 	// Simulated errors
-	MockError error
+	MockError      error
+	MockBlockError error
 }
 
 // NewMockVeChainClient creates a new mock client
@@ -252,6 +253,9 @@ func NewMockVeChainClient() *MockVeChainClient {
 // Implement the VeChainClient interface
 
 func (m *MockVeChainClient) GetBlock(revision string) (*api.JSONExpandedBlock, error) {
+	if m.MockBlockError != nil {
+		return nil, m.MockBlockError
+	}
 	if m.MockError != nil {
 		return nil, m.MockError
 	}
@@ -370,6 +374,11 @@ func (m *MockVeChainClient) CallContract(contractAddress, callData string) (stri
 // SetMockError configures a simulated error
 func (m *MockVeChainClient) SetMockError(err error) {
 	m.MockError = err
+}
+
+// SetMockBlockError configures a simulated block error
+func (m *MockVeChainClient) SetMockBlockError(err error) {
+	m.MockBlockError = err
 }
 
 // SetMockAccount configures the simulated account

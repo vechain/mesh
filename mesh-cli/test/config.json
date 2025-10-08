@@ -175,7 +175,7 @@
         "log_blocks": false,
         "log_transactions": false,
         "end_conditions": {
-            "index": 30000
+            "index": 25000
         }
     }
 }
