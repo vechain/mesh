@@ -249,7 +249,6 @@ func TestConfigGetters(t *testing.T) {
 		},
 	}
 
-	// Test GetNetworkIdentifier
 	networkID := config.GetNetworkIdentifier()
 	if networkID == nil {
 		t.Errorf("GetNetworkIdentifier() returned nil")
@@ -262,37 +261,31 @@ func TestConfigGetters(t *testing.T) {
 		}
 	}
 
-	// Test GetRunMode
 	mode := config.GetRunMode()
 	if mode != meshcommon.OnlineMode {
 		t.Errorf("GetRunMode() = %v, want online", mode)
 	}
 
-	// Test GetPort
 	port := config.GetPort()
 	if port != 8080 {
 		t.Errorf("GetPort() = %v, want 8080", port)
 	}
 
-	// Test GetNodeAPI
 	nodeAPI := config.GetNodeAPI()
 	if nodeAPI != "http://localhost:8669" {
 		t.Errorf("GetNodeAPI() = %v, want http://localhost:8669", nodeAPI)
 	}
 
-	// Test GetNetwork
 	network := config.GetNetwork()
 	if network != "solo" {
 		t.Errorf("GetNetwork() = %v, want solo", network)
 	}
 
-	// Test GetChainTag
 	chainTag := config.GetChainTag()
 	if chainTag != 0xf6 {
 		t.Errorf("GetChainTag() = %v, want 0xf6", chainTag)
 	}
 
-	// Test GetMeshVersion
 	version := config.GetMeshVersion()
 	if version != "1.0.0" {
 		t.Errorf("GetMeshVersion() = %v, want 1.0.0", version)

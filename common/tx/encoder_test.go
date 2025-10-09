@@ -15,7 +15,6 @@ import (
 	thorTx "github.com/vechain/thor/v2/tx"
 )
 
-// Test helper functions
 func createTestVeChainTransaction() *thorTx.Transaction {
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
 	builder.ChainTag(0x27)
@@ -82,7 +81,6 @@ func createTestConfig() *config.Config {
 	}
 }
 
-// Tests for NewMeshTransactionEncoder
 func TestNewMeshTransactionEncoder(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	if encoder == nil {
@@ -90,7 +88,6 @@ func TestNewMeshTransactionEncoder(t *testing.T) {
 	}
 }
 
-// Tests for EncodeUnsignedTransaction
 func TestEncodeUnsignedTransaction_Legacy(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	vechainTx := createTestVeChainTransaction()
@@ -130,7 +127,6 @@ func TestEncodeUnsignedTransaction_Dynamic(t *testing.T) {
 	}
 }
 
-// Tests for DecodeUnsignedTransaction
 func TestDecodeUnsignedTransaction_ValidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
@@ -251,7 +247,6 @@ func TestDecodeUnsignedTransaction_InvalidData(t *testing.T) {
 	}
 }
 
-// Tests for DecodeSignedTransaction
 func TestDecodeSignedTransaction_ValidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
@@ -378,7 +373,6 @@ func TestDecodeSignedTransaction_InvalidData(t *testing.T) {
 	}
 }
 
-// Tests for EncodeSignedTransaction
 func TestEncodeSignedTransaction_Legacy(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	meshTx := createTestMeshTransaction()
@@ -392,7 +386,6 @@ func TestEncodeSignedTransaction_Legacy(t *testing.T) {
 	}
 }
 
-// Tests for ParseTransactionOperationsFromAPI
 func TestParseTransactionOperationsFromAPI(t *testing.T) {
 	// Create test transaction
 	tx := &api.JSONEmbeddedTx{
@@ -432,7 +425,6 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 	}
 }
 
-// Tests for ParseTransactionFromBytes
 func TestParseTransactionFromBytes(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 

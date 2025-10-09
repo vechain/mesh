@@ -75,7 +75,6 @@ func TestCreateTransactionBuilder(t *testing.T) {
 	})
 }
 
-// Tests for BuildTransactionFromRequest
 func TestBuildTransactionFromRequest(t *testing.T) {
 	config := createTestConfig()
 
@@ -113,7 +112,6 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 	}
 }
 
-// Tests for addClausesToBuilder
 func TestAddClausesToBuilder(t *testing.T) {
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
 
@@ -138,7 +136,6 @@ func TestAddClausesToBuilder(t *testing.T) {
 	}
 }
 
-// Tests for BuildMeshTransactionFromTransactions
 func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 	// Create test transaction
 	tx := &transactions.Transaction{
@@ -177,7 +174,6 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 	}
 }
 
-// Tests for BuildMeshTransactionFromAPI
 func TestBuildMeshTransactionFromAPI(t *testing.T) {
 	// Create test transaction
 	tx := &api.JSONEmbeddedTx{

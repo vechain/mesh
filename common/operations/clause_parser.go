@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/mesh/common/vip180"
 	meshthor "github.com/vechain/mesh/thor"
@@ -303,4 +304,51 @@ func (e *ClauseParser) ParseClausesFromOptions(clausesRaw any) ([]*tx.Clause, er
 	}
 
 	return txClauses, nil
+}
+
+// ParseHexOrDecimal256 parses a hex or decimal string into math.HexOrDecimal256
+func (e *ClauseParser) ParseHexOrDecimal256(valueStr string) (*math.HexOrDecimal256, error) {
+	var value math.HexOrDecimal256
+	if err := value.UnmarshalText([]byte(valueStr)); err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+
+// ParseAPIClause parses a single clause from a map to api.Clause
+func (e *ClauseParser) ParseAPIClause(clauseMap map[string]any) (*api.Clause, error) {
+	clause := &api.Clause{}
+
+	// Parse 'to' address
+	if toRaw, ok := clauseMap["to"]; ok && toRaw != nil {
+		toStr, ok := toRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("'to' must be a string or null")
+		}
+		toAddr, err := thor.ParseAddress(toStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid 'to' address: %v", err)
+		}
+		clause.To = &toAddr
+	}
+
+	// Parse 'value'
+	valueStr, ok := clauseMap["value"].(string)
+	if !ok {
+		return nil, fmt.Errorf("'value' is required and must be a string")
+	}
+	value, err := e.ParseHexOrDecimal256(valueStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid 'value': %v", err)
+	}
+	clause.Value = value
+
+	// Parse 'data'
+	dataStr, ok := clauseMap["data"].(string)
+	if !ok {
+		return nil, fmt.Errorf("'data' is required and must be a string")
+	}
+	clause.Data = dataStr
+
+	return clause, nil
 }

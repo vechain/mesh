@@ -1,16 +1,14 @@
 package services
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"net/http"
-	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
 	meshhttp "github.com/vechain/mesh/common/http"
+	meshoperations "github.com/vechain/mesh/common/operations"
 	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
@@ -24,6 +22,7 @@ type CallService struct {
 	responseHandler *meshhttp.ResponseHandler
 	vechainClient   meshthor.VeChainClientInterface
 	config          *meshconfig.Config
+	clauseParser    *meshoperations.ClauseParser
 }
 
 // NewCallService creates a new call service
@@ -33,6 +32,7 @@ func NewCallService(vechainClient meshthor.VeChainClientInterface, config *meshc
 		responseHandler: meshhttp.NewResponseHandler(),
 		vechainClient:   vechainClient,
 		config:          config,
+		clauseParser:    meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
 	}
 }
 
@@ -114,7 +114,7 @@ func (c *CallService) parseBatchCallDataFromParameters(params map[string]any) (*
 			return nil, fmt.Errorf("clause at index %d must be an object", i)
 		}
 
-		clause, err := c.parseClause(clauseMap)
+		clause, err := c.clauseParser.ParseAPIClause(clauseMap)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse clause at index %d: %v", i, err)
 		}
@@ -134,7 +134,7 @@ func (c *CallService) parseBatchCallDataFromParameters(params map[string]any) (*
 	}
 
 	if gasPriceStr, ok := params["gasPrice"].(string); ok {
-		gasPrice, err := parseHexOrDecimal256(gasPriceStr)
+		gasPrice, err := c.clauseParser.ParseHexOrDecimal256(gasPriceStr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid gasPrice: %v", err)
 		}
@@ -142,7 +142,7 @@ func (c *CallService) parseBatchCallDataFromParameters(params map[string]any) (*
 	}
 
 	if provedWorkStr, ok := params["provedWork"].(string); ok {
-		provedWork, err := parseHexOrDecimal256(provedWorkStr)
+		provedWork, err := c.clauseParser.ParseHexOrDecimal256(provedWorkStr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid provedWork: %v", err)
 		}
@@ -150,19 +150,19 @@ func (c *CallService) parseBatchCallDataFromParameters(params map[string]any) (*
 	}
 
 	if callerStr, ok := params["caller"].(string); ok {
-		caller, err := parseAddress(callerStr)
+		caller, err := thor.ParseAddress(callerStr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid caller address: %v", err)
 		}
-		batchCallData.Caller = caller
+		batchCallData.Caller = &caller
 	}
 
 	if gasPayerStr, ok := params["gasPayer"].(string); ok {
-		gasPayer, err := parseAddress(gasPayerStr)
+		gasPayer, err := thor.ParseAddress(gasPayerStr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid gasPayer address: %v", err)
 		}
-		batchCallData.GasPayer = gasPayer
+		batchCallData.GasPayer = &gasPayer
 	}
 
 	if expiration, ok := params["expiration"].(float64); ok {
@@ -174,70 +174,6 @@ func (c *CallService) parseBatchCallDataFromParameters(params map[string]any) (*
 	}
 
 	return batchCallData, nil
-}
-
-// parseClause parses a single clause from the request
-func (c *CallService) parseClause(clauseMap map[string]any) (*api.Clause, error) {
-	clause := &api.Clause{}
-
-	// Parse 'to' address (can be nil for contract deployment)
-	if toRaw, ok := clauseMap["to"]; ok && toRaw != nil {
-		toStr, ok := toRaw.(string)
-		if !ok {
-			return nil, fmt.Errorf("'to' must be a string or null")
-		}
-		toAddr, err := parseAddress(toStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid 'to' address: %v", err)
-		}
-		clause.To = toAddr
-	}
-
-	// Parse 'value' (required)
-	valueStr, ok := clauseMap["value"].(string)
-	if !ok {
-		return nil, fmt.Errorf("'value' is required and must be a string")
-	}
-	value, err := parseHexOrDecimal256(valueStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid 'value': %v", err)
-	}
-	clause.Value = value
-
-	// Parse 'data' (required)
-	dataStr, ok := clauseMap["data"].(string)
-	if !ok {
-		return nil, fmt.Errorf("'data' is required and must be a string")
-	}
-	clause.Data = dataStr
-
-	return clause, nil
-}
-
-// parseAddress parses an address string
-func parseAddress(addrStr string) (*thor.Address, error) {
-	addrStr = strings.TrimPrefix(addrStr, "0x")
-	if len(addrStr) != 40 {
-		return nil, fmt.Errorf("address must be 40 hex characters (got %d)", len(addrStr))
-	}
-
-	addrBytes, err := hex.DecodeString(addrStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid hex string: %v", err)
-	}
-
-	addr := thor.BytesToAddress(addrBytes)
-	return &addr, nil
-}
-
-// parseHexOrDecimal256 parses a hex or decimal string into math.HexOrDecimal256
-func parseHexOrDecimal256(valueStr string) (*math.HexOrDecimal256, error) {
-	// Try to unmarshal as HexOrDecimal256
-	var value math.HexOrDecimal256
-	if err := value.UnmarshalText([]byte(valueStr)); err != nil {
-		return nil, err
-	}
-	return &value, nil
 }
 
 // convertCallResultsToMap converts Thor API CallResults to a map for Rosetta response

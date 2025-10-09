@@ -41,7 +41,6 @@ func createTestAddress(addr string) *thor.Address {
 	return &address
 }
 
-// Test analyzeClauses
 func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -131,7 +130,6 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 	}
 }
 
-// Test getClauseValue
 func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -180,7 +178,6 @@ func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
 	}
 }
 
-// Test isVIP180Transfer
 func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -243,7 +240,6 @@ func TestMeshTransactionEncoder_isVIP180Transfer(t *testing.T) {
 	}
 }
 
-// Test hasContractInteraction
 func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -301,7 +297,6 @@ func TestMeshTransactionEncoder_hasContractInteraction(t *testing.T) {
 	}
 }
 
-// Test createTransferOperation
 func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -370,7 +365,6 @@ func TestMeshTransactionEncoder_createTransferOperation(t *testing.T) {
 	}
 }
 
-// Test createContractInteractionOperation
 func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -438,7 +432,6 @@ func TestMeshTransactionEncoder_createContractInteractionOperation(t *testing.T)
 	}
 }
 
-// Test createEnergyTransferOperation
 func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -496,7 +489,6 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 	}
 }
 
-// Test parseVETTransfer
 func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -580,7 +572,6 @@ func TestMeshTransactionEncoder_parseVETTransfer(t *testing.T) {
 	}
 }
 
-// Test parseTransactionOperationsFromClauses
 func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -642,7 +633,6 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 	}
 }
 
-// Test ParseTransactionOperationsFromTransactionClauses
 func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
@@ -915,6 +905,242 @@ func TestClauseParser_ParseClausesFromOptions(t *testing.T) {
 
 			if tt.validateFunc != nil {
 				tt.validateFunc(t, clauses)
+			}
+		})
+	}
+}
+func TestParseHexOrDecimal256(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	tests := []struct {
+		name        string
+		input       string
+		expectError bool
+		expectedStr string
+	}{
+		{
+			name:        "decimal value",
+			input:       "1000000000000000000",
+			expectError: false,
+			expectedStr: "1000000000000000000",
+		},
+		{
+			name:        "hex value with 0x prefix",
+			input:       "0xde0b6b3a7640000",
+			expectError: false,
+			expectedStr: "1000000000000000000",
+		},
+		{
+			name:        "zero value",
+			input:       "0",
+			expectError: false,
+			expectedStr: "0",
+		},
+		{
+			name:        "large value",
+			input:       "1000000000000000000000000",
+			expectError: false,
+			expectedStr: "1000000000000000000000000",
+		},
+		{
+			name:        "invalid value - empty string",
+			input:       "",
+			expectError: false,
+		},
+		{
+			name:        "invalid value - non-numeric",
+			input:       "abc",
+			expectError: true,
+		},
+		{
+			name:        "invalid value - invalid hex",
+			input:       "0xzzzz",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parser.ParseHexOrDecimal256(tt.input)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if result == nil {
+				t.Error("Expected non-nil result")
+				return
+			}
+
+			// Convert to big.Int for comparison
+			bigIntResult := (*big.Int)(result)
+			expectedBigInt := new(big.Int)
+			expectedBigInt.SetString(tt.expectedStr, 10)
+
+			if bigIntResult.Cmp(expectedBigInt) != 0 {
+				t.Errorf("Expected value %s, got %s", tt.expectedStr, bigIntResult.String())
+			}
+		})
+	}
+}
+
+func TestParseAPIClause(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	tests := []struct {
+		name        string
+		input       map[string]any
+		expectError bool
+		validate    func(t *testing.T, clause *api.Clause)
+	}{
+		{
+			name: "valid clause with all fields",
+			input: map[string]any{
+				"to":    "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"value": "1000000000000000000",
+				"data":  "0xa9059cbb",
+			},
+			expectError: false,
+			validate: func(t *testing.T, clause *api.Clause) {
+				if clause.To == nil {
+					t.Error("Expected non-nil 'to' address")
+				}
+				if clause.To.String() != "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed" {
+					t.Errorf("Expected specific 'to' address, got %s", clause.To.String())
+				}
+				if clause.Value == nil {
+					t.Error("Expected non-nil value")
+				}
+				if clause.Data != "0xa9059cbb" {
+					t.Errorf("Expected data 0xa9059cbb, got %s", clause.Data)
+				}
+			},
+		},
+		{
+			name: "valid clause with nil 'to' (contract creation)",
+			input: map[string]any{
+				"to":    nil,
+				"value": "0",
+				"data":  "0x608060",
+			},
+			expectError: false,
+			validate: func(t *testing.T, clause *api.Clause) {
+				if clause.To != nil {
+					t.Error("Expected nil 'to' address for contract creation")
+				}
+			},
+		},
+		{
+			name: "valid clause with zero value",
+			input: map[string]any{
+				"to":    "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"value": "0",
+				"data":  "0x",
+			},
+			expectError: false,
+			validate: func(t *testing.T, clause *api.Clause) {
+				bigIntValue := (*big.Int)(clause.Value)
+				if bigIntValue.Cmp(big.NewInt(0)) != 0 {
+					t.Errorf("Expected zero value, got %s", bigIntValue.String())
+				}
+			},
+		},
+		{
+			name: "invalid - 'to' is not a string",
+			input: map[string]any{
+				"to":    123,
+				"value": "0",
+				"data":  "0x",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid - 'to' address is invalid",
+			input: map[string]any{
+				"to":    "0xinvalid",
+				"value": "0",
+				"data":  "0x",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid - missing 'value'",
+			input: map[string]any{
+				"to":   "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"data": "0x",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid - 'value' is not a string",
+			input: map[string]any{
+				"to":    "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"value": 123,
+				"data":  "0x",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid - 'value' is invalid number",
+			input: map[string]any{
+				"to":    "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"value": "invalid",
+				"data":  "0x",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid - missing 'data'",
+			input: map[string]any{
+				"to":    "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"value": "0",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid - 'data' is not a string",
+			input: map[string]any{
+				"to":    "0x7567d83b7b8d80addcb281a71d54fc7b3364ffed",
+				"value": "0",
+				"data":  123,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parser.ParseAPIClause(tt.input)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if result == nil {
+				t.Error("Expected non-nil result")
+				return
+			}
+
+			if tt.validate != nil {
+				tt.validate(t, result)
 			}
 		})
 	}
