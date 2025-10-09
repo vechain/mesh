@@ -49,9 +49,9 @@ Validates the complete transaction construction flow: derive → preprocess → 
 ## Configuration
 
 Configuration files are located in environment-specific directories:
-- `mesh-cli/solo/` - Local development (recommended for testing)
-- `mesh-cli/test/` - Testnet configuration
-- `mesh-cli/main/` - Mainnet configuration
+- `cli/solo/` - Local development (recommended for testing)
+- `cli/test/` - Testnet configuration
+- `cli/main/` - Mainnet configuration
 
 The configuration files are already set up and ready to use. No manual configuration needed for basic validation.
 
@@ -115,8 +115,8 @@ If you need to run mesh-cli directly:
 # Data API validation
 docker run --rm \
   --network mesh_vechain-network \
-  -v $(pwd)/mesh-cli/solo:/config:ro \
-  -v $(pwd)/mesh-cli/data:/data \
+  -v $(pwd)/cli/solo:/config:ro \
+  -v $(pwd)/cli/data:/data \
   vechain-mesh-cli:latest \
   check:data --configuration-file /config/config.json
 ```
@@ -124,5 +124,5 @@ docker run --rm \
 ### Results
 
 Validation results are saved to:
-- Data API: `mesh-cli/data/data_results.json`
-- Construction API: `mesh-cli/data/construction_results.json`
+- Data API: `cli/data/data_results.json`
+- Construction API: `cli/data/construction_results.json`
