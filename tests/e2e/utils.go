@@ -154,10 +154,8 @@ func CreateTestPublicKey() *types.PublicKey {
 	}
 }
 
-// CreateTestAddress1PublicKey creates a public key for TestAddress1
-// Derives the public key from the TestAddress1 private key
+// CreateTestAddress1PublicKey creates a public key
 func CreateTestAddress1PublicKey() *types.PublicKey {
-	// Address: 0x16277a1ff38678291c41d1820957c78bb5da59ce (TestAddress1)
 	privateKeyHex := meshtests.TestAddress1PrivateKey
 
 	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
