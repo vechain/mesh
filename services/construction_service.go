@@ -682,7 +682,7 @@ func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, ga
 func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, request types.ConstructionPayloadsRequest) ([]*types.SigningPayload, error) {
 	var payloads []*types.SigningPayload
 
-	// Check for fee delegation from metadata (not operations)
+	// Check for fee delegation from metadata
 	txDelegator := c.operationsExtractor.GetFeeDelegatorAccount(request.Metadata)
 	hasFeeDelegation := txDelegator != ""
 
