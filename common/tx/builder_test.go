@@ -165,7 +165,7 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	status := meshcommon.OperationStatusSucceeded
-	operations := encoder.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	operations := encoder.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), "", tx.Gas, &status)
 	builder := NewTransactionBuilder()
 	meshTx := builder.BuildMeshTransactionFromTransaction(tx, operations)
 

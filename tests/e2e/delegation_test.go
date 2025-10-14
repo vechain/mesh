@@ -199,14 +199,26 @@ func testDelegationFlow(
 	for _, op := range parseSignedResp.Operations {
 		if op.Type == meshcommon.OperationTypeFeeDelegation {
 			hasFeeDelegation = true
-			t.Logf("✅ Found fee delegation operation: account=%s, amount=%s %s",
-				op.Account.Address, op.Amount.Value, op.Amount.Currency.Symbol)
 
-			// Verify it's the delegator paying
-			if op.Account.Address != delegatorAddress {
-				t.Fatalf("Expected fee delegation operation to be paid by delegator %s, got %s",
-					delegatorAddress, op.Account.Address)
+			// Verify account is the origin (sender)
+			if op.Account.Address != originAddress {
+				t.Fatalf("Fee delegation operation account should be origin %s, got %s", originAddress, op.Account.Address)
 			}
+
+			// Verify metadata contains fee_delegator_account
+			if op.Metadata == nil {
+				t.Fatal("Fee delegation operation should have metadata")
+			}
+			delegatorInMetadata, ok := op.Metadata["fee_delegator_account"].(string)
+			if !ok {
+				t.Fatal("Fee delegation operation metadata should contain fee_delegator_account field")
+			}
+			if delegatorInMetadata != delegatorAddress {
+				t.Fatalf("Fee delegation operation fee_delegator_account should be %s, got %s", delegatorAddress, delegatorInMetadata)
+			}
+
+			t.Logf("✅ Found fee delegation operation: origin=%s, delegator=%s, amount=%s %s",
+				op.Account.Address, delegatorInMetadata, op.Amount.Value, op.Amount.Currency.Symbol)
 			break
 		}
 	}
@@ -252,8 +264,28 @@ func testDelegationFlow(
 	for _, op := range foundTx.Operations {
 		if op.Type == meshcommon.OperationTypeFeeDelegation {
 			hasFeeDelegationInBlock = true
-			t.Logf("✅ Confirmed: Fee delegation operation in block - delegator %s paid %s %s",
-				op.Account.Address, op.Amount.Value, op.Amount.Currency.Symbol)
+
+			// Verify account is the origin (sender)
+			if op.Account.Address != originAddress {
+				t.Fatalf("Fee delegation operation account should be origin %s, got %s", originAddress, op.Account.Address)
+			}
+
+			// Verify metadata contains fee_delegator_account
+			if op.Metadata == nil {
+				t.Fatal("Fee delegation operation should have metadata")
+			}
+			delegatorInMetadata, ok := op.Metadata["fee_delegator_account"].(string)
+			if !ok {
+				t.Fatal("Fee delegation operation metadata should contain fee_delegator_account field")
+			}
+			if delegatorInMetadata != delegatorAddress {
+				t.Fatalf("Fee delegation operation fee_delegator_account in metadata should be %s, got %s", delegatorAddress, delegatorInMetadata)
+			}
+
+			t.Logf("✅ Confirmed: Fee delegation operation in block")
+			t.Logf("   - Origin (sender): %s", op.Account.Address)
+			t.Logf("   - Delegator (payer): %s", delegatorInMetadata)
+			t.Logf("   - Amount: %s %s", op.Amount.Value, op.Amount.Currency.Symbol)
 			break
 		}
 	}

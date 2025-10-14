@@ -61,7 +61,7 @@ func NewClauseParser(vechainClient meshthor.VeChainClientInterface, operationsEx
 }
 
 // ParseTransactionOperationsFromClauseData parses operations from clause data with client for contract calls
-func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []ClauseData, originAddr string, gas uint64, status *string) []*types.Operation {
+func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []ClauseData, originAddr string, delegatorAddr string, gas uint64, status *string) []*types.Operation {
 	var operations []*types.Operation
 	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := e.analyzeClauses(clauseData, gas)
 
@@ -98,7 +98,7 @@ func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []Cla
 
 	// Add energy transfer operation if needed
 	if hasEnergyTransfer {
-		op := e.createEnergyTransferOperation(operationIndex, originAddr, gas, status)
+		op := e.createEnergyTransferOperation(operationIndex, originAddr, delegatorAddr, gas, status)
 		operations = append(operations, op)
 	}
 
@@ -223,33 +223,41 @@ func (e *ClauseParser) createContractInteractionOperation(clause ClauseData, cla
 }
 
 // createEnergyTransferOperation creates an energy transfer operation
-func (e *ClauseParser) createEnergyTransferOperation(operationIndex int, originAddr string, gas uint64, status *string) *types.Operation {
+func (e *ClauseParser) createEnergyTransferOperation(operationIndex int, originAddr string, delegatorAddr string, gas uint64, status *string) *types.Operation {
+	feeType := meshcommon.OperationTypeFee
+	metadata := map[string]any{"gas": strconv.FormatUint(gas, 10)}
+
+	if delegatorAddr != "" {
+		feeType = meshcommon.OperationTypeFeeDelegation
+		metadata["fee_delegator_account"] = delegatorAddr
+	}
+
 	return &types.Operation{
 		OperationIdentifier: &types.OperationIdentifier{Index: int64(operationIndex)},
-		Type:                meshcommon.OperationTypeFee,
+		Type:                feeType,
 		Status:              status,
 		Account:             &types.AccountIdentifier{Address: originAddr},
 		Amount:              &types.Amount{Value: "-" + strconv.FormatUint(gas, 10), Currency: meshcommon.VTHOCurrency},
-		Metadata:            map[string]any{"gas": strconv.FormatUint(gas, 10)},
+		Metadata:            metadata,
 	}
 }
 
 // ParseTransactionOperationsFromJSONClauses is a helper function that parses operations from clauses
-func (e *ClauseParser) ParseTransactionOperationsFromJSONClauses(clauses []*api.JSONClause, originAddr string, gas uint64, status *string) []*types.Operation {
+func (e *ClauseParser) ParseTransactionOperationsFromJSONClauses(clauses []*api.JSONClause, originAddr string, delegatorAddr string, gas uint64, status *string) []*types.Operation {
 	clauseData := make([]ClauseData, len(clauses))
 	for i, clause := range clauses {
 		clauseData[i] = JSONClauseAdapter{Clause: clause}
 	}
-	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
+	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, delegatorAddr, gas, status)
 }
 
 // ParseOperationsFromAPIClauses is a helper function that parses operations from transactions.Clauses
-func (e *ClauseParser) ParseOperationsFromAPIClauses(clauses api.Clauses, originAddr string, gas uint64, status *string) []*types.Operation {
+func (e *ClauseParser) ParseOperationsFromAPIClauses(clauses api.Clauses, originAddr string, delegatorAddr string, gas uint64, status *string) []*types.Operation {
 	clauseData := make([]ClauseData, len(clauses))
 	for i, clause := range clauses {
 		clauseData[i] = ClauseAdapter{Clause: clause}
 	}
-	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, gas, status)
+	return e.ParseTransactionOperationsFromClauseData(clauseData, originAddr, delegatorAddr, gas, status)
 }
 
 // ParseClausesFromOptions parses clauses from map format to Thor tx.Clause objects

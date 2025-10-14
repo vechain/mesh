@@ -461,7 +461,7 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operation := parser.createEnergyTransferOperation(tt.operationIndex, tt.originAddr, tt.gas, tt.status)
+			operation := parser.createEnergyTransferOperation(tt.operationIndex, tt.originAddr, "", tt.gas, tt.status)
 
 			if operation.OperationIdentifier.Index != int64(tt.operationIndex) {
 				t.Errorf("createEnergyTransferOperation() index = %v, want %v", operation.OperationIdentifier.Index, tt.operationIndex)
@@ -624,7 +624,7 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := parser.ParseTransactionOperationsFromJSONClauses(tt.clauses, tt.originAddr, tt.gas, tt.status)
+			operations := parser.ParseTransactionOperationsFromJSONClauses(tt.clauses, tt.originAddr, "", tt.gas, tt.status)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseTransactionOperationsFromClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -671,7 +671,7 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, tt.gas, tt.status)
+			operations := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, "", tt.gas, tt.status)
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("ParseTransactionOperationsFromTransactionClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
