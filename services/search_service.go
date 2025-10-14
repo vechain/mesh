@@ -72,7 +72,13 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 	if txReceipt.Reverted {
 		status = meshcommon.OperationStatusReverted
 	}
-	operations := s.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), txReceipt.GasUsed, &status)
+
+	var delegatorAddr string
+	if tx.Delegator != nil && !tx.Delegator.IsZero() {
+		delegatorAddr = tx.Delegator.String()
+	}
+
+	operations := s.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, txReceipt.GasUsed, &status)
 
 	// Create transaction identifier
 	transactionIdentifier := &types.TransactionIdentifier{

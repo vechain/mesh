@@ -112,6 +112,61 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 	}
 }
 
+func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
+	config := createTestConfig()
+
+	request := types.ConstructionPayloadsRequest{
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.TestAddress1,
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 1},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.FirstSoloAddress,
+				},
+				Amount: &types.Amount{
+					Value:    "1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType":       meshcommon.TransactionTypeDynamic,
+			"blockRef":              "0x0000000000000000",
+			"chainTag":              float64(1),
+			"gas":                   float64(21000),
+			"nonce":                 "0x1",
+			"maxFeePerGas":          "1000000000000000",
+			"maxPriorityFeePerGas":  "0",
+			"fee_delegator_account": meshtests.FirstSoloAddress,
+		},
+	}
+
+	builder := NewTransactionBuilder()
+	tx, err := builder.BuildTransactionFromRequest(request, config)
+	if err != nil {
+		t.Errorf("BuildTransactionFromRequest() error = %v", err)
+	}
+	if tx == nil {
+		t.Errorf("BuildTransactionFromRequest() returned nil transaction")
+	}
+
+	// Verify delegation feature is set
+	if !tx.Features().IsDelegated() {
+		t.Errorf("BuildTransactionFromRequest() expected delegation feature to be set")
+	}
+}
+
 func TestAddClausesToBuilder(t *testing.T) {
 	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
 
@@ -165,7 +220,7 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	status := meshcommon.OperationStatusSucceeded
-	operations := encoder.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+	operations := encoder.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), "", tx.Gas, &status)
 	builder := NewTransactionBuilder()
 	meshTx := builder.BuildMeshTransactionFromTransaction(tx, operations)
 

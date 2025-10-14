@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -12,8 +13,10 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/mesh/common/vip180/contracts"
+	meshtests "github.com/vechain/mesh/tests"
 	"github.com/vechain/thor/v2/abi"
 )
 
@@ -142,13 +145,35 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 
 // CreateTestPublicKey creates a test public key
 func CreateTestPublicKey() *types.PublicKey {
-	// Use the correct public key that corresponds to the private key
 	hexStr := "03e32e5960781ce0b43d8c2952eeea4b95e286b1bb5f8c1f0c9f09983ba7141d2f"
 	bytes, _ := hex.DecodeString(hexStr)
 
 	return &types.PublicKey{
 		Bytes:     bytes,
-		CurveType: "secp256k1",
+		CurveType: meshtests.SECP256k1,
+	}
+}
+
+// CreateTestAddress1PublicKey creates a public key
+func CreateTestAddress1PublicKey() *types.PublicKey {
+	privateKeyHex := meshtests.TestAddress1PrivateKey
+
+	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to decode TestAddress1 private key: %v", err))
+	}
+
+	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create ECDSA private key for TestAddress1: %v", err))
+	}
+
+	publicKey := privateKey.Public().(*ecdsa.PublicKey)
+	publicKeyBytes := crypto.CompressPubkey(publicKey)
+
+	return &types.PublicKey{
+		Bytes:     publicKeyBytes,
+		CurveType: meshtests.SECP256k1,
 	}
 }
 

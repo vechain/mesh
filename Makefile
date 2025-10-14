@@ -3,7 +3,7 @@
 GO_PACKAGES_TEST = $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts)
 COVERAGE_EXCLUDE_PATTERN = _test\.go\|_mock\.go\|/main\.go
 
-.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-offline test-e2e-offline-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
+.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-offline test-e2e-offline-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full test-e2e-delegation test-e2e-delegation-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
 
 # Default target
 help:
@@ -41,6 +41,8 @@ help:
 	@echo "  test-e2e-vip180-full - Full VIP180 e2e test cycle (start solo, test, stop solo)"
 	@echo "  test-e2e-call - Run Call service e2e test (requires solo mode server)"
 	@echo "  test-e2e-call-full - Full Call service e2e test cycle (start solo, test, stop solo)"
+	@echo "  test-e2e-delegation - Run fee delegation e2e test (requires solo mode server)"
+	@echo "  test-e2e-delegation-full - Full delegation e2e test cycle (start solo, test, stop solo)"
 	@echo "  clean - Clean Go build artifacts and cache"
 	@echo ""
 	@echo "Utilities:"
@@ -54,7 +56,7 @@ test-unit:
 	go test $(GO_PACKAGES_TEST)
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=84.9
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=85
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."
@@ -196,74 +198,58 @@ test-e2e-offline-full:
 	fi; \
 	exit $$test_result'
 
+# Internal helper for running e2e test with solo mode setup/teardown
+.PHONY: _e2e-solo-wrapper
+_e2e-solo-wrapper:
+	@echo "Starting full $(TEST_NAME) e2e test cycle..."
+	@echo "1. Starting solo mode services..."
+	@$(MAKE) docker-solo-up
+	@echo "2. Waiting for services to be ready..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ]; do \
+		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+			echo "✅ Mesh API server is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "❌ Timeout waiting for server to start"; \
+		$(MAKE) docker-solo-down; \
+		exit 1; \
+	fi
+	@echo "3. Running $(TEST_NAME) e2e test..."
+	@bash -c '$(MAKE) $(TEST_TARGET); \
+	test_result=$$?; \
+	echo "4. Stopping solo mode services..."; \
+	$(MAKE) docker-solo-down; \
+	if [ $$test_result -eq 0 ]; then \
+		echo "✅ $(TEST_NAME) e2e test passed!"; \
+	else \
+		echo "❌ $(TEST_NAME) e2e test failed!"; \
+	fi; \
+	exit $$test_result'
+
 test-e2e-call:
 	@echo "Running Call service e2e test..."
 	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
 	go test -v -run TestCallService_InspectClausesWithVIP180 ./tests/e2e/...
 
 test-e2e-call-full:
-	@echo "Starting full Call service e2e test cycle..."
-	@echo "1. Starting solo mode services..."
-	@$(MAKE) docker-solo-up
-	@echo "2. Waiting for services to be ready..."
-	@timeout=60; \
-	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
-			echo "✅ Mesh API server is ready!"; \
-			break; \
-		fi; \
-		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
-		sleep 2; \
-		timeout=$$((timeout-2)); \
-	done; \
-	if [ $$timeout -le 0 ]; then \
-		echo "❌ Timeout waiting for server to start"; \
-		$(MAKE) docker-solo-down; \
-		exit 1; \
-	fi
-	@echo "3. Running Call service e2e test..."
-	@bash -c '$(MAKE) test-e2e-call; \
-	test_result=$$?; \
-	echo "4. Stopping solo mode services..."; \
-	$(MAKE) docker-solo-down; \
-	if [ $$test_result -eq 0 ]; then \
-		echo "✅ Call service e2e test passed!"; \
-	else \
-		echo "❌ Call service e2e test failed!"; \
-	fi; \
-	exit $$test_result'
+	@$(MAKE) _e2e-solo-wrapper TEST_NAME="call-service" TEST_TARGET=test-e2e-call
 
 test-e2e-vip180-full:
-	@echo "Starting full VIP180 e2e test cycle..."
-	@echo "1. Starting solo mode services..."
-	@$(MAKE) docker-solo-up
-	@echo "2. Waiting for services to be ready..."
-	@timeout=60; \
-	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
-			echo "✅ Mesh API server is ready!"; \
-			break; \
-		fi; \
-		echo "⏳ Waiting for server... ($$timeout seconds remaining)"; \
-		sleep 2; \
-		timeout=$$((timeout-2)); \
-	done; \
-	if [ $$timeout -le 0 ]; then \
-		echo "❌ Timeout waiting for server to start"; \
-		$(MAKE) docker-solo-down; \
-		exit 1; \
-	fi
-	@echo "3. Running VIP180 e2e test..."
-	@bash -c '$(MAKE) test-e2e-vip180; \
-	test_result=$$?; \
-	echo "4. Stopping solo mode services..."; \
-	$(MAKE) docker-solo-down; \
-	if [ $$test_result -eq 0 ]; then \
-		echo "✅ VIP180 e2e test passed!"; \
-	else \
-		echo "❌ VIP180 e2e test failed!"; \
-	fi; \
-	exit $$test_result'
+	@$(MAKE) _e2e-solo-wrapper TEST_NAME="VIP180" TEST_TARGET=test-e2e-vip180
+
+test-e2e-delegation:
+	@echo "Running fee delegation e2e test..."
+	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
+	go test -v -run TestDelegation ./tests/e2e/...
+
+test-e2e-delegation-full:
+	@$(MAKE) _e2e-solo-wrapper TEST_NAME="delegation" TEST_TARGET=test-e2e-delegation
 
 clean:
 	@echo "Cleaning Go build artifacts and cache..."

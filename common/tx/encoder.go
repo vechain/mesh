@@ -122,7 +122,13 @@ func (e *MeshTransactionEncoder) ParseTransactionOperationsFromAPI(tx *api.JSONE
 	if tx.Reverted {
 		status = meshcommon.OperationStatusReverted
 	}
-	return e.clauseParser.ParseTransactionOperationsFromJSONClauses(tx.Clauses, tx.Origin.String(), tx.Gas, &status)
+
+	var delegatorAddr string
+	if tx.Delegator != nil && !tx.Delegator.IsZero() {
+		delegatorAddr = tx.Delegator.String()
+	}
+
+	return e.clauseParser.ParseTransactionOperationsFromJSONClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, tx.Gas, &status)
 }
 
 // ParseTransactionFromBytes parses a transaction from bytes and returns operations and signers
@@ -189,7 +195,11 @@ func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *Me
 	}
 
 	// Use the existing parsing logic that handles both VET and token transfers
-	operations := e.clauseParser.ParseTransactionOperationsFromClauseData(clauseData, originAddr.String(), uint64(meshTx.Gas()), nil)
+	var delegatorAddrStr string
+	if delegatorAddr != nil {
+		delegatorAddrStr = delegatorAddr.String()
+	}
+	operations := e.clauseParser.ParseTransactionOperationsFromClauseData(clauseData, originAddr.String(), delegatorAddrStr, uint64(meshTx.Gas()), nil)
 
 	return operations, signers
 }

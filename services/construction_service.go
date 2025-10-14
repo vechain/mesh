@@ -682,8 +682,9 @@ func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, ga
 func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, request types.ConstructionPayloadsRequest) ([]*types.SigningPayload, error) {
 	var payloads []*types.SigningPayload
 
-	// Check for fee delegation
-	hasFeeDelegation := c.operationsExtractor.HasFeeDelegation(request.Operations)
+	// Check for fee delegation from metadata
+	txDelegator := c.operationsExtractor.GetFeeDelegatorAccount(request.Metadata)
+	hasFeeDelegation := txDelegator != ""
 
 	// Get origin address for first payload
 	if len(request.PublicKeys) > 0 {

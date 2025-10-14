@@ -84,6 +84,10 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 	builder.Gas(uint64(gas))
 	builder.Nonce(nonceValue.Uint64())
 
+	if _, hasDelegator := metadata["fee_delegator_account"]; hasDelegator {
+		builder.Features(thorTx.DelegationFeature)
+	}
+
 	// Add clauses from operations
 	if err := b.addClausesToBuilder(builder, request.Operations); err != nil {
 		return nil, err

@@ -259,6 +259,32 @@ func testConstructionCombine(client *HTTPClient, networkIdentifier *types.Networ
 	return &response, nil
 }
 
+// testConstructionCombineWithSignatures tests the /construction/combine endpoint with multiple signatures
+func testConstructionCombineWithSignatures(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, payloadsResp *types.ConstructionPayloadsResponse, signatures []*types.Signature) (*types.ConstructionCombineResponse, error) {
+	request := &types.ConstructionCombineRequest{
+		NetworkIdentifier:   networkIdentifier,
+		UnsignedTransaction: payloadsResp.UnsignedTransaction,
+		Signatures:          signatures,
+	}
+
+	resp, err := client.Post(meshcommon.ConstructionCombineEndpoint, request)
+	if err != nil {
+		return nil, err
+	}
+
+	var response types.ConstructionCombineResponse
+	if err := ParseResponse(resp, &response); err != nil {
+		return nil, err
+	}
+
+	// Validate response
+	if err := ValidateConstructionCombineResponse(&response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
 // testConstructionHash tests the /construction/hash endpoint
 func testConstructionHash(client *HTTPClient, networkIdentifier *types.NetworkIdentifier, combineResp *types.ConstructionCombineResponse) (*types.TransactionIdentifierResponse, error) {
 	request := &types.ConstructionHashRequest{
