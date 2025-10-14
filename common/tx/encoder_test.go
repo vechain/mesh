@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/mesh/config"
@@ -425,6 +426,69 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 	}
 }
 
+func TestParseTransactionOperationsFromAPI_WithDelegation(t *testing.T) {
+	delegatorAddr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
+	originAddr, _ := thor.ParseAddress(meshtests.TestAddress1)
+
+	// Create test transaction with delegation
+	tx := &api.JSONEmbeddedTx{
+		ID: func() thor.Bytes32 {
+			hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+			return hash
+		}(),
+		Clauses: []*api.JSONClause{
+			{
+				To: func() *thor.Address {
+					addr, _ := thor.ParseAddress(meshtests.TestAddress1)
+					return &addr
+				}(),
+				Value: func() math.HexOrDecimal256 {
+					val, _ := new(big.Int).SetString("1000000000000000000", 10)
+					return math.HexOrDecimal256(*val)
+				}(),
+				Data: "",
+			},
+		},
+		Origin:    originAddr,
+		Delegator: &delegatorAddr,
+		Gas:       21000,
+	}
+
+	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
+	operations := encoder.ParseTransactionOperationsFromAPI(tx)
+
+	if len(operations) == 0 {
+		t.Errorf("ParseTransactionOperationsFromAPI() returned no operations")
+	}
+
+	// Find fee delegation operation
+	var feeDelegationOp *types.Operation
+	for _, op := range operations {
+		if op.Type == meshcommon.OperationTypeFeeDelegation {
+			feeDelegationOp = op
+			break
+		}
+	}
+
+	if feeDelegationOp == nil {
+		t.Fatal("Expected to find OperationTypeFeeDelegation")
+	}
+
+	// Verify account is origin
+	if feeDelegationOp.Account.Address != originAddr.String() {
+		t.Errorf("Expected account to be origin %s, got %s", originAddr.String(), feeDelegationOp.Account.Address)
+	}
+
+	// Verify delegator in metadata
+	delegatorInMetadata, ok := feeDelegationOp.Metadata["fee_delegator_account"].(string)
+	if !ok {
+		t.Fatal("Expected fee_delegator_account in metadata")
+	}
+	if delegatorInMetadata != delegatorAddr.String() {
+		t.Errorf("Expected delegator %s, got %s", delegatorAddr.String(), delegatorInMetadata)
+	}
+}
+
 func TestParseTransactionFromBytes(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
@@ -586,6 +650,37 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 				delegatorAddr := thor.BytesToAddress(tt.meshTx.Delegator)
 				if signers[1].Address != delegatorAddr.String() {
 					t.Errorf("parseTransactionSignersAndOperations() second signer = %v, want %v", signers[1].Address, delegatorAddr.String())
+				}
+			}
+
+			// Verify fee delegation operation type when delegator is present
+			if len(tt.meshTx.Delegator) > 0 && len(operations) > 0 {
+				// Find the last operation (should be fee operation)
+				feeOp := operations[len(operations)-1]
+				if feeOp.Type != meshcommon.OperationTypeFeeDelegation {
+					t.Errorf("parseTransactionSignersAndOperations() expected OperationTypeFeeDelegation, got %v", feeOp.Type)
+				}
+				// Verify account is origin
+				originAddr := thor.BytesToAddress(tt.meshTx.Origin)
+				if feeOp.Account.Address != originAddr.String() {
+					t.Errorf("parseTransactionSignersAndOperations() fee operation account = %v, want origin %v", feeOp.Account.Address, originAddr.String())
+				}
+				// Verify delegator in metadata
+				delegatorAddr := thor.BytesToAddress(tt.meshTx.Delegator)
+				delegatorInMetadata, ok := feeOp.Metadata["fee_delegator_account"].(string)
+				if !ok {
+					t.Error("parseTransactionSignersAndOperations() fee_delegator_account not found in metadata")
+				} else if delegatorInMetadata != delegatorAddr.String() {
+					t.Errorf("parseTransactionSignersAndOperations() fee_delegator_account = %v, want %v", delegatorInMetadata, delegatorAddr.String())
+				}
+			}
+
+			// Verify regular fee operation when no delegator
+			if len(tt.meshTx.Delegator) == 0 && len(operations) > 0 {
+				// Find the last operation (should be fee operation)
+				feeOp := operations[len(operations)-1]
+				if feeOp.Type != meshcommon.OperationTypeFee {
+					t.Errorf("parseTransactionSignersAndOperations() expected OperationTypeFee, got %v", feeOp.Type)
 				}
 			}
 		})
