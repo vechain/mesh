@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshtests "github.com/vechain/mesh/tests"
 )
 
 func TestGenerateNonce(t *testing.T) {
@@ -33,7 +34,7 @@ func TestComputeAddress(t *testing.T) {
 	// Test with valid public key
 	publicKey := &types.PublicKey{
 		Bytes:     []byte{0x02, 0xd9, 0x92, 0xbd, 0x20, 0x3d, 0x2b, 0xf8, 0x88, 0x38, 0x90, 0x89, 0xdb, 0x13, 0xd2, 0xd0, 0x80, 0x7c, 0x16, 0x97, 0x09, 0x1d, 0xe3, 0x77, 0x99, 0x8e, 0xfe, 0x6c, 0xf6, 0x0d, 0x66, 0xfb, 0xb3},
-		CurveType: "secp256k1",
+		CurveType: meshtests.SECP256k1,
 	}
 
 	address, err := handler.ComputeAddress(publicKey)
@@ -48,7 +49,7 @@ func TestComputeAddress(t *testing.T) {
 	// Test with invalid public key
 	invalidPublicKey := &types.PublicKey{
 		Bytes:     []byte("invalid"),
-		CurveType: "secp256k1",
+		CurveType: meshtests.SECP256k1,
 	}
 
 	_, err = handler.ComputeAddress(invalidPublicKey)

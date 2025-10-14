@@ -1,6 +1,8 @@
 package tests
 
 const (
+	SECP256k1 = "secp256k1"
+
 	FirstSoloAddress = "0xf077b491b355e64048ce21e3a6fc4751eeea77fa"
 
 	TestAddress1PrivateKey = "5959365666b6165dbbbe6c406d1f07f5f430bab3064c5ea89ff0a0edd8ff5e19"

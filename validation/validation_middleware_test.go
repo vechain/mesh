@@ -499,9 +499,9 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					},
 				},
 				PublicKeys: []*types.PublicKey{
-					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
-					{Bytes: []byte{4, 5, 6}, CurveType: "secp256k1"},
-					{Bytes: []byte{7, 8, 9}, CurveType: "secp256k1"},
+					{Bytes: []byte{1, 2, 3}, CurveType: meshtests.SECP256k1},
+					{Bytes: []byte{4, 5, 6}, CurveType: meshtests.SECP256k1},
+					{Bytes: []byte{7, 8, 9}, CurveType: meshtests.SECP256k1},
 				},
 			},
 			expectError: true,
@@ -527,7 +527,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					},
 				},
 				PublicKeys: []*types.PublicKey{
-					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
+					{Bytes: []byte{1, 2, 3}, CurveType: meshtests.SECP256k1},
 				},
 				Metadata: nil,
 			},
@@ -554,7 +554,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					},
 				},
 				PublicKeys: []*types.PublicKey{
-					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
+					{Bytes: []byte{1, 2, 3}, CurveType: meshtests.SECP256k1},
 				},
 				Metadata: map[string]any{
 					"fee_delegator_account": "0x1234567890123456789012345678901234567890",
@@ -583,7 +583,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					},
 				},
 				PublicKeys: []*types.PublicKey{
-					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
+					{Bytes: []byte{1, 2, 3}, CurveType: meshtests.SECP256k1},
 				},
 				Metadata: map[string]any{
 					"transactionType": meshcommon.TransactionTypeLegacy,
@@ -623,7 +623,7 @@ func TestValidationMiddleware_CheckConstructionPayloads(t *testing.T) {
 					},
 				},
 				PublicKeys: []*types.PublicKey{
-					{Bytes: []byte{1, 2, 3}, CurveType: "secp256k1"},
+					{Bytes: []byte{1, 2, 3}, CurveType: meshtests.SECP256k1},
 				},
 				Metadata: map[string]any{
 					"transactionType": meshcommon.TransactionTypeLegacy,

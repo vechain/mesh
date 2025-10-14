@@ -150,7 +150,7 @@ func CreateTestPublicKey() *types.PublicKey {
 
 	return &types.PublicKey{
 		Bytes:     bytes,
-		CurveType: "secp256k1",
+		CurveType: meshtests.SECP256k1,
 	}
 }
 
@@ -173,7 +173,7 @@ func CreateTestAddress1PublicKey() *types.PublicKey {
 
 	return &types.PublicKey{
 		Bytes:     publicKeyBytes,
-		CurveType: "secp256k1",
+		CurveType: meshtests.SECP256k1,
 	}
 }
 
