@@ -714,19 +714,6 @@ func TestClauseParser_ParseOperationsWithFeeDelegation(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	parser := NewClauseParser(mockClient, NewOperationsExtractor())
 
-	createTestClause := func(to *thor.Address, value *big.Int, data string) *api.Clause {
-		return &api.Clause{
-			To:    to,
-			Value: (*math.HexOrDecimal256)(value),
-			Data:  data,
-		}
-	}
-
-	createTestAddress := func(addr string) *thor.Address {
-		address, _ := thor.ParseAddress(addr)
-		return &address
-	}
-
 	tests := []struct {
 		name          string
 		clauses       api.Clauses
