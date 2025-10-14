@@ -13,7 +13,6 @@ import (
 )
 
 // TestDelegation tests the complete fee delegation flow using VIP-191
-// The delegator (FirstSoloAddress) pays fees for transactions originated by TestAddress1
 func TestDelegation(t *testing.T) {
 	t.Log("Starting fee delegation test with dynamic transaction...")
 
@@ -22,18 +21,16 @@ func TestDelegation(t *testing.T) {
 	client := NewHTTPClient(config.BaseURL, config.TimeoutSeconds)
 	networkIdentifier := CreateTestNetworkIdentifier(config.Network)
 
-	// Use TestAddress1 as origin (sender) and FirstSoloAddress as delegator
 	originAddress := meshtests.TestAddress1
 	originPrivateKey := meshtests.TestAddress1PrivateKey
 	delegatorAddress := meshtests.FirstSoloAddress
-	delegatorPrivateKey := config.SenderPrivateKey // FirstSoloAddress private key
+	delegatorPrivateKey := config.SenderPrivateKey
 	recipientAddress := config.RecipientAddress
 	transferAmount := config.TransferAmount
 
 	testDelegationFlow(t, client, networkIdentifier, originAddress, originPrivateKey, delegatorAddress, delegatorPrivateKey, recipientAddress, transferAmount)
 }
 
-// testDelegationFlow tests the complete delegation transaction flow
 func testDelegationFlow(
 	t *testing.T,
 	client *HTTPClient,
@@ -97,7 +94,7 @@ func testDelegationFlow(
 	t.Log("Step 3: Testing /construction/payloads with delegation (2 public keys)")
 	publicKeys := []*types.PublicKey{
 		CreateTestAddress1PublicKey(), // Origin
-		CreateTestPublicKey(),         // Delegator (FirstSoloAddress)
+		CreateTestPublicKey(),         // Delegator
 	}
 
 	// Add fee_delegator_account to metadata for payloads endpoint
