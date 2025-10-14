@@ -440,34 +440,49 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 		name           string
 		operationIndex int
 		originAddr     string
+		delegatorAddr  string
 		gas            uint64
 		status         *string
+		expectedType   string
 	}{
 		{
-			name:           "basic energy transfer",
+			name:           "basic energy transfer without delegation",
 			operationIndex: 0,
 			originAddr:     meshtests.FirstSoloAddress,
+			delegatorAddr:  "",
 			gas:            21000,
 			status:         &testStatus,
+			expectedType:   meshcommon.OperationTypeFee,
 		},
 		{
-			name:           "zero gas",
+			name:           "energy transfer with fee delegation",
 			operationIndex: 1,
 			originAddr:     meshtests.TestAddress1,
+			delegatorAddr:  meshtests.FirstSoloAddress,
+			gas:            25000,
+			status:         &testStatus,
+			expectedType:   meshcommon.OperationTypeFeeDelegation,
+		},
+		{
+			name:           "zero gas without delegation",
+			operationIndex: 2,
+			originAddr:     meshtests.TestAddress1,
+			delegatorAddr:  "",
 			gas:            0,
 			status:         &testStatus,
+			expectedType:   meshcommon.OperationTypeFee,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operation := parser.createEnergyTransferOperation(tt.operationIndex, tt.originAddr, "", tt.gas, tt.status)
+			operation := parser.createEnergyTransferOperation(tt.operationIndex, tt.originAddr, tt.delegatorAddr, tt.gas, tt.status)
 
 			if operation.OperationIdentifier.Index != int64(tt.operationIndex) {
 				t.Errorf("createEnergyTransferOperation() index = %v, want %v", operation.OperationIdentifier.Index, tt.operationIndex)
 			}
-			if operation.Type != meshcommon.OperationTypeFee {
-				t.Errorf("createEnergyTransferOperation() type = %v, want %v", operation.Type, meshcommon.OperationTypeFee)
+			if operation.Type != tt.expectedType {
+				t.Errorf("createEnergyTransferOperation() type = %v, want %v", operation.Type, tt.expectedType)
 			}
 			if operation.Status != tt.status {
 				t.Errorf("createEnergyTransferOperation() status = %v, want %v", operation.Status, tt.status)
@@ -484,6 +499,21 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 			}
 			if operation.Metadata["gas"] != strconv.FormatUint(tt.gas, 10) {
 				t.Errorf("createEnergyTransferOperation() gas = %v, want %v", operation.Metadata["gas"], tt.gas)
+			}
+
+			// Check fee_delegator_account in metadata for delegation
+			if tt.delegatorAddr != "" {
+				delegatorInMetadata, ok := operation.Metadata["fee_delegator_account"].(string)
+				if !ok {
+					t.Errorf("createEnergyTransferOperation() fee_delegator_account not found in metadata")
+				}
+				if delegatorInMetadata != tt.delegatorAddr {
+					t.Errorf("createEnergyTransferOperation() fee_delegator_account = %v, want %v", delegatorInMetadata, tt.delegatorAddr)
+				}
+			} else {
+				if _, exists := operation.Metadata["fee_delegator_account"]; exists {
+					t.Errorf("createEnergyTransferOperation() fee_delegator_account should not exist in metadata without delegation")
+				}
 			}
 		})
 	}
@@ -675,6 +705,120 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("ParseTransactionOperationsFromTransactionClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
+			}
+		})
+	}
+}
+
+func TestClauseParser_ParseOperationsWithFeeDelegation(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	createTestClause := func(to *thor.Address, value *big.Int, data string) *api.Clause {
+		return &api.Clause{
+			To:    to,
+			Value: (*math.HexOrDecimal256)(value),
+			Data:  data,
+		}
+	}
+
+	createTestAddress := func(addr string) *thor.Address {
+		address, _ := thor.ParseAddress(addr)
+		return &address
+	}
+
+	tests := []struct {
+		name          string
+		clauses       api.Clauses
+		originAddr    string
+		delegatorAddr string
+		gas           uint64
+		status        *string
+		expectedOps   int
+		validateFunc  func(*testing.T, []*types.Operation)
+	}{
+		{
+			name: "VET transfer with fee delegation",
+			clauses: api.Clauses{
+				createTestClause(
+					createTestAddress(meshtests.TestAddress1),
+					big.NewInt(1000000000000000000),
+					"",
+				),
+			},
+			originAddr:    meshtests.FirstSoloAddress,
+			delegatorAddr: "0xf077b491b355e64048ce21e3a6fc4751eeea77fa",
+			gas:           21000,
+			status:        &testStatus,
+			expectedOps:   3, // sender, receiver, fee delegation
+			validateFunc: func(t *testing.T, ops []*types.Operation) {
+				// Check that last operation is fee delegation
+				if len(ops) < 3 {
+					t.Fatalf("Expected at least 3 operations, got %d", len(ops))
+				}
+				feeOp := ops[len(ops)-1]
+				if feeOp.Type != meshcommon.OperationTypeFeeDelegation {
+					t.Errorf("Expected OperationTypeFeeDelegation, got %s", feeOp.Type)
+				}
+				// Check account is origin
+				if feeOp.Account.Address != meshtests.FirstSoloAddress {
+					t.Errorf("Expected account to be origin %s, got %s", meshtests.FirstSoloAddress, feeOp.Account.Address)
+				}
+				// Check delegator in metadata
+				delegator, ok := feeOp.Metadata["fee_delegator_account"].(string)
+				if !ok {
+					t.Error("Expected fee_delegator_account in metadata")
+				}
+				if delegator != "0xf077b491b355e64048ce21e3a6fc4751eeea77fa" {
+					t.Errorf("Expected delegator 0xf077b491b355e64048ce21e3a6fc4751eeea77fa, got %s", delegator)
+				}
+			},
+		},
+		{
+			name: "VET transfer without fee delegation",
+			clauses: api.Clauses{
+				createTestClause(
+					createTestAddress(meshtests.TestAddress1),
+					big.NewInt(1000000000000000000),
+					"",
+				),
+			},
+			originAddr:    meshtests.FirstSoloAddress,
+			delegatorAddr: "",
+			gas:           21000,
+			status:        &testStatus,
+			expectedOps:   3, // sender, receiver, fee
+			validateFunc: func(t *testing.T, ops []*types.Operation) {
+				// Check that last operation is regular fee
+				if len(ops) < 3 {
+					t.Fatalf("Expected at least 3 operations, got %d", len(ops))
+				}
+				feeOp := ops[len(ops)-1]
+				if feeOp.Type != meshcommon.OperationTypeFee {
+					t.Errorf("Expected OperationTypeFee, got %s", feeOp.Type)
+				}
+				// Check account is origin
+				if feeOp.Account.Address != meshtests.FirstSoloAddress {
+					t.Errorf("Expected account to be origin %s, got %s", meshtests.FirstSoloAddress, feeOp.Account.Address)
+				}
+				// Check no delegator in metadata
+				if _, exists := feeOp.Metadata["fee_delegator_account"]; exists {
+					t.Error("fee_delegator_account should not exist in metadata without delegation")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			operations := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, tt.delegatorAddr, tt.gas, tt.status)
+
+			if len(operations) != tt.expectedOps {
+				t.Errorf("ParseOperationsFromAPIClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
+			}
+
+			if tt.validateFunc != nil {
+				tt.validateFunc(t, operations)
 			}
 		})
 	}
