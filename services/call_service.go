@@ -1,13 +1,12 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"math/big"
-	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
-	meshhttp "github.com/vechain/mesh/common/http"
 	meshoperations "github.com/vechain/mesh/common/operations"
 	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
@@ -18,55 +17,46 @@ import (
 
 // CallService handles the /call endpoint for network-specific procedure calls
 type CallService struct {
-	requestHandler  *meshhttp.RequestHandler
-	responseHandler *meshhttp.ResponseHandler
-	vechainClient   meshthor.VeChainClientInterface
-	config          *meshconfig.Config
-	clauseParser    *meshoperations.ClauseParser
+	vechainClient meshthor.VeChainClientInterface
+	config        *meshconfig.Config
+	clauseParser  *meshoperations.ClauseParser
 }
 
 // NewCallService creates a new call service
 func NewCallService(vechainClient meshthor.VeChainClientInterface, config *meshconfig.Config) *CallService {
 	return &CallService{
-		requestHandler:  meshhttp.NewRequestHandler(),
-		responseHandler: meshhttp.NewResponseHandler(),
-		vechainClient:   vechainClient,
-		config:          config,
-		clauseParser:    meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
+		vechainClient: vechainClient,
+		config:        config,
+		clauseParser:  meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
 	}
 }
 
 // Call invokes a network-specific procedure call
 // For VeChain, this implements the InspectClauses functionality to simulate transactions
-func (c *CallService) Call(w http.ResponseWriter, r *http.Request) {
-	var request types.CallRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *CallService) Call(
+	ctx context.Context,
+	req *types.CallRequest,
+) (*types.CallResponse, *types.Error) {
 	// Validate method
-	if request.Method != meshcommon.CallMethodInspectClauses {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestBody, map[string]any{
+	if req.Method != meshcommon.CallMethodInspectClauses {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestBody, map[string]any{
 			"error":             "unsupported method",
-			"method":            request.Method,
+			"method":            req.Method,
 			"supported_methods": []string{meshcommon.CallMethodInspectClauses},
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	// Parse parameters into BatchCallData
-	batchCallData, err := c.parseBatchCallDataFromParameters(request.Parameters)
+	batchCallData, err := c.parseBatchCallDataFromParameters(req.Parameters)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestBody, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestBody, map[string]any{
 			"error": fmt.Sprintf("failed to parse parameters: %v", err),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	// Parse revision from parameters (optional)
 	revision := "best" // default
-	if revisionRaw, ok := request.Parameters["revision"]; ok {
+	if revisionRaw, ok := req.Parameters["revision"]; ok {
 		if revisionStr, ok := revisionRaw.(string); ok {
 			revision = revisionStr
 		}
@@ -75,21 +65,18 @@ func (c *CallService) Call(w http.ResponseWriter, r *http.Request) {
 	// Call InspectClauses with revision
 	results, err := c.vechainClient.InspectClauses(batchCallData, thorclient.Option(thorclient.Revision(revision)))
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 			"error": fmt.Sprintf("failed to inspect clauses: %v", err),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
 	// Convert results to Mesh format
-	response := &types.CallResponse{
+	return &types.CallResponse{
 		Result: map[string]any{
 			"results": convertCallResultsToMap(results),
 		},
 		Idempotent: true, // InspectClauses is deterministic for a given block state
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // parseBatchCallDataFromParameters converts request parameters to api.BatchCallData

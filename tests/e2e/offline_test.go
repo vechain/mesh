@@ -164,7 +164,7 @@ func TestOnlineOnlyEndpointsFailInOfflineMode(t *testing.T) {
 
 	t.Log("Testing that online-only endpoints fail in offline mode...")
 
-	expectedErrorSubstring := "this endpoint requires online mode"
+	expectedErrorSubstring := "API does not support offline mode"
 
 	t.Run("NetworkStatus_ShouldFail", func(t *testing.T) {
 		t.Log("Testing /network/status should fail in offline mode")

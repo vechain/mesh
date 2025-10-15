@@ -1,17 +1,12 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"context"
 	"testing"
 
-	meshcommon "github.com/vechain/mesh/common"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
+	meshcommon "github.com/vechain/mesh/common"
 	meshconfig "github.com/vechain/mesh/config"
-	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -44,21 +39,13 @@ func TestNetworkService_NetworkList(t *testing.T) {
 	service := NewNetworkService(mockClient, config)
 
 	// Create request
-	req := httptest.NewRequest("POST", meshcommon.NetworkListEndpoint, nil)
-	w := httptest.NewRecorder()
+	request := &types.MetadataRequest{}
 
-	// Call NetworkList
-	service.NetworkList(w, req)
+	ctx := context.Background()
+	response, err := service.NetworkList(ctx, request)
 
-	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("NetworkList() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Parse response
-	var response types.NetworkListResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("NetworkList() error = %v", err)
 	}
 
 	// Verify response structure
@@ -82,28 +69,18 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 	service := NewNetworkService(mockClient, config)
 
 	// Create request with proper body
-	request := types.NetworkRequest{
+	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.NetworkOptionsEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.NetworkOptions(ctx, request)
 
-	// Call NetworkOptions
-	service.NetworkOptions(w, req)
-
-	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("NetworkOptions() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Parse response
-	var response types.NetworkOptionsResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("NetworkOptions() error = %v", err)
 	}
 
 	// Verify response structure
@@ -116,48 +93,29 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 	}
 }
 
-func TestNetworkService_NetworkStatus_InvalidRequestBody(t *testing.T) {
-	config := &meshconfig.Config{}
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewNetworkService(mockClient, config)
-
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call NetworkStatus
-	service.NetworkStatus(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("NetworkStatus() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
 func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 	config := &meshconfig.Config{}
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewNetworkService(mockClient, config)
 
 	// Create request
-	request := types.NetworkRequest{
+	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.NetworkStatusEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.NetworkStatus(ctx, request)
 
-	// Call NetworkStatus
-	service.NetworkStatus(w, req)
+	// Note: This test will succeed with mock client
+	if err != nil {
+		t.Fatalf("NetworkStatus() error = %v", err)
+	}
 
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("NetworkStatus() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
+	if response == nil {
+		t.Error("NetworkStatus() returned nil response")
 	}
 }
 

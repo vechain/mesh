@@ -1,18 +1,15 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"net/http"
-	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	meshcommon "github.com/vechain/mesh/common"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
-	meshhttp "github.com/vechain/mesh/common/http"
 	meshoperations "github.com/vechain/mesh/common/operations"
 	meshtx "github.com/vechain/mesh/common/tx"
 	"github.com/vechain/mesh/common/vip180"
@@ -25,8 +22,6 @@ import (
 
 // ConstructionService handles construction API endpoints
 type ConstructionService struct {
-	requestHandler      *meshhttp.RequestHandler
-	responseHandler     *meshhttp.ResponseHandler
 	vechainClient       meshthor.VeChainClientInterface
 	encoder             *meshtx.MeshTransactionEncoder
 	builder             *meshtx.TransactionBuilder
@@ -41,8 +36,6 @@ type ConstructionService struct {
 func NewConstructionService(vechainClient meshthor.VeChainClientInterface, config *config.Config) *ConstructionService {
 	operationsExtractor := meshoperations.NewOperationsExtractor()
 	return &ConstructionService{
-		requestHandler:      meshhttp.NewRequestHandler(),
-		responseHandler:     meshhttp.NewResponseHandler(),
 		vechainClient:       vechainClient,
 		encoder:             meshtx.NewMeshTransactionEncoder(vechainClient),
 		builder:             meshtx.NewTransactionBuilder(),
@@ -55,69 +48,56 @@ func NewConstructionService(vechainClient meshthor.VeChainClientInterface, confi
 }
 
 // ConstructionDerive derives an address from a public key
-func (c *ConstructionService) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionDeriveRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *ConstructionService) ConstructionDerive(
+	ctx context.Context,
+	req *types.ConstructionDeriveRequest,
+) (*types.ConstructionDeriveResponse, *types.Error) {
 	// Extract public key from request
-	if len(request.PublicKey.Bytes) == 0 {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrPublicKeyRequired), http.StatusBadRequest)
-		return
+	if len(req.PublicKey.Bytes) == 0 {
+		return nil, meshcommon.GetError(meshcommon.ErrPublicKeyRequired)
 	}
+
 	// Derive address from public key
-	address, err := c.bytesHandler.ComputeAddress(request.PublicKey)
-
+	address, err := c.bytesHandler.ComputeAddress(req.PublicKey)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
-	response := &types.ConstructionDeriveResponse{
+	return &types.ConstructionDeriveResponse{
 		AccountIdentifier: &types.AccountIdentifier{
 			Address: address,
 		},
 		Metadata: map[string]any{
 			"derivation_path": "m/44'/818'/0'/0/0", // VeChain BIP44 path
 		},
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // ConstructionPreprocess preprocesses a transaction
-func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionPreprocessRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *ConstructionService) ConstructionPreprocess(
+	ctx context.Context,
+	req *types.ConstructionPreprocessRequest,
+) (*types.ConstructionPreprocessResponse, *types.Error) {
 	// Get transaction origins
-	origins := c.operationsExtractor.GetTxOrigins(request.Operations)
+	origins := c.operationsExtractor.GetTxOrigins(req.Operations)
 	if len(origins) > 1 {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrTransactionMultipleOrigins), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrTransactionMultipleOrigins)
 	} else if len(origins) == 0 {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrTransactionOriginNotExist), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrTransactionOriginNotExist)
 	}
 
 	// Get fee delegator from metadata
-	delegator := c.operationsExtractor.GetFeeDelegatorAccount(request.Metadata)
+	delegator := c.operationsExtractor.GetFeeDelegatorAccount(req.Metadata)
 
 	// Get VET and token operations
-	vetOpers := c.operationsExtractor.GetVETOperations(request.Operations)
-	tokensOpers := c.operationsExtractor.GetTokensOperations(request.Operations)
+	vetOpers := c.operationsExtractor.GetVETOperations(req.Operations)
+	tokensOpers := c.operationsExtractor.GetTokensOperations(req.Operations)
 
 	// Validate operations
 	if len(vetOpers) == 0 && len(tokensOpers) == 0 {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrNoTransferOperation), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrNoTransferOperation)
 	}
 
 	// Build clauses
@@ -137,10 +117,9 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 		// Encode VIP180 transfer call data
 		transferData, err := c.vip180Encoder.EncodeVIP180TransferCallData(op["to"], op["value"])
 		if err != nil {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 				"error": err.Error(),
-			}), http.StatusInternalServerError)
-			return
+			})
 		}
 
 		clauses = append(clauses, map[string]any{
@@ -167,58 +146,51 @@ func (c *ConstructionService) ConstructionPreprocess(w http.ResponseWriter, r *h
 		})
 	}
 
-	c.responseHandler.WriteJSONResponse(w, response)
+	return response, nil
 }
 
 // ConstructionMetadata gets metadata for construction
-func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionMetadataRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *ConstructionService) ConstructionMetadata(
+	ctx context.Context,
+	req *types.ConstructionMetadataRequest,
+) (*types.ConstructionMetadataResponse, *types.Error) {
 	// Get basic transaction info
 	bestBlock, chainTag, err := c.getBasicTransactionInfo()
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
 	// Determine transaction type
-	transactionType := c.operationsExtractor.GetStringFromOptions(request.Options, "transactionType")
+	transactionType := c.operationsExtractor.GetStringFromOptions(req.Options, "transactionType")
 
 	// Calculate gas and create blockRef
-	gas, err := c.calculateGas(request.Options)
+	gas, err := c.calculateGas(req.Options)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 	blockRef := bestBlock.ID[:8]
 	nonce, err := c.bytesHandler.GenerateNonce()
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
 	// Build metadata based on transaction type
 	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), uint64(chainTag), gas, nonce)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
 	// Calculate fee and build response
 	fee := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
-	response := &types.ConstructionMetadataResponse{
+	return &types.ConstructionMetadataResponse{
 		Metadata: metadata,
 		SuggestedFee: []*types.Amount{
 			{
@@ -226,112 +198,97 @@ func (c *ConstructionService) ConstructionMetadata(w http.ResponseWriter, r *htt
 				Currency: meshcommon.VTHOCurrency,
 			},
 		},
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // ConstructionPayloads creates payloads for construction
-func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionPayloadsRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *ConstructionService) ConstructionPayloads(
+	ctx context.Context,
+	req *types.ConstructionPayloadsRequest,
+) (*types.ConstructionPayloadsResponse, *types.Error) {
 	// Get transaction origin from operations
-	origins := c.operationsExtractor.GetTxOrigins(request.Operations)
+	origins := c.operationsExtractor.GetTxOrigins(req.Operations)
 	txOrigin := origins[0]
 
 	// Check fee delegation
-	txDelegator := c.operationsExtractor.GetFeeDelegatorAccount(request.Metadata)
+	txDelegator := c.operationsExtractor.GetFeeDelegatorAccount(req.Metadata)
 	hasFeeDelegation := txDelegator != ""
 
 	// Validate origin address matches first public key
-	originAddress, err := c.bytesHandler.ComputeAddress(request.PublicKeys[0])
+	originAddress, err := c.bytesHandler.ComputeAddress(req.PublicKeys[0])
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 	if originAddress != txOrigin {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrOriginAddressMismatch, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrOriginAddressMismatch, map[string]any{
 			"expected": txOrigin,
 			"got":      originAddress,
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	// Validate delegator address if present
 	if hasFeeDelegation {
-		delegatorAddress, err := c.bytesHandler.ComputeAddress(request.PublicKeys[1])
+		delegatorAddress, err := c.bytesHandler.ComputeAddress(req.PublicKeys[1])
 		if err != nil {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 				"error": err.Error(),
-			}), http.StatusBadRequest)
-			return
+			})
 		}
 		if delegatorAddress != txDelegator {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrDelegatorAddressMismatch, map[string]any{
+			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrDelegatorAddressMismatch, map[string]any{
 				"expected": txDelegator,
 				"got":      delegatorAddress,
-			}), http.StatusBadRequest)
-			return
+			})
 		}
 	}
 
 	// Build transaction
-	vechainTx, err := c.builder.BuildTransactionFromRequest(request, c.config)
+	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	// Create signing payloads
-	payloads, err := c.createSigningPayloads(vechainTx, request)
+	payloads, err := c.createSigningPayloads(vechainTx, *req)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	// Get origin and delegator addresses
-	originAddr, err := c.bytesHandler.ComputeAddress(request.PublicKeys[0])
+	originAddr, err := c.bytesHandler.ComputeAddress(req.PublicKeys[0])
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 	originBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(originAddr)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 			"error":      err.Error(),
 			"originAddr": originAddr,
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	var delegatorBytes []byte
 	if hasFeeDelegation {
-		delegatorAddr, err := c.bytesHandler.ComputeAddress(request.PublicKeys[1])
+		delegatorAddr, err := c.bytesHandler.ComputeAddress(req.PublicKeys[1])
 		if err != nil {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 				"error":         err.Error(),
 				"delegatorAddr": delegatorAddr,
-			}), http.StatusBadRequest)
-			return
+			})
 		}
 		delegatorBytes, err = c.bytesHandler.DecodeHexStringWithPrefix(delegatorAddr)
 		if err != nil {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 				"error": err.Error(),
-			}), http.StatusBadRequest)
-			return
+			})
 		}
 	}
 
@@ -342,44 +299,35 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		Delegator:   delegatorBytes,
 	})
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToEncodeTransaction, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToEncodeTransaction, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
-	response := &types.ConstructionPayloadsResponse{
+	return &types.ConstructionPayloadsResponse{
 		UnsignedTransaction: fmt.Sprintf("0x%s", hex.EncodeToString(unsignedTx)),
 		Payloads:            payloads,
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // ConstructionParse parses a transaction
-func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionParseRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *ConstructionService) ConstructionParse(
+	ctx context.Context,
+	req *types.ConstructionParseRequest,
+) (*types.ConstructionParseResponse, *types.Error) {
 	// Decode transaction
-	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(request.Transaction)
+	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.Transaction)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)
 	}
 
 	// Use common parsing function
-	meshTx, operations, signers, err := c.encoder.ParseTransactionFromBytes(txBytes, request.Signed)
+	meshTx, operations, signers, err := c.encoder.ParseTransactionFromBytes(txBytes, req.Signed)
 	if err != nil {
-		if request.Signed {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToDecodeTransaction), http.StatusBadRequest)
-		} else {
-			c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToDecodeUnsignedTransaction), http.StatusBadRequest)
+		if req.Signed {
+			return nil, meshcommon.GetError(meshcommon.ErrFailedToDecodeTransaction)
 		}
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToDecodeUnsignedTransaction)
 	}
 
 	// Calculate gas price based on transaction type
@@ -456,134 +404,110 @@ func (c *ConstructionService) ConstructionParse(w http.ResponseWriter, r *http.R
 	}
 
 	// Only include signers for signed transactions
-	if request.Signed {
+	if req.Signed {
 		response.AccountIdentifierSigners = signers
 	}
 
-	c.responseHandler.WriteJSONResponse(w, response)
+	return response, nil
 }
 
 // ConstructionCombine combines signed transactions
-func (c *ConstructionService) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionCombineRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
-	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(request.UnsignedTransaction)
+func (c *ConstructionService) ConstructionCombine(
+	ctx context.Context,
+	req *types.ConstructionCombineRequest,
+) (*types.ConstructionCombineResponse, *types.Error) {
+	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.UnsignedTransaction)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidUnsignedTransactionParameter), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidUnsignedTransactionParameter)
 	}
 
 	// Decode unsigned transaction using unified method
 	meshTx, err := c.encoder.DecodeUnsignedTransaction(txBytes)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToDecodeUnsignedTransaction), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToDecodeUnsignedTransaction)
 	}
 
 	// Apply signatures to Mesh transaction
-	if len(request.Signatures) == 2 {
+	if len(req.Signatures) == 2 {
 		// VIP191 Fee Delegation with two signatures
-		originSig := request.Signatures[0]
-		delegatorSig := request.Signatures[1]
+		originSig := req.Signatures[0]
+		delegatorSig := req.Signatures[1]
 
 		// Combine signatures for VIP191
 		combinedSig := append(originSig.Bytes, delegatorSig.Bytes...)
 		meshTx.Transaction = meshTx.WithSignature(combinedSig)
 
-	} else if len(request.Signatures) == 1 {
+	} else if len(req.Signatures) == 1 {
 		// Regular transaction: only origin signature
-		sig := request.Signatures[0]
+		sig := req.Signatures[0]
 		meshTx.Transaction = meshTx.WithSignature(sig.Bytes)
 	} else {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidNumberOfSignatures), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidNumberOfSignatures)
 	}
 
 	// Encode signed Mesh transaction
 	signedTxBytes, err := c.encoder.EncodeTransaction(meshTx)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToEncodeSignedTransaction), http.StatusInternalServerError)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToEncodeSignedTransaction)
 	}
 
-	response := &types.ConstructionCombineResponse{
+	return &types.ConstructionCombineResponse{
 		SignedTransaction: fmt.Sprintf("0x%s", hex.EncodeToString(signedTxBytes)),
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // ConstructionHash gets the hash of a transaction
-func (c *ConstructionService) ConstructionHash(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionHashRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
-	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(request.SignedTransaction)
+func (c *ConstructionService) ConstructionHash(
+	ctx context.Context,
+	req *types.ConstructionHashRequest,
+) (*types.TransactionIdentifierResponse, *types.Error) {
+	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.SignedTransaction)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)
 	}
 
 	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToDecodeMeshTransaction, map[string]any{"error": err.Error()}), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToDecodeMeshTransaction, map[string]any{"error": err.Error()})
 	}
 
-	response := &types.TransactionIdentifierResponse{
+	return &types.TransactionIdentifierResponse{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: meshTx.Transaction.ID().String(),
 		},
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // ConstructionSubmit submits a transaction to the network
-func (c *ConstructionService) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
-	var request types.ConstructionSubmitRequest
-	if err := c.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (c *ConstructionService) ConstructionSubmit(
+	ctx context.Context,
+	req *types.ConstructionSubmitRequest,
+) (*types.TransactionIdentifierResponse, *types.Error) {
 	// Decode transaction using our utility method
-	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(request.SignedTransaction)
+	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.SignedTransaction)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)
 	}
 
 	// Decode Mesh transaction to get the native Thor transaction
 	meshTx, err := c.encoder.DecodeSignedTransaction(txBytes)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToDecodeMeshTransaction), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToDecodeMeshTransaction)
 	}
 
 	// Submit the native Thor transaction to VeChain network
 	txID, err := c.vechainClient.SubmitTransaction(meshTx.Transaction)
 	if err != nil {
-		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToSubmitTransaction, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrFailedToSubmitTransaction, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
-	response := &types.TransactionIdentifierResponse{
+	return &types.TransactionIdentifierResponse{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: txID,
 		},
-	}
-
-	c.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // getBasicTransactionInfo gets basic transaction information from the network
@@ -723,16 +647,15 @@ func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, r
 
 // createOriginPayload creates the origin signing payload
 func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, publicKey *types.PublicKey) (*types.SigningPayload, error) {
-	originPubKey, err := crypto.DecompressPubkey(publicKey.Bytes)
+	originAddress, err := c.bytesHandler.ComputeAddress(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin public key: %w", err)
 	}
-	originAddress := crypto.PubkeyToAddress(*originPubKey)
 
 	hash := vechainTx.SigningHash()
 	return &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: strings.ToLower(originAddress.Hex()),
+			Address: originAddress,
 		},
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,
@@ -741,19 +664,17 @@ func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, pub
 
 // createDelegatorPayload creates the delegator signing payload
 func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, publicKeys []*types.PublicKey) (*types.SigningPayload, error) {
-	delegatorAddr, err := crypto.DecompressPubkey(publicKeys[1].Bytes)
+	delegatorAddress, err := c.bytesHandler.ComputeAddress(publicKeys[1])
 	if err != nil {
 		return nil, fmt.Errorf("invalid delegator public key: %w", err)
 	}
-	delegatorAddress := crypto.PubkeyToAddress(*delegatorAddr)
 
 	// Create hash for delegator signing
-	originAddr, err := crypto.DecompressPubkey(publicKeys[0].Bytes)
+	originAddress, err := c.bytesHandler.ComputeAddress(publicKeys[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin public key: %w", err)
 	}
-	originAddress := crypto.PubkeyToAddress(*originAddr)
-	thorOriginAddr, err := thor.ParseAddress(originAddress.Hex())
+	thorOriginAddr, err := thor.ParseAddress(originAddress)
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin address: %w", err)
 	}
@@ -761,7 +682,7 @@ func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, 
 
 	return &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: strings.ToLower(delegatorAddress.Hex()),
+			Address: delegatorAddress,
 		},
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,

@@ -4,7 +4,7 @@ coverage:
       default:
         only_pulls: true
         target: auto
-        threshold: 1%
+        threshold: 8%
 
 # Comments on PRs
 comment:

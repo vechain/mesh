@@ -1,17 +1,14 @@
 package services
 
 import (
-	"encoding/json"
+	"context"
 	"math/big"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
 	meshconfig "github.com/vechain/mesh/config"
-	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
@@ -27,8 +24,8 @@ func createMockCallServiceWithClient(client *meshthor.MockVeChainClient) *CallSe
 	return NewCallService(client, config)
 }
 
-func createTestCallRequest(method string, params map[string]any) types.CallRequest {
-	return types.CallRequest{
+func createTestCallRequest(method string, params map[string]any) *types.CallRequest {
+	return &types.CallRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "solo",
@@ -45,13 +42,11 @@ func TestCallService_Call_UnsupportedMethod(t *testing.T) {
 		"test": "value",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for unsupported method")
 	}
 }
 
@@ -85,23 +80,15 @@ func TestCallService_Call_ValidInspectClauses(t *testing.T) {
 		"blockRef":   "0x00000000851caf3c",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Call() status code = %v, want %v. Body: %s", w.Code, http.StatusOK, w.Body.String())
-		return
-	}
-
-	var response types.CallResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("Call() error = %v", err)
 	}
 
 	if response.Result == nil {
-		t.Errorf("Call() result is nil")
+		t.Error("Call() result is nil")
 		return
 	}
 
@@ -111,9 +98,9 @@ func TestCallService_Call_ValidInspectClauses(t *testing.T) {
 	}
 
 	// Verify results
-	results, ok := response.Result["results"].([]any)
+	results, ok := response.Result["results"].([]map[string]any)
 	if !ok {
-		t.Errorf("Call() result['results'] is not an array")
+		t.Error("Call() result['results'] is not an array")
 		return
 	}
 
@@ -123,8 +110,8 @@ func TestCallService_Call_ValidInspectClauses(t *testing.T) {
 	}
 
 	// Verify first result
-	result := results[0].(map[string]any)
-	if gasUsed, ok := result["gasUsed"].(float64); !ok || gasUsed != 21000 {
+	result := results[0]
+	if gasUsed, ok := result["gasUsed"].(uint64); !ok || gasUsed != 21000 {
 		t.Errorf("Call() result gasUsed = %v, want 21000", gasUsed)
 	}
 
@@ -141,13 +128,11 @@ func TestCallService_Call_InvalidParameters(t *testing.T) {
 		"gas": float64(50000),
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for missing clauses")
 	}
 }
 
@@ -163,13 +148,11 @@ func TestCallService_Call_InvalidClauseFormat(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid clause format")
 	}
 }
 
@@ -199,13 +182,11 @@ func TestCallService_Call_WithRevision(t *testing.T) {
 		"revision": "finalized",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Call() status code = %v, want %v. Body: %s", w.Code, http.StatusOK, w.Body.String())
+	if err != nil {
+		t.Fatalf("Call() error = %v", err)
 	}
 }
 
@@ -234,26 +215,11 @@ func TestCallService_Call_WithNilToAddress(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Call() status code = %v, want %v. Body: %s", w.Code, http.StatusOK, w.Body.String())
-	}
-}
-
-func TestCallService_Call_InvalidRequestBody(t *testing.T) {
-	service := createMockCallService()
-
-	req := httptest.NewRequest("POST", meshcommon.CallEndpoint, nil)
-	w := httptest.NewRecorder()
-
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err != nil {
+		t.Fatalf("Call() error = %v", err)
 	}
 }
 
@@ -289,13 +255,11 @@ func TestCallService_Call_WithOptionalParameters(t *testing.T) {
 		"blockRef":   "0x00000000851caf3c",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Call() status code = %v, want %v. Body: %s", w.Code, http.StatusOK, w.Body.String())
+	if err != nil {
+		t.Fatalf("Call() error = %v", err)
 	}
 }
 
@@ -312,13 +276,11 @@ func TestCallService_Call_InvalidAddress(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid address")
 	}
 }
 
@@ -376,61 +338,52 @@ func TestCallService_Call_WithEventsAndTransfers(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Call() status code = %v, want %v. Body: %s", w.Code, http.StatusOK, w.Body.String())
-		return
-	}
-
-	var response types.CallResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("Call() error = %v", err)
 	}
 
 	// Verify results with events and transfers
-	results, ok := response.Result["results"].([]any)
+	results, ok := response.Result["results"].([]map[string]any)
 	if !ok || len(results) == 0 {
-		t.Fatalf("Call() result['results'] is not an array or is empty")
+		t.Fatal("Call() result['results'] is not an array or is empty")
 	}
 
-	result := results[0].(map[string]any)
-
+	result := results[0]
 	// Verify events
-	events, ok := result["events"].([]any)
+	events, ok := result["events"].([]map[string]any)
 	if !ok {
-		t.Errorf("Call() result['events'] is not an array")
+		t.Error("Call() result['events'] is not an array")
 	} else if len(events) != 1 {
 		t.Errorf("Call() events length = %v, want 1", len(events))
 	} else {
-		event := events[0].(map[string]any)
+		event := events[0]
 		if address, ok := event["address"].(string); !ok || address == "" {
-			t.Errorf("Call() event address is invalid")
+			t.Error("Call() event address is invalid")
 		}
-		if topics, ok := event["topics"].([]any); !ok || len(topics) != 2 {
+		if topics, ok := event["topics"].([]string); !ok || len(topics) != 2 {
 			t.Errorf("Call() event topics length = %v, want 2", len(topics))
 		}
 	}
 
 	// Verify transfers
-	transfers, ok := result["transfers"].([]any)
+	transfers, ok := result["transfers"].([]map[string]any)
 	if !ok {
-		t.Errorf("Call() result['transfers'] is not an array")
+		t.Error("Call() result['transfers'] is not an array")
 	} else if len(transfers) != 1 {
 		t.Errorf("Call() transfers length = %v, want 1", len(transfers))
 	} else {
-		transfer := transfers[0].(map[string]any)
+		transfer := transfers[0]
 		if sender, ok := transfer["sender"].(string); !ok || sender == "" {
-			t.Errorf("Call() transfer sender is invalid")
+			t.Error("Call() transfer sender is invalid")
 		}
 		if recipient, ok := transfer["recipient"].(string); !ok || recipient == "" {
-			t.Errorf("Call() transfer recipient is invalid")
+			t.Error("Call() transfer recipient is invalid")
 		}
 		if amount, ok := transfer["amount"].(string); !ok || amount == "" {
-			t.Errorf("Call() transfer amount is invalid")
+			t.Error("Call() transfer amount is invalid")
 		}
 	}
 }
@@ -443,13 +396,11 @@ func TestCallService_Call_InvalidClausesNotArray(t *testing.T) {
 		"clauses": "not-an-array",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for clauses not being an array")
 	}
 }
 
@@ -462,13 +413,11 @@ func TestCallService_Call_InvalidClauseNotObject(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for clause not being an object")
 	}
 }
 
@@ -485,13 +434,11 @@ func TestCallService_Call_InvalidToAddress(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid to address type")
 	}
 }
 
@@ -507,13 +454,11 @@ func TestCallService_Call_MissingValue(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for missing value")
 	}
 }
 
@@ -530,13 +475,11 @@ func TestCallService_Call_InvalidValue(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid value")
 	}
 }
 
@@ -552,13 +495,11 @@ func TestCallService_Call_MissingData(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for missing data")
 	}
 }
 
@@ -576,13 +517,11 @@ func TestCallService_Call_InvalidGasString(t *testing.T) {
 		"gas": "invalid-number",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid gas")
 	}
 }
 
@@ -600,13 +539,11 @@ func TestCallService_Call_InvalidGasPrice(t *testing.T) {
 		"gasPrice": "invalid-hex",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid gas price")
 	}
 }
 
@@ -624,13 +561,11 @@ func TestCallService_Call_InvalidProvedWork(t *testing.T) {
 		"provedWork": "invalid-hex",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid proved work")
 	}
 }
 
@@ -648,13 +583,11 @@ func TestCallService_Call_InvalidCallerAddress(t *testing.T) {
 		"caller": "invalid-address",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid caller address")
 	}
 }
 
@@ -672,13 +605,11 @@ func TestCallService_Call_InvalidGasPayerAddress(t *testing.T) {
 		"gasPayer": "short",
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if err == nil {
+		t.Error("Call() expected error for invalid gas payer address")
 	}
 }
 
@@ -708,27 +639,19 @@ func TestCallService_Call_WithRevertedTransaction(t *testing.T) {
 		},
 	})
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.CallEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Call(ctx, request)
 
-	service.Call(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Call() status code = %v, want %v", w.Code, http.StatusOK)
-		return
+	if err != nil {
+		t.Fatalf("Call() error = %v", err)
 	}
 
-	var response types.CallResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	results, ok := response.Result["results"].([]any)
+	results, ok := response.Result["results"].([]map[string]any)
 	if !ok || len(results) == 0 {
-		t.Fatalf("Call() result['results'] is not an array or is empty")
+		t.Fatal("Call() result['results'] is not an array or is empty")
 	}
 
-	result := results[0].(map[string]any)
+	result := results[0]
 	if reverted, ok := result["reverted"].(bool); !ok || !reverted {
 		t.Errorf("Call() result reverted = %v, want true", reverted)
 	}

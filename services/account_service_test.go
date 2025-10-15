@@ -1,17 +1,13 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
-
-	meshcommon "github.com/vechain/mesh/common"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
+	meshcommon "github.com/vechain/mesh/common"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
@@ -31,48 +27,32 @@ func TestNewAccountService(t *testing.T) {
 	}
 }
 
-func TestAccountService_AccountBalance_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewAccountService(mockClient)
-
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.AccountBalanceEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call AccountBalance
-	service.AccountBalance(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
+// Request body validation is handled by SDK asserter, not by individual service tests
 
 func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 	tests := []struct {
 		name       string
 		currencies []*types.Currency
-		wantStatus int
+		wantError  bool
 	}{
 		{
 			name:       "no specific currencies",
 			currencies: nil,
-			wantStatus: http.StatusOK,
+			wantError:  false,
 		},
 		{
 			name: "VET currency",
 			currencies: []*types.Currency{
 				{Symbol: "VET", Decimals: 18},
 			},
-			wantStatus: http.StatusOK,
+			wantError: false,
 		},
 		{
 			name: "invalid currency - empty symbol",
 			currencies: []*types.Currency{
 				{Symbol: "", Decimals: 18},
 			},
-			wantStatus: http.StatusBadRequest,
+			wantError: true,
 		},
 	}
 
@@ -81,7 +61,7 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 			mockClient := meshthor.NewMockVeChainClient()
 			service := NewAccountService(mockClient)
 
-			request := types.AccountBalanceRequest{
+			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
@@ -92,19 +72,16 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 				Currencies: tt.currencies,
 			}
 
-			req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
-			w := httptest.NewRecorder()
+			ctx := context.Background()
+			response, err := service.AccountBalance(ctx, request)
 
-			service.AccountBalance(w, req)
-
-			if w.Code != tt.wantStatus {
-				t.Errorf("AccountBalance() status code = %v, want %v", w.Code, tt.wantStatus)
-			}
-
-			if tt.wantStatus == http.StatusOK {
-				var response types.AccountBalanceResponse
-				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-					t.Fatalf("Failed to unmarshal response: %v", err)
+			if tt.wantError {
+				if err == nil {
+					t.Error("AccountBalance() expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("AccountBalance() error = %v", err)
 				}
 
 				if response.Balances == nil {
@@ -239,7 +216,7 @@ func TestAccountService_AccountBalance_WithCurrenciesAndBlocks(t *testing.T) {
 			mockClient := meshthor.NewMockVeChainClient()
 			service := NewAccountService(mockClient)
 
-			request := types.AccountBalanceRequest{
+			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
@@ -251,18 +228,11 @@ func TestAccountService_AccountBalance_WithCurrenciesAndBlocks(t *testing.T) {
 				BlockIdentifier: tt.blockIdentifier,
 			}
 
-			req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
-			w := httptest.NewRecorder()
+			ctx := context.Background()
+			response, err := service.AccountBalance(ctx, request)
 
-			service.AccountBalance(w, req)
-
-			if w.Code != http.StatusOK {
-				t.Errorf("AccountBalance() status code = %v, want %v", w.Code, http.StatusOK)
-			}
-
-			var response types.AccountBalanceResponse
-			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-				t.Fatalf("Failed to unmarshal response: %v", err)
+			if err != nil {
+				t.Fatalf("AccountBalance() error = %v", err)
 			}
 
 			if response.Balances == nil {
@@ -280,7 +250,7 @@ func TestAccountService_AccountBalance_WithVIP180Token_Success(t *testing.T) {
 	mockClient.SetMockCallResult("0x0000000000000000000000000000000000000000000000000de0b6b3a7640000") // 1000000000000000000 (1 token)
 
 	// Create request with VIP180 token currency
-	request := types.AccountBalanceRequest{
+	request := &types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
@@ -299,19 +269,11 @@ func TestAccountService_AccountBalance_WithVIP180Token_Success(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.AccountBalance(ctx, request)
 
-	service.AccountBalance(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("AccountBalance() status = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	var response types.AccountBalanceResponse
-	err := json.Unmarshal(w.Body.Bytes(), &response)
 	if err != nil {
-		t.Errorf("AccountBalance() failed to unmarshal response: %v", err)
+		t.Fatalf("AccountBalance() error = %v", err)
 	}
 
 	if len(response.Balances) != 1 {
@@ -379,21 +341,21 @@ func TestAccountService_AccountBalance_WithBlockIdentifiers(t *testing.T) {
 	tests := []struct {
 		name            string
 		blockIdentifier *types.PartialBlockIdentifier
-		wantStatus      int
+		wantError       bool
 	}{
 		{
 			name: "with block hash",
 			blockIdentifier: &types.PartialBlockIdentifier{
 				Hash: func() *string { s := "0x00003abbf8435573e0c50fed42647160eabbe140a87efbe0ffab8ef895b7686e"; return &s }(),
 			},
-			wantStatus: http.StatusOK,
+			wantError: false,
 		},
 		{
 			name:            "with empty block identifier - should error",
 			blockIdentifier: &types.PartialBlockIdentifier{
 				// No Hash and no Index - should trigger error
 			},
-			wantStatus: http.StatusBadRequest,
+			wantError: true,
 		},
 	}
 
@@ -402,7 +364,7 @@ func TestAccountService_AccountBalance_WithBlockIdentifiers(t *testing.T) {
 			mockClient := meshthor.NewMockVeChainClient()
 			service := NewAccountService(mockClient)
 
-			request := types.AccountBalanceRequest{
+			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
@@ -413,28 +375,20 @@ func TestAccountService_AccountBalance_WithBlockIdentifiers(t *testing.T) {
 				BlockIdentifier: tt.blockIdentifier,
 			}
 
-			req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
-			w := httptest.NewRecorder()
+			ctx := context.Background()
+			response, err := service.AccountBalance(ctx, request)
 
-			service.AccountBalance(w, req)
-
-			if w.Code != tt.wantStatus {
-				t.Errorf("AccountBalance() status code = %v, want %v. Body: %s", w.Code, tt.wantStatus, w.Body.String())
-			}
-
-			if tt.wantStatus == http.StatusOK {
-				var response types.AccountBalanceResponse
-				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-					t.Fatalf("Failed to unmarshal response: %v", err)
+			if tt.wantError {
+				if err == nil {
+					t.Error("AccountBalance() expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("AccountBalance() error = %v", err)
 				}
 
 				if response.Balances == nil {
 					t.Errorf("AccountBalance() response.Balances is nil")
-				}
-			} else {
-				bodyStr := w.Body.String()
-				if bodyStr == "" {
-					t.Errorf("Expected error response body, got empty")
 				}
 			}
 		})
@@ -447,7 +401,6 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 		setupMock       func(*meshthor.MockVeChainClient)
 		currencies      []*types.Currency
 		blockIdentifier *types.PartialBlockIdentifier
-		wantStatus      int
 	}{
 		{
 			name: "get balance error",
@@ -459,7 +412,6 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 				{Symbol: "VET", Decimals: 18},
 			},
 			blockIdentifier: nil,
-			wantStatus:      http.StatusInternalServerError,
 		},
 		{
 			name: "get block error",
@@ -481,7 +433,6 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 			blockIdentifier: &types.PartialBlockIdentifier{
 				Index: func() *int64 { i := int64(999999); return &i }(),
 			},
-			wantStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -491,7 +442,7 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 			tt.setupMock(mockClient)
 			service := NewAccountService(mockClient)
 
-			request := types.AccountBalanceRequest{
+			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
 					Network:    "test",
@@ -503,18 +454,11 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 				BlockIdentifier: tt.blockIdentifier,
 			}
 
-			req := meshtests.CreateRequestWithContext("POST", meshcommon.AccountBalanceEndpoint, request)
-			w := httptest.NewRecorder()
+			ctx := context.Background()
+			_, err := service.AccountBalance(ctx, request)
 
-			service.AccountBalance(w, req)
-
-			if w.Code != tt.wantStatus {
-				t.Errorf("AccountBalance() status code = %v, want %v. Body: %s", w.Code, tt.wantStatus, w.Body.String())
-			}
-
-			bodyStr := w.Body.String()
-			if bodyStr == "" {
-				t.Errorf("Expected error response body, got empty")
+			if err == nil {
+				t.Error("AccountBalance() expected error but got none")
 			}
 		})
 	}

@@ -1,16 +1,14 @@
 package services
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/stretchr/testify/assert"
 	meshcommon "github.com/vechain/mesh/common"
-	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
@@ -66,28 +64,17 @@ func TestSearchService_SearchTransactions_Success(t *testing.T) {
 	searchService := NewSearchService(mockClient)
 
 	// Create request
-	request := types.SearchTransactionsRequest{
+	request := &types.SearchTransactionsRequest{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 		},
 	}
 
-	// Create HTTP request
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := searchService.SearchTransactions(ctx, request)
 
-	// Call the handler
-	searchService.SearchTransactions(w, req)
-
-	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
-	}
-
-	// Parse response
-	var response types.SearchTransactionsResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Errorf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("SearchTransactions() error = %v", err)
 	}
 
 	// Verify response structure
@@ -108,27 +95,6 @@ func TestSearchService_SearchTransactions_Success(t *testing.T) {
 	}
 }
 
-func TestSearchService_SearchTransactions_InvalidRequestBody(t *testing.T) {
-	// Create mock client
-	mockClient := meshthor.NewMockVeChainClient()
-
-	// Create search service
-	searchService := NewSearchService(mockClient)
-
-	// Create invalid JSON request
-	req := httptest.NewRequest("POST", meshcommon.SearchTransactionsEndpoint, nil)
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call the handler
-	searchService.SearchTransactions(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
-	}
-}
-
 func TestSearchService_SearchTransactions_MissingTransactionIdentifier(t *testing.T) {
 	// Create mock client
 	mockClient := meshthor.NewMockVeChainClient()
@@ -137,18 +103,15 @@ func TestSearchService_SearchTransactions_MissingTransactionIdentifier(t *testin
 	searchService := NewSearchService(mockClient)
 
 	// Create request without transaction identifier
-	request := types.SearchTransactionsRequest{}
+	request := &types.SearchTransactionsRequest{
+		TransactionIdentifier: nil,
+	}
 
-	// Create HTTP request
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := searchService.SearchTransactions(ctx, request)
 
-	// Call the handler
-	searchService.SearchTransactions(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if err == nil {
+		t.Error("SearchTransactions() expected error for missing transaction identifier")
 	}
 }
 
@@ -160,77 +123,44 @@ func TestSearchService_SearchTransactions_EmptyTransactionHash(t *testing.T) {
 	searchService := NewSearchService(mockClient)
 
 	// Create request with empty transaction hash
-	request := types.SearchTransactionsRequest{
+	request := &types.SearchTransactionsRequest{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "",
 		},
 	}
 
-	// Create HTTP request
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := searchService.SearchTransactions(ctx, request)
 
-	// Call the handler
-	searchService.SearchTransactions(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if err == nil {
+		t.Error("SearchTransactions() expected error for empty transaction hash")
 	}
 }
 
 func TestSearchService_SearchTransactions_TransactionNotFound(t *testing.T) {
-	// Create mock client with error
+	// Create mock client
 	mockClient := meshthor.NewMockVeChainClient()
-	mockClient.SetMockError(assert.AnError)
+	mockClient.SetMockError(errors.New("transaction not found"))
 
 	// Create search service
 	searchService := NewSearchService(mockClient)
 
 	// Create request
-	request := types.SearchTransactionsRequest{
+	request := &types.SearchTransactionsRequest{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 		},
 	}
 
-	// Create HTTP request
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := searchService.SearchTransactions(ctx, request)
 
-	// Call the handler
-	searchService.SearchTransactions(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if response != nil {
+		t.Errorf("Expected nil response, got %v", response)
 	}
-}
-
-func TestSearchService_SearchTransactions_ThorClientError(t *testing.T) {
-	// Create mock client with error
-	mockClient := meshthor.NewMockVeChainClient()
-	mockClient.SetMockError(assert.AnError)
-
-	// Create search service
-	searchService := NewSearchService(mockClient)
-
-	// Create request
-	request := types.SearchTransactionsRequest{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-		},
+	if err == nil {
+		t.Error("SearchTransactions() expected error for transaction not found")
 	}
 
-	// Create HTTP request
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.SearchTransactionsEndpoint, request)
-	w := httptest.NewRecorder()
-
-	// Call the handler
-	searchService.SearchTransactions(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
-	}
+	assert.Equal(t, meshcommon.GetError(meshcommon.ErrTransactionNotFound), err)
 }

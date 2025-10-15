@@ -13,14 +13,19 @@ func TestGetError(t *testing.T) {
 		expected *types.Error
 	}{
 		{
-			name:     "valid error code",
+			name:     "valid error code - InternalServerError",
 			code:     ErrInternalServerError,
 			expected: &types.Error{Code: ErrInternalServerError, Message: "Internal server error.", Retriable: true},
 		},
 		{
-			name:     "another valid error code",
-			code:     ErrInvalidPublicKeyParameter,
-			expected: &types.Error{Code: ErrInvalidPublicKeyParameter, Message: "Invalid public key parameter.", Retriable: false},
+			name:     "valid error code - InvalidRequestParameters",
+			code:     ErrInvalidRequestParameters,
+			expected: &types.Error{Code: ErrInvalidRequestParameters, Message: "Invalid request parameters.", Retriable: false},
+		},
+		{
+			name:     "valid error code - PublicKeyRequired",
+			code:     ErrPublicKeyRequired,
+			expected: &types.Error{Code: ErrPublicKeyRequired, Message: "Public key is required.", Retriable: false},
 		},
 		{
 			name:     "non-existent error code",
@@ -110,22 +115,22 @@ func TestGetErrorWithMetadata(t *testing.T) {
 		},
 		{
 			name:     "valid error with nil metadata",
-			code:     ErrInvalidPublicKeyParameter,
+			code:     ErrInvalidRequestParameters,
 			metadata: nil,
 			expected: &types.Error{
-				Code:      ErrInvalidPublicKeyParameter,
-				Message:   "Invalid public key parameter.",
+				Code:      ErrInvalidRequestParameters,
+				Message:   "Invalid request parameters.",
 				Retriable: false,
 				Details:   nil,
 			},
 		},
 		{
 			name:     "valid error with empty metadata",
-			code:     ErrInvalidPublicKeyParameter,
+			code:     ErrPublicKeyRequired,
 			metadata: map[string]any{},
 			expected: &types.Error{
-				Code:      ErrInvalidPublicKeyParameter,
-				Message:   "Invalid public key parameter.",
+				Code:      ErrPublicKeyRequired,
+				Message:   "Public key is required.",
 				Retriable: false,
 				Details:   map[string]any{},
 			},
@@ -193,64 +198,39 @@ func TestErrorConstants(t *testing.T) {
 
 	allCodes := []int{
 		ErrInternalServerError,
-		ErrContractAddressNotFound,
-		ErrBlockIdentifierNotFound,
-		ErrTransactionIdentifierNotFound,
-		ErrInvalidPublicKeyParameter,
+		ErrInvalidRequestParameters,
+		ErrInvalidRequestBody,
+		ErrInvalidBlockIdentifierParameter,
+		ErrInvalidTransactionIdentifier,
+		ErrInvalidTransactionHash,
+		ErrInvalidCurrency,
+		ErrInvalidPublicKeyFormat,
+		ErrPublicKeyRequired,
+		ErrInvalidUnsignedTransactionParameter,
+		ErrInvalidTransactionHex,
 		ErrTransactionMultipleOrigins,
 		ErrTransactionOriginNotExist,
-		ErrTransactionMultipleDelegators,
 		ErrNoTransferOperation,
-		ErrUnregisteredTokenOperations,
-		ErrGettingBlockchainMetadata,
-		ErrInvalidSignedTransactionParameter,
-		ErrSubmittingRawTransaction,
-		ErrInvalidPreprocessRequest,
-		ErrInvalidOptionsArrayParameter,
-		ErrInvalidMetadataObjectParameter,
-		ErrUnableToDecodeTransactionParameter,
-		ErrInvalidRequestParameters,
-		ErrInvalidUnsignedTransactionParameter,
-		ErrInvalidCombineRequestParameters,
-		ErrInvalidBlocksRequestParameters,
-		ErrInvalidNetworkIdentifierParameter,
-		ErrInvalidAccountIdentifierParameter,
-		ErrInvalidBlockIdentifierParameter,
-		ErrAPIDoesNotSupportOfflineMode,
-		ErrContractNotCreatedAtBlockIdentifier,
-		ErrDelegatorPublicKeyNotSet,
-		ErrOperationAccountAndPublicKeyMismatch,
-		ErrOriginPublicKeyNotSet,
-		ErrInvalidCurrenciesParameter,
-		ErrInvalidRequestBody,
+		ErrOriginAddressMismatch,
+		ErrDelegatorAddressMismatch,
+		ErrInvalidNumberOfSignatures,
+		ErrFailedToDecodeTransaction,
+		ErrFailedToDecodeUnsignedTransaction,
+		ErrFailedToDecodeMeshTransaction,
+		ErrFailedToEncodeSignedTransaction,
+		ErrFailedToEncodeTransaction,
 		ErrFailedToGetBestBlock,
 		ErrFailedToGetGenesisBlock,
 		ErrFailedToGetSyncProgress,
 		ErrFailedToGetPeers,
 		ErrFailedToGetAccount,
-		ErrFailedToEncodeResponse,
-		ErrPublicKeyRequired,
-		ErrInvalidPublicKeyFormat,
-		ErrOriginAddressMismatch,
-		ErrDelegatorAddressMismatch,
-		ErrInvalidTransactionHex,
-		ErrFailedToDecodeTransaction,
-		ErrFailedToDecodeUnsignedTransaction,
-		ErrInvalidNumberOfSignatures,
-		ErrFailedToEncodeSignedTransaction,
-		ErrFailedToDecodeMeshTransaction,
-		ErrFailedToBuildThorTransaction,
-		ErrFailedToEncodeTransaction,
-		ErrFailedToSubmitTransaction,
+		ErrFailedToGetMempool,
+		ErrGettingBlockchainMetadata,
 		ErrBlockNotFound,
 		ErrTransactionNotFound,
-		ErrFailedToConvertVETBalance,
-		ErrFailedToConvertVTHOBalance,
 		ErrTransactionNotFoundInMempool,
-		ErrFailedToGetMempool,
-		ErrInvalidTransactionIdentifier,
-		ErrInvalidTransactionHash,
-		ErrInvalidCurrency,
+		ErrFailedToSubmitTransaction,
+		ErrAPIDoesNotSupportOfflineMode,
 	}
 
 	for _, code := range allCodes {
@@ -258,6 +238,11 @@ func TestErrorConstants(t *testing.T) {
 			t.Errorf("Duplicate error code found: %d", code)
 		}
 		errorCodes[code] = true
+	}
+
+	// Verify we have the expected number of unique codes
+	if len(errorCodes) != len(allCodes) {
+		t.Errorf("Expected %d unique error codes, got %d", len(allCodes), len(errorCodes))
 	}
 }
 

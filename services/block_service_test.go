@@ -1,17 +1,12 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	meshcommon "github.com/vechain/mesh/common"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshtests "github.com/vechain/mesh/tests"
+	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
@@ -26,30 +21,14 @@ func TestNewBlockService(t *testing.T) {
 	}
 }
 
-func TestBlockService_Block_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewBlockService(mockClient)
-
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.BlockEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call Block
-	service.Block(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Block() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
+// Request body validation is handled by SDK asserter
 
 func TestBlockService_Block_ValidRequest(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewBlockService(mockClient)
 
 	// Create request with valid block identifier
-	request := types.BlockRequest{
+	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
@@ -59,43 +38,15 @@ func TestBlockService_Block_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Block(ctx, request)
 
-	// Call Block
-	service.Block(w, req)
-
-	// Should succeed with mock client
-	if w.Code != http.StatusOK {
-		t.Errorf("Block() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Verify response structure
-	var response types.BlockResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("Block() error = %v", err)
 	}
 
 	if response.Block == nil {
 		t.Errorf("Block() response.Block is nil")
-	}
-}
-
-func TestBlockService_BlockTransaction_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewBlockService(mockClient)
-
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.BlockTransactionEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call BlockTransaction
-	service.BlockTransaction(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("BlockTransaction() status code = %v, want %v", w.Code, http.StatusBadRequest)
 	}
 }
 
@@ -104,7 +55,7 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	// Create request with valid block and transaction identifiers
-	request := types.BlockTransactionRequest{
+	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
@@ -117,21 +68,11 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockTransactionEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.BlockTransaction(ctx, request)
 
-	// Call BlockTransaction
-	service.BlockTransaction(w, req)
-
-	// Should succeed with mock client
-	if w.Code != http.StatusOK {
-		t.Errorf("BlockTransaction() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Verify response structure
-	var response types.BlockTransactionResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("BlockTransaction() error = %v", err)
 	}
 
 	if response.Transaction == nil {
@@ -144,7 +85,7 @@ func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	// Create request with hash identifier
-	request := types.BlockRequest{
+	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
@@ -154,21 +95,11 @@ func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Block(ctx, request)
 
-	// Call Block
-	service.Block(w, req)
-
-	// Should succeed with mock client
-	if w.Code != http.StatusOK {
-		t.Errorf("Block() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Verify response structure
-	var response types.BlockResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("Block() error = %v", err)
 	}
 
 	if response.Block == nil {
@@ -181,7 +112,7 @@ func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	// Create request with both index and hash identifiers
-	request := types.BlockRequest{
+	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
@@ -192,21 +123,11 @@ func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Block(ctx, request)
 
-	// Call Block
-	service.Block(w, req)
-
-	// Should succeed with mock client
-	if w.Code != http.StatusOK {
-		t.Errorf("Block() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Verify response structure
-	var response types.BlockResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("Block() error = %v", err)
 	}
 
 	if response.Block == nil {
@@ -218,22 +139,11 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewBlockService(mockClient)
 
-	t.Run("Invalid request body", func(t *testing.T) {
-		req := httptest.NewRequest("POST", meshcommon.BlockEndpoint, bytes.NewReader([]byte("invalid json")))
-		w := httptest.NewRecorder()
-
-		service.Block(w, req)
-
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Block() status = %v, want %v", w.Code, http.StatusBadRequest)
-		}
-	})
-
 	t.Run("Block not found", func(t *testing.T) {
 		// Set up mock to return error
 		mockClient.SetMockError(fmt.Errorf("block not found"))
 
-		request := types.BlockRequest{
+		request := &types.BlockRequest{
 			NetworkIdentifier: &types.NetworkIdentifier{
 				Blockchain: meshcommon.BlockchainName,
 				Network:    "test",
@@ -243,13 +153,11 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 			},
 		}
 
-		req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockEndpoint, request)
-		w := httptest.NewRecorder()
+		ctx := context.Background()
+		_, err := service.Block(ctx, request)
 
-		service.Block(w, req)
-
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Block() status = %v, want %v", w.Code, http.StatusBadRequest)
+		if err == nil {
+			t.Error("Block() expected error but got none")
 		}
 	})
 }
@@ -259,7 +167,7 @@ func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
 	service := NewBlockService(mockClient)
 
 	// Create request with hash block identifier
-	request := types.BlockTransactionRequest{
+	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
@@ -272,21 +180,11 @@ func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.BlockTransactionEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.BlockTransaction(ctx, request)
 
-	// Call BlockTransaction
-	service.BlockTransaction(w, req)
-
-	// Should succeed with mock client
-	if w.Code != http.StatusOK {
-		t.Errorf("BlockTransaction() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Verify response structure
-	var response types.BlockTransactionResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	if err != nil {
+		t.Fatalf("BlockTransaction() error = %v", err)
 	}
 
 	if response.Transaction == nil {
