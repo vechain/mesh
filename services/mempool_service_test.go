@@ -94,11 +94,11 @@ func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
 	response, err := service.MempoolTransaction(ctx, request)
 
 	// This should return an error because VeChain doesn't support this operation
-	if err == nil {
-		t.Error("MempoolTransaction() expected error for unsupported operation")
+	if err != nil {
+		t.Errorf("MempoolTransaction() should not return an error %v", err)
 	}
 
-	if response != nil {
-		t.Error("MempoolTransaction() should return nil response for unsupported operation")
+	if response == nil {
+		t.Error("MempoolTransaction() should not return nil response")
 	}
 }
