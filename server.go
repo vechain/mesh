@@ -93,7 +93,7 @@ func (v *VeChainMeshServer) Stop(ctx context.Context) error {
 
 // GetEndpoints returns a list of all registered endpoints
 func (v *VeChainMeshServer) GetEndpoints() ([]string, error) {
-	// Return standard Rosetta API endpoints
+	// Return standard Mesh API endpoints
 	endpoints := []string{
 		fmt.Sprintf("POST %s", meshcommon.NetworkListEndpoint),
 		fmt.Sprintf("POST %s", meshcommon.NetworkOptionsEndpoint),
