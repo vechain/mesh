@@ -1,11 +1,10 @@
 package services
 
 import (
-	"net/http"
+	"context"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
-	meshhttp "github.com/vechain/mesh/common/http"
 	meshoperations "github.com/vechain/mesh/common/operations"
 	meshtx "github.com/vechain/mesh/common/tx"
 	meshthor "github.com/vechain/mesh/thor"
@@ -13,52 +12,42 @@ import (
 
 // SearchService handles search API endpoints
 type SearchService struct {
-	requestHandler  *meshhttp.RequestHandler
-	responseHandler *meshhttp.ResponseHandler
-	vechainClient   meshthor.VeChainClientInterface
-	encoder         *meshtx.MeshTransactionEncoder
-	clauseParser    *meshoperations.ClauseParser
+	vechainClient meshthor.VeChainClientInterface
+	encoder       *meshtx.MeshTransactionEncoder
+	clauseParser  *meshoperations.ClauseParser
 }
 
 // NewSearchService creates a new search service
 func NewSearchService(vechainClient meshthor.VeChainClientInterface) *SearchService {
 	return &SearchService{
-		requestHandler:  meshhttp.NewRequestHandler(),
-		responseHandler: meshhttp.NewResponseHandler(),
-		vechainClient:   vechainClient,
-		encoder:         meshtx.NewMeshTransactionEncoder(vechainClient),
-		clauseParser:    meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
+		vechainClient: vechainClient,
+		encoder:       meshtx.NewMeshTransactionEncoder(vechainClient),
+		clauseParser:  meshoperations.NewClauseParser(vechainClient, meshoperations.NewOperationsExtractor()),
 	}
 }
 
 // SearchTransactions handles the /search/transactions endpoint
-func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Request) {
-	var request types.SearchTransactionsRequest
-	if err := s.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (s *SearchService) SearchTransactions(
+	ctx context.Context,
+	req *types.SearchTransactionsRequest,
+) (*types.SearchTransactionsResponse, *types.Error) {
 	// Validate transaction identifier
-	if request.TransactionIdentifier == nil || request.TransactionIdentifier.Hash == "" {
-		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestParameters), http.StatusBadRequest)
-		return
+	if req.TransactionIdentifier == nil || req.TransactionIdentifier.Hash == "" {
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidRequestParameters)
 	}
 
-	txID := request.TransactionIdentifier.Hash
+	txID := req.TransactionIdentifier.Hash
 
 	// Get transaction to get the clauses
 	tx, err := s.vechainClient.GetTransaction(txID)
 	if err != nil {
-		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrTransactionNotFound), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrTransactionNotFound)
 	}
 
 	// Get transaction receipt to check status
 	txReceipt, err := s.vechainClient.GetTransactionReceipt(txID)
 	if err != nil {
-		s.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrTransactionNotFound), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrTransactionNotFound)
 	}
 
 	// Create block identifier
@@ -80,10 +69,9 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 
 	operations, err := s.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, txReceipt.GasUsed, &status)
 	if err != nil {
-		s.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
 	// Create transaction identifier
@@ -104,10 +92,8 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Create response
-	response := types.SearchTransactionsResponse{
+	return &types.SearchTransactionsResponse{
 		Transactions: []*types.BlockTransaction{blockTransaction},
 		TotalCount:   1,
-	}
-
-	s.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }

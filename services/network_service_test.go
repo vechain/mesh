@@ -1,17 +1,13 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"context"
 	"testing"
 
 	meshcommon "github.com/vechain/mesh/common"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshconfig "github.com/vechain/mesh/config"
-	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -44,21 +40,15 @@ func TestNetworkService_NetworkList(t *testing.T) {
 	service := NewNetworkService(mockClient, config)
 
 	// Create request
-	req := httptest.NewRequest("POST", meshcommon.NetworkListEndpoint, nil)
-	w := httptest.NewRecorder()
+	req := &types.MetadataRequest{}
 
 	// Call NetworkList
-	service.NetworkList(w, req)
+	ctx := context.Background()
+	response, err := service.NetworkList(ctx, req)
 
-	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("NetworkList() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Parse response
-	var response types.NetworkListResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	// Check error
+	if err != nil {
+		t.Fatalf("NetworkList() returned error: %v", err)
 	}
 
 	// Verify response structure
@@ -81,105 +71,131 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewNetworkService(mockClient, config)
 
-	// Create request with proper body
-	request := types.NetworkRequest{
+	// Create request
+	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.NetworkOptionsEndpoint, request)
-	w := httptest.NewRecorder()
-
 	// Call NetworkOptions
-	service.NetworkOptions(w, req)
+	ctx := context.Background()
+	response, err := service.NetworkOptions(ctx, request)
 
-	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("NetworkOptions() status code = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	// Parse response
-	var response types.NetworkOptionsResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	// Check error
+	if err != nil {
+		t.Fatalf("NetworkOptions() returned error: %v", err)
 	}
 
 	// Verify response structure
 	if response.Version == nil {
-		t.Errorf("NetworkOptions() version is nil")
+		t.Errorf("NetworkOptions() Version is nil")
 	}
 
 	if response.Allow == nil {
-		t.Errorf("NetworkOptions() allow is nil")
+		t.Errorf("NetworkOptions() Allow is nil")
+	}
+
+	// Check operation types
+	expectedOpTypes := []string{
+		meshcommon.OperationTypeTransfer,
+		meshcommon.OperationTypeFee,
+		meshcommon.OperationTypeFeeDelegation,
+		meshcommon.OperationTypeContractCall,
+	}
+
+	if len(response.Allow.OperationTypes) != len(expectedOpTypes) {
+		t.Errorf("NetworkOptions() OperationTypes length = %v, want %v", len(response.Allow.OperationTypes), len(expectedOpTypes))
+	}
+
+	// Check operation statuses
+	expectedOpStatuses := 3 // None, Succeeded, Reverted
+	if len(response.Allow.OperationStatuses) != expectedOpStatuses {
+		t.Errorf("NetworkOptions() OperationStatuses length = %v, want %v", len(response.Allow.OperationStatuses), expectedOpStatuses)
+	}
+
+	// Check balance exemptions
+	if len(response.Allow.BalanceExemptions) == 0 {
+		t.Errorf("NetworkOptions() BalanceExemptions is empty")
+	}
+
+	// Verify VTHO has dynamic exemption
+	vthoExemption := response.Allow.BalanceExemptions[0]
+	if vthoExemption.Currency.Symbol != meshcommon.VTHOCurrency.Symbol {
+		t.Errorf("NetworkOptions() first exemption currency = %v, want %v", vthoExemption.Currency.Symbol, meshcommon.VTHOCurrency.Symbol)
+	}
+
+	if vthoExemption.ExemptionType != types.BalanceDynamic {
+		t.Errorf("NetworkOptions() VTHO exemption type = %v, want %v", vthoExemption.ExemptionType, types.BalanceDynamic)
+	}
+
+	// Check historical balance lookup
+	if !response.Allow.HistoricalBalanceLookup {
+		t.Errorf("NetworkOptions() HistoricalBalanceLookup = false, want true")
+	}
+
+	// Check call methods
+	if len(response.Allow.CallMethods) == 0 {
+		t.Errorf("NetworkOptions() CallMethods is empty")
 	}
 }
 
-func TestNetworkService_NetworkStatus_InvalidRequestBody(t *testing.T) {
-	config := &meshconfig.Config{}
+func TestNetworkService_NetworkStatus(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-	service := NewNetworkService(mockClient, config)
-
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.NetworkStatusEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call NetworkStatus
-	service.NetworkStatus(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("NetworkStatus() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 	config := &meshconfig.Config{}
-	mockClient := meshthor.NewMockVeChainClient()
 	service := NewNetworkService(mockClient, config)
 
 	// Create request
-	request := types.NetworkRequest{
+	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.NetworkStatusEndpoint, request)
-	w := httptest.NewRecorder()
-
 	// Call NetworkStatus
-	service.NetworkStatus(w, req)
+	ctx := context.Background()
+	response, err := service.NetworkStatus(ctx, request)
 
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("NetworkStatus() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
-	}
-}
-
-func TestGetTargetIndex(t *testing.T) {
-	peers := []Peer{
-		{
-			BestBlockID: "0000000000000001",
-		},
-		{
-			BestBlockID: "0000000000000002",
-		},
+	// Check error
+	if err != nil {
+		t.Fatalf("NetworkStatus() returned error: %v", err)
 	}
 
-	// Test with local index 0
-	index := getTargetIndex(0, peers)
-	if index != 2 {
-		t.Errorf("Expected index 2, got %d", index)
+	// Verify response structure
+	if response.CurrentBlockIdentifier == nil {
+		t.Errorf("NetworkStatus() CurrentBlockIdentifier is nil")
 	}
 
-	// Test with local index higher than peers
-	index = getTargetIndex(5, peers)
-	if index != 5 {
-		t.Errorf("Expected index 5, got %d", index)
+	if response.GenesisBlockIdentifier == nil {
+		t.Errorf("NetworkStatus() GenesisBlockIdentifier is nil")
+	}
+
+	if response.SyncStatus == nil {
+		t.Errorf("NetworkStatus() SyncStatus is nil")
+	}
+
+	// Check that genesis block exists (mock returns block 100 as genesis)
+	if response.GenesisBlockIdentifier.Index < 0 {
+		t.Errorf("NetworkStatus() GenesisBlockIdentifier.Index = %v, should be >= 0", response.GenesisBlockIdentifier.Index)
+	}
+
+	// Check sync status fields
+	if response.SyncStatus.CurrentIndex == nil {
+		t.Errorf("NetworkStatus() SyncStatus.CurrentIndex is nil")
+	}
+
+	if response.SyncStatus.TargetIndex == nil {
+		t.Errorf("NetworkStatus() SyncStatus.TargetIndex is nil")
+	}
+
+	if response.SyncStatus.Synced == nil {
+		t.Errorf("NetworkStatus() SyncStatus.Synced is nil")
+	}
+
+	// Check peers
+	if response.Peers == nil {
+		t.Errorf("NetworkStatus() Peers is nil")
 	}
 }

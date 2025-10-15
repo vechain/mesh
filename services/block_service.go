@@ -1,12 +1,11 @@
 package services
 
 import (
+	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
-	meshhttp "github.com/vechain/mesh/common/http"
 	meshtx "github.com/vechain/mesh/common/tx"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
@@ -14,142 +13,106 @@ import (
 
 // BlockService handles block API endpoints
 type BlockService struct {
-	requestHandler  *meshhttp.RequestHandler
-	responseHandler *meshhttp.ResponseHandler
-	vechainClient   meshthor.VeChainClientInterface
-	encoder         *meshtx.MeshTransactionEncoder
-	builder         *meshtx.TransactionBuilder
+	vechainClient meshthor.VeChainClientInterface
+	encoder       *meshtx.MeshTransactionEncoder
+	builder       *meshtx.TransactionBuilder
 }
 
 // NewBlockService creates a new block service
 func NewBlockService(vechainClient meshthor.VeChainClientInterface) *BlockService {
 	return &BlockService{
-		requestHandler:  meshhttp.NewRequestHandler(),
-		responseHandler: meshhttp.NewResponseHandler(),
-		vechainClient:   vechainClient,
-		encoder:         meshtx.NewMeshTransactionEncoder(vechainClient),
-		builder:         meshtx.NewTransactionBuilder(),
+		vechainClient: vechainClient,
+		encoder:       meshtx.NewMeshTransactionEncoder(vechainClient),
+		builder:       meshtx.NewTransactionBuilder(),
 	}
 }
 
 // Block gets block information
-func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
-	request, err := b.parseBlockRequest(r)
-	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
-		return
+func (b *BlockService) Block(
+	ctx context.Context,
+	req *types.BlockRequest,
+) (*types.BlockResponse, *types.Error) {
+	// Validate that a block identifier is provided
+	var revision any
+	if req.BlockIdentifier.Hash != nil && *req.BlockIdentifier.Hash != "" {
+		revision = *req.BlockIdentifier.Hash
+	} else if req.BlockIdentifier.Index != nil {
+		revision = *req.BlockIdentifier.Index
 	}
 
-	block, err := b.getBlockByPartialIdentifier(*request.BlockIdentifier)
+	if revision == nil {
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter)
+	}
+
+	block, err := b.getBlockByPartialIdentifier(*req.BlockIdentifier)
 	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	parent, err := b.getParentBlock(block)
 	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
-	response, err := b.buildBlockResponse(block, parent)
+	response, err := b.buildRosettaBlock(block, parent)
 	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
-	b.responseHandler.WriteJSONResponse(w, response)
+	return response, nil
 }
 
 // BlockTransaction gets a specific transaction from a block
-func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) {
-	request, err := b.parseBlockTransactionRequest(r)
-	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter), http.StatusBadRequest)
-		return
+func (b *BlockService) BlockTransaction(
+	ctx context.Context,
+	req *types.BlockTransactionRequest,
+) (*types.BlockTransactionResponse, *types.Error) {
+	// Validate that a block identifier is provided
+	var revision any
+	if req.BlockIdentifier.Hash != "" {
+		revision = req.BlockIdentifier.Hash
+	} else if req.BlockIdentifier.Index != 0 {
+		revision = req.BlockIdentifier.Index
 	}
 
-	block, err := b.getBlockByIdentifier(*request.BlockIdentifier)
+	if revision == nil {
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter)
+	}
+
+	// Validate that transaction identifier is provided
+	if req.TransactionIdentifier == nil || req.TransactionIdentifier.Hash == "" {
+		return nil, meshcommon.GetError(meshcommon.ErrInvalidRequestBody)
+	}
+
+	block, err := b.getBlockByIdentifier(*req.BlockIdentifier)
 	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
 			"error": err.Error(),
-		}), http.StatusBadRequest)
-		return
+		})
 	}
 
 	// Get the full transaction data from the block
-	foundTx, err := b.findTransactionInBlock(block, request.TransactionIdentifier.Hash)
+	foundTx, err := b.findTransactionInBlock(block, req.TransactionIdentifier.Hash)
 	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrTransactionNotFound, map[string]any{
-			"transaction_identifier_hash": request.TransactionIdentifier.Hash,
-		}), http.StatusBadRequest)
-		return
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrTransactionNotFound, map[string]any{
+			"transaction_identifier_hash": req.TransactionIdentifier.Hash,
+		})
 	}
 
 	response, err := b.buildBlockTransactionResponse(foundTx)
 	if err != nil {
-		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 			"error": err.Error(),
-		}), http.StatusInternalServerError)
-		return
+		})
 	}
 
-	b.responseHandler.WriteJSONResponse(w, response)
-}
-
-// parseBlockRequest parses and validates a block request
-func (b *BlockService) parseBlockRequest(r *http.Request) (*types.BlockRequest, error) {
-	var request types.BlockRequest
-	if err := b.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		return nil, fmt.Errorf("invalid request body")
-	}
-
-	// Validate that a block identifier is provided
-	var revision any
-	if request.BlockIdentifier.Hash != nil && *request.BlockIdentifier.Hash != "" {
-		revision = *request.BlockIdentifier.Hash
-	} else if request.BlockIdentifier.Index != nil {
-		revision = *request.BlockIdentifier.Index
-	}
-
-	if revision == nil {
-		return nil, fmt.Errorf("block identifier is required")
-	}
-
-	return &request, nil
-}
-
-// parseBlockTransactionRequest parses and validates a block transaction request
-func (b *BlockService) parseBlockTransactionRequest(r *http.Request) (*types.BlockTransactionRequest, error) {
-	var request types.BlockTransactionRequest
-	if err := b.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		return nil, fmt.Errorf("invalid request body")
-	}
-
-	// Validate that a block identifier is provided
-	var revision any
-	if request.BlockIdentifier.Hash != "" {
-		revision = request.BlockIdentifier.Hash
-	} else if request.BlockIdentifier.Index != 0 {
-		revision = request.BlockIdentifier.Index
-	}
-
-	if revision == nil {
-		return nil, fmt.Errorf("block identifier is required")
-	}
-
-	// Validate that transaction identifier is provided
-	if request.TransactionIdentifier == nil || request.TransactionIdentifier.Hash == "" {
-		return nil, fmt.Errorf("transaction identifier is required")
-	}
-
-	return &request, nil
+	return response, nil
 }
 
 // getBlockByIdentifier gets a block by its identifier (hash or index)
@@ -196,8 +159,8 @@ func (b *BlockService) findTransactionInBlock(block *api.JSONExpandedBlock, txHa
 	return nil, fmt.Errorf("transaction %s not found in block %s", txHash, block.ID.String())
 }
 
-// buildBlockResponse builds the response for a block request
-func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) (*types.BlockResponse, error) {
+// buildRosettaBlock builds the response for a block request
+func (b *BlockService) buildRosettaBlock(block, parent *api.JSONExpandedBlock) (*types.BlockResponse, error) {
 	blockIdentifier := &types.BlockIdentifier{
 		Index: int64(block.Number),
 		Hash:  block.ID.String(),

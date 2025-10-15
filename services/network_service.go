@@ -1,22 +1,19 @@
 package services
 
 import (
-	"net/http"
+	"context"
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
-	meshhttp "github.com/vechain/mesh/common/http"
 	meshconfig "github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
 // NetworkService handles network-related endpoints
 type NetworkService struct {
-	requestHandler  *meshhttp.RequestHandler
-	responseHandler *meshhttp.ResponseHandler
-	vechainClient   meshthor.VeChainClientInterface
-	config          *meshconfig.Config
+	vechainClient meshthor.VeChainClientInterface
+	config        *meshconfig.Config
 }
 
 // Peer represents a connected peer
@@ -28,61 +25,53 @@ type Peer struct {
 // NewNetworkService creates a new network service
 func NewNetworkService(vechainClient meshthor.VeChainClientInterface, config *meshconfig.Config) *NetworkService {
 	return &NetworkService{
-		requestHandler:  meshhttp.NewRequestHandler(),
-		responseHandler: meshhttp.NewResponseHandler(),
-		vechainClient:   vechainClient,
-		config:          config,
+		vechainClient: vechainClient,
+		config:        config,
 	}
 }
 
 // NetworkList returns the list of supported networks
-func (n *NetworkService) NetworkList(w http.ResponseWriter, r *http.Request) {
-	networks := &types.NetworkListResponse{
+func (n *NetworkService) NetworkList(
+	ctx context.Context,
+	req *types.MetadataRequest,
+) (*types.NetworkListResponse, *types.Error) {
+	return &types.NetworkListResponse{
 		NetworkIdentifiers: []*types.NetworkIdentifier{
 			{
 				Blockchain: meshcommon.BlockchainName,
 				Network:    n.config.GetNetwork(),
 			},
 		},
-	}
-
-	n.responseHandler.WriteJSONResponse(w, networks)
+	}, nil
 }
 
 // NetworkStatus returns the current network status
-func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
-	var request types.NetworkRequest
-	if err := n.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (n *NetworkService) NetworkStatus(
+	ctx context.Context,
+	req *types.NetworkRequest,
+) (*types.NetworkStatusResponse, *types.Error) {
 	// Get real VeChain data
 	bestBlock, err := n.vechainClient.GetBlock("best")
 	if err != nil {
-		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetBestBlock), http.StatusInternalServerError)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToGetBestBlock)
 	}
 
 	// Get genesis block
 	genesisBlock, err := n.vechainClient.GetBlock("0")
 	if err != nil {
-		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetGenesisBlock), http.StatusInternalServerError)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToGetGenesisBlock)
 	}
 
 	// Get sync progress
 	progress, err := n.vechainClient.GetSyncProgress()
 	if err != nil {
-		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetSyncProgress), http.StatusInternalServerError)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToGetSyncProgress)
 	}
 
 	// Get peers
 	peers, err := n.vechainClient.GetPeers()
 	if err != nil {
-		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrFailedToGetPeers), http.StatusInternalServerError)
-		return
+		return nil, meshcommon.GetError(meshcommon.ErrFailedToGetPeers)
 	}
 
 	// Convert peers to utils.Peer type
@@ -109,7 +98,7 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	stage := "block sync"
 	synced := progress == 1.0
 
-	status := &types.NetworkStatusResponse{
+	return &types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
 			Index: int64(bestBlock.Number),
 			Hash:  bestBlock.ID.String(),
@@ -126,19 +115,14 @@ func (n *NetworkService) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 			Synced:       &synced,
 		},
 		Peers: meshPeers,
-	}
-
-	n.responseHandler.WriteJSONResponse(w, status)
+	}, nil
 }
 
 // NetworkOptions returns network options and capabilities
-func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) {
-	var request types.NetworkRequest
-	if err := n.requestHandler.ParseJSONFromContext(r, &request); err != nil {
-		n.responseHandler.WriteErrorResponse(w, meshcommon.GetError(meshcommon.ErrInvalidRequestBody), http.StatusBadRequest)
-		return
-	}
-
+func (n *NetworkService) NetworkOptions(
+	ctx context.Context,
+	req *types.NetworkRequest,
+) (*types.NetworkOptionsResponse, *types.Error) {
 	// Define operation statuses
 	operationStatuses := []*types.OperationStatus{
 		{
@@ -189,12 +173,10 @@ func (n *NetworkService) NetworkOptions(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Create response
-	response := &types.NetworkOptionsResponse{
+	return &types.NetworkOptionsResponse{
 		Version: version,
 		Allow:   allow,
-	}
-
-	n.responseHandler.WriteJSONResponse(w, response)
+	}, nil
 }
 
 // getTargetIndex calculates the target index based on local index and peers

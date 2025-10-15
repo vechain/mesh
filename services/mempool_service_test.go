@@ -1,15 +1,11 @@
 package services
 
 import (
-	"bytes"
-	"net/http"
-	"net/http/httptest"
+	"context"
 	"testing"
 
-	meshcommon "github.com/vechain/mesh/common"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshtests "github.com/vechain/mesh/tests"
+	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -27,198 +23,83 @@ func TestNewMempoolService(t *testing.T) {
 	}
 }
 
-func TestMempoolService_Mempool_InvalidRequestBody(t *testing.T) {
+func TestMempoolService_Mempool(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewMempoolService(mockClient)
 
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.MempoolEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call Mempool
-	service.Mempool(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Mempool() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewMempoolService(mockClient)
-
-	// Create request
-	request := map[string]any{
-		"network_identifier": map[string]any{
-			"blockchain": meshcommon.BlockchainName,
-			"network":    "test",
-		},
-	}
-
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolEndpoint, request)
-	w := httptest.NewRecorder()
-
-	// Call Mempool
-	service.Mempool(w, req)
-
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("Mempool() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
-	}
-}
-
-func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewMempoolService(mockClient)
-
-	// Create request with origin filter
-	request := map[string]any{
-		"network_identifier": map[string]any{
-			"blockchain": meshcommon.BlockchainName,
-			"network":    "test",
-		},
-		"metadata": map[string]any{
-			"origin": meshtests.FirstSoloAddress,
-		},
-	}
-
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolEndpoint, request)
-	w := httptest.NewRecorder()
-
-	// Call Mempool
-	service.Mempool(w, req)
-
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("Mempool() status code = %v, want %v or %v", w.Code, http.StatusOK, http.StatusInternalServerError)
-	}
-}
-
-func TestMempoolService_MempoolTransaction_InvalidRequestBody(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewMempoolService(mockClient)
-
-	// Create request with invalid JSON
-	req := httptest.NewRequest("POST", meshcommon.MempoolTransactionEndpoint, bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Call MempoolTransaction
-	service.MempoolTransaction(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("MempoolTransaction() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestMempoolService_MempoolTransaction_MissingTransactionIdentifier(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewMempoolService(mockClient)
-
-	// Create request without transaction identifier
-	request := types.MempoolTransactionRequest{
+	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
-		// TransactionIdentifier is nil
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.Mempool(ctx, request)
 
-	// Call MempoolTransaction
-	service.MempoolTransaction(w, req)
+	if err != nil {
+		t.Fatalf("Mempool() returned error: %v", err)
+	}
 
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("MempoolTransaction() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if response == nil {
+		t.Fatal("Mempool() returned nil response")
+	}
+
+	if response.TransactionIdentifiers == nil {
+		t.Error("Mempool() TransactionIdentifiers is nil")
 	}
 }
 
-func TestMempoolService_MempoolTransaction_EmptyTransactionHash(t *testing.T) {
+func TestMempoolService_MempoolTransaction(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewMempoolService(mockClient)
 
-	// Create request with empty transaction hash
-	request := types.MempoolTransactionRequest{
+	// Valid transaction hash from mock
+	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "", // Empty hash
+			Hash: "0x8e5c7a4b971c2d028e3ba9ba7e56e78d1ff75ddb68d4a26a1c5e36aef70e1a3c",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	response, err := service.MempoolTransaction(ctx, request)
 
-	// Call MempoolTransaction
-	service.MempoolTransaction(w, req)
+	if err != nil {
+		t.Fatalf("MempoolTransaction() returned error: %v", err)
+	}
 
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("MempoolTransaction() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	if response == nil {
+		t.Fatal("MempoolTransaction() returned nil response")
+	}
+
+	if response.Transaction == nil {
+		t.Error("MempoolTransaction() Transaction is nil")
 	}
 }
 
-func TestMempoolService_MempoolTransaction_InvalidTransactionHash(t *testing.T) {
+func TestMempoolService_MempoolTransaction_InvalidHash(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewMempoolService(mockClient)
 
-	// Create request with invalid transaction hash
-	request := types.MempoolTransactionRequest{
+	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "invalid_hash", // Invalid hash format
+			Hash: "invalid",
 		},
 	}
 
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
-	w := httptest.NewRecorder()
+	ctx := context.Background()
+	_, err := service.MempoolTransaction(ctx, request)
 
-	// Call MempoolTransaction
-	service.MempoolTransaction(w, req)
-
-	// Check response
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("MempoolTransaction() status code = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewMempoolService(mockClient)
-
-	// Create request
-	request := types.MempoolTransactionRequest{
-		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
-		},
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-		},
-	}
-
-	req := meshtests.CreateRequestWithContext("POST", meshcommon.MempoolTransactionEndpoint, request)
-	w := httptest.NewRecorder()
-
-	// Call MempoolTransaction
-	service.MempoolTransaction(w, req)
-
-	// Note: This test will fail if the VeChain node is not running
-	// but it tests the request parsing and basic flow
-	if w.Code != http.StatusOK && w.Code != http.StatusNotFound && w.Code != http.StatusInternalServerError {
-		t.Errorf("MempoolTransaction() status code = %v, want %v, %v, or %v", w.Code, http.StatusOK, http.StatusNotFound, http.StatusInternalServerError)
+	// Should return error for invalid hash format
+	if err == nil {
+		t.Error("MempoolTransaction() expected error for invalid hash")
 	}
 }

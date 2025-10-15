@@ -9,6 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/types"
+
 	meshcommon "github.com/vechain/mesh/common"
 	meshconfig "github.com/vechain/mesh/config"
 	"github.com/vechain/mesh/thor"
@@ -96,9 +99,36 @@ func startThorWithConfig(thorServer *thor.Server, cfg *meshconfig.Config) error 
 	return thorServer.AttachToPublicNetworkAndStart()
 }
 
+// createAsserter creates and configures the asserter for request validation
+func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
+	// Define VeChain operation types
+	supportedOperationTypes := []string{
+		meshcommon.OperationTypeTransfer,
+		meshcommon.OperationTypeFee,
+		meshcommon.OperationTypeFeeDelegation,
+		meshcommon.OperationTypeContractCall,
+	}
+
+	// Create asserter
+	return asserter.NewServer(
+		supportedOperationTypes,
+		cfg.Mode == meshcommon.OnlineMode, // historical balance lookup
+		[]*types.NetworkIdentifier{cfg.GetNetworkIdentifier()},
+		nil,   // CallMethods - VeChain doesn't use this
+		false, // ValidationFilePath
+		"",    // RequestFundsEndpoint
+	)
+}
+
 // createMeshServer creates and configures the Mesh API server
 func createMeshServer(cfg *meshconfig.Config) *VeChainMeshServer {
-	meshServer, err := NewVeChainMeshServer(cfg)
+	// Create asserter
+	asrt, err := createAsserter(cfg)
+	if err != nil {
+		log.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	meshServer, err := NewVeChainMeshServer(cfg, asrt)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

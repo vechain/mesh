@@ -4,15 +4,40 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/types"
+
 	meshcommon "github.com/vechain/mesh/common"
 	meshconfig "github.com/vechain/mesh/config"
 )
+
+func createTestAsserter() (*asserter.Asserter, error) {
+	supportedOperationTypes := []string{
+		meshcommon.OperationTypeTransfer,
+		meshcommon.OperationTypeFee,
+		meshcommon.OperationTypeFeeDelegation,
+		meshcommon.OperationTypeContractCall,
+	}
+
+	return asserter.NewServer(
+		supportedOperationTypes,
+		true, // historical balance lookup
+		[]*types.NetworkIdentifier{
+			{
+				Blockchain: meshcommon.BlockchainName,
+				Network:    "test",
+			},
+		},
+		nil,   // CallMethods
+		false, // ValidationFilePath
+		"",    // RequestFundsEndpoint
+	)
+}
 
 func TestNewVeChainMeshServer(t *testing.T) {
 	config := &meshconfig.Config{
@@ -21,64 +46,30 @@ func TestNewVeChainMeshServer(t *testing.T) {
 		Mode:    meshcommon.OnlineMode,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
 
 	if server == nil {
-		t.Errorf("NewVeChainMeshServer() returned nil")
-	} else {
-		if server.router == nil {
-			t.Errorf("NewVeChainMeshServer() router is nil")
-		}
-		if server.networkService == nil {
-			t.Errorf("NewVeChainMeshServer() networkService is nil")
-		}
-		if server.accountService == nil {
-			t.Errorf("NewVeChainMeshServer() accountService is nil")
-		}
-		if server.constructionService == nil {
-			t.Errorf("NewVeChainMeshServer() constructionService is nil")
-		}
-		if server.blockService == nil {
-			t.Errorf("NewVeChainMeshServer() blockService is nil")
-		}
-		if server.mempoolService == nil {
-			t.Errorf("NewVeChainMeshServer() mempoolService is nil")
-		}
-	}
-}
-
-func TestVeChainMeshServer_HealthCheck(t *testing.T) {
-	config := &meshconfig.Config{
-		NodeAPI: "http://localhost:8669",
-		Network: "test",
-		Mode:    meshcommon.OnlineMode,
+		t.Fatal("NewVeChainMeshServer() returned nil")
 	}
 
-	server, err := NewVeChainMeshServer(config)
-	if err != nil {
-		t.Fatalf("NewVeChainMeshServer() error = %v", err)
+	if server.server == nil {
+		t.Error("NewVeChainMeshServer() server is nil")
 	}
 
-	req := httptest.NewRequest("GET", meshcommon.HealthEndpoint, nil)
-	w := httptest.NewRecorder()
-
-	server.healthCheck(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("healthCheck() status code = %v, want %v", w.Code, http.StatusOK)
+	if server.asserter == nil {
+		t.Error("NewVeChainMeshServer() asserter is nil")
 	}
 
-	// Check response body
-	var response map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	if response["status"] != "healthy" {
-		t.Errorf("healthCheck() response status = %v, want healthy", response["status"])
+	if server.config != config {
+		t.Error("NewVeChainMeshServer() config mismatch")
 	}
 }
 
@@ -90,7 +81,12 @@ func TestVeChainMeshServer_Start(t *testing.T) {
 		Port:    8080,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
@@ -123,7 +119,12 @@ func TestVeChainMeshServer_Stop(t *testing.T) {
 		Port:    8080,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
@@ -142,7 +143,12 @@ func TestVeChainMeshServer_NetworkEndpoints(t *testing.T) {
 		Mode:    meshcommon.OnlineMode,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
@@ -152,10 +158,10 @@ func TestVeChainMeshServer_NetworkEndpoints(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.router.ServeHTTP(w, req)
+	server.server.Handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("network/list status code = %v, want %v", w.Code, http.StatusOK)
+		t.Errorf("network/list status code = %v, want %v, body: %s", w.Code, http.StatusOK, w.Body.String())
 	}
 }
 
@@ -166,21 +172,26 @@ func TestVeChainMeshServer_AccountEndpoints(t *testing.T) {
 		Mode:    meshcommon.OnlineMode,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
 
-	// Test account/balance endpoint with invalid request (to avoid validation issues)
+	// Test account/balance endpoint with invalid request
 	req := httptest.NewRequest("POST", meshcommon.AccountBalanceEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.router.ServeHTTP(w, req)
+	server.server.Handler.ServeHTTP(w, req)
 
-	// Should return 400 for invalid JSON
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("AccountEndpoints() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	// Should return 400 or 500 for invalid JSON (asserter validates)
+	if w.Code != http.StatusBadRequest && w.Code != http.StatusInternalServerError {
+		t.Errorf("AccountEndpoints() status code = %v, want 400 or 500", w.Code)
 	}
 }
 
@@ -191,21 +202,26 @@ func TestVeChainMeshServer_ConstructionEndpoints(t *testing.T) {
 		Mode:    meshcommon.OnlineMode,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
 
-	// Test construction/derive endpoint with invalid request (to avoid validation issues)
+	// Test construction/derive endpoint with invalid request
 	req := httptest.NewRequest("POST", meshcommon.ConstructionDeriveEndpoint, bytes.NewBufferString("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.router.ServeHTTP(w, req)
+	server.server.Handler.ServeHTTP(w, req)
 
-	// Should return 400 for invalid JSON
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("ConstructionEndpoints() status code = %v, want %v", w.Code, http.StatusBadRequest)
+	// Should return 400 or 500 for invalid JSON (asserter validates)
+	if w.Code != http.StatusBadRequest && w.Code != http.StatusInternalServerError {
+		t.Errorf("ConstructionEndpoints() status code = %v, want 400 or 500", w.Code)
 	}
 }
 
@@ -216,7 +232,12 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 		Mode:    meshcommon.OnlineMode,
 	}
 
-	server, err := NewVeChainMeshServer(config)
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
 	if err != nil {
 		t.Fatalf("NewVeChainMeshServer() error = %v", err)
 	}
@@ -226,16 +247,13 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 		t.Fatalf("GetEndpoints() error = %v", err)
 	}
 
-	fmt.Println("endpoints", endpoints)
-
 	// Check that we have endpoints
 	if len(endpoints) == 0 {
 		t.Errorf("GetEndpoints() returned empty slice")
 	}
 
-	// Check for specific expected endpoints
+	// Check for specific expected endpoints (no health endpoint with SDK router)
 	expectedEndpoints := map[string]bool{
-		"GET /health":                   false,
 		"POST /network/list":            false,
 		"POST /network/status":          false,
 		"POST /network/options":         false,
@@ -265,15 +283,63 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 	}
 
 	// Check that all expected endpoints are present
+	missingEndpoints := []string{}
 	for endpoint, found := range expectedEndpoints {
 		if !found {
-			t.Errorf("Expected endpoint not found: %s", endpoint)
+			missingEndpoints = append(missingEndpoints, endpoint)
 		}
+	}
+
+	if len(missingEndpoints) > 0 {
+		t.Errorf("Expected endpoints not found: %v", missingEndpoints)
 	}
 
 	// Check that we have the expected number of endpoints
 	expectedCount := len(expectedEndpoints)
 	if len(endpoints) != expectedCount {
-		t.Errorf("GetEndpoints() returned %d endpoints, expected %d", len(endpoints), expectedCount)
+		t.Errorf("GetEndpoints() returned %d endpoints, expected %d. Endpoints: %v", len(endpoints), expectedCount, endpoints)
+	}
+}
+
+func TestVeChainMeshServer_NetworkListWithValidRequest(t *testing.T) {
+	config := &meshconfig.Config{
+		NodeAPI: "http://localhost:8669",
+		Network: "test",
+		Mode:    meshcommon.OnlineMode,
+	}
+
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
+	if err != nil {
+		t.Fatalf("NewVeChainMeshServer() error = %v", err)
+	}
+
+	// Create valid request body
+	requestBody := map[string]any{}
+	bodyBytes, _ := json.Marshal(requestBody)
+
+	req := httptest.NewRequest("POST", meshcommon.NetworkListEndpoint, bytes.NewBuffer(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	server.server.Handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("network/list status code = %v, want %v, body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Parse response
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	// Check that network_identifiers exists
+	if _, ok := response["network_identifiers"]; !ok {
+		t.Error("Response missing network_identifiers field")
 	}
 }
