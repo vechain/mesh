@@ -27,7 +27,7 @@ type VeChainMeshServer struct {
 func NewVeChainMeshServer(cfg *meshconfig.Config, asrt *asserter.Asserter) (*VeChainMeshServer, error) {
 	vechainClient := meshthor.NewVeChainClient(cfg.GetNodeAPI())
 
-	// Initialize base services
+	// Initialize services
 	networkService := services.NewNetworkService(vechainClient, cfg)
 	accountService := services.NewAccountService(vechainClient)
 	constructionService := services.NewConstructionService(vechainClient, cfg)
@@ -37,26 +37,15 @@ func NewVeChainMeshServer(cfg *meshconfig.Config, asrt *asserter.Asserter) (*VeC
 	searchService := services.NewSearchService(vechainClient)
 	callService := services.NewCallService(vechainClient, cfg)
 
-	// Wrap services with offline validators
-	// These wrappers intercept calls and return appropriate errors when in offline mode
-	offlineNetworkService := services.NewOfflineNetworkService(networkService, cfg)
-	offlineAccountService := services.NewOfflineAccountService(accountService, cfg)
-	offlineConstructionService := services.NewOfflineConstructionService(constructionService, cfg)
-	offlineBlockService := services.NewOfflineBlockService(blockService, cfg)
-	offlineMempoolService := services.NewOfflineMempoolService(mempoolService, cfg)
-	offlineEventsService := services.NewOfflineEventsService(eventsService, cfg)
-	offlineSearchService := services.NewOfflineSearchService(searchService, cfg)
-	offlineCallService := services.NewOfflineCallService(callService, cfg)
-
-	// Create API controllers with wrapped services
-	networkController := server.NewNetworkAPIController(offlineNetworkService, asrt)
-	accountController := server.NewAccountAPIController(offlineAccountService, asrt)
-	constructionController := server.NewConstructionAPIController(offlineConstructionService, asrt)
-	blockController := server.NewBlockAPIController(offlineBlockService, asrt)
-	mempoolController := server.NewMempoolAPIController(offlineMempoolService, asrt)
-	eventsController := server.NewEventsAPIController(offlineEventsService, asrt)
-	searchController := server.NewSearchAPIController(offlineSearchService, asrt)
-	callController := server.NewCallAPIController(offlineCallService, asrt)
+	// Create API controllers
+	networkController := server.NewNetworkAPIController(networkService, asrt)
+	accountController := server.NewAccountAPIController(accountService, asrt)
+	constructionController := server.NewConstructionAPIController(constructionService, asrt)
+	blockController := server.NewBlockAPIController(blockService, asrt)
+	mempoolController := server.NewMempoolAPIController(mempoolService, asrt)
+	eventsController := server.NewEventsAPIController(eventsService, asrt)
+	searchController := server.NewSearchAPIController(searchService, asrt)
+	callController := server.NewCallAPIController(callService, asrt)
 
 	// Create router with all controllers
 	router := server.NewRouter(
@@ -70,8 +59,9 @@ func NewVeChainMeshServer(cfg *meshconfig.Config, asrt *asserter.Asserter) (*VeC
 		callController,
 	)
 
-	// Apply logging and CORS middleware
-	loggedRouter := server.LoggerMiddleware(router)
+	// Apply middleware stack: offline mode validation, logging, and CORS
+	offlineRouter := services.OfflineModeMiddleware(cfg)(router)
+	loggedRouter := server.LoggerMiddleware(offlineRouter)
 	corsRouter := server.CorsMiddleware(loggedRouter)
 
 	meshServer := &VeChainMeshServer{
