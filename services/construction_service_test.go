@@ -948,3 +948,203 @@ func TestConstructionService_ConstructionSubmit_InvalidTransactionBytes(t *testi
 		t.Error("ConstructionSubmit() expected error for invalid transaction bytes")
 	}
 }
+
+func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
+	service := createMockConstructionService()
+
+	// Create a valid VeChain transaction for testing using thor.Builder
+	request := types.ConstructionPayloadsRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.FirstSoloAddress,
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 1},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.TestAddress1,
+				},
+				Amount: &types.Amount{
+					Value:    "1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	if err != nil {
+		t.Fatalf("Failed to build transaction: %v", err)
+	}
+
+	// Create two valid public keys: one for origin, one for delegator
+	publicKeys := []*types.PublicKey{
+		{
+			Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+			CurveType: meshtests.SECP256k1,
+		},
+		{
+			Bytes:     []byte{0x02, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98},
+			CurveType: meshtests.SECP256k1,
+		},
+	}
+
+	// Call the private method
+	payload, err := service.createDelegatorPayload(vechainTx, publicKeys)
+
+	if err != nil {
+		t.Fatalf("createDelegatorPayload() error = %v", err)
+	}
+
+	// Verify the payload structure
+	if payload == nil {
+		t.Fatal("createDelegatorPayload() returned nil payload")
+	}
+
+	if payload.AccountIdentifier == nil {
+		t.Error("createDelegatorPayload() AccountIdentifier is nil")
+	}
+
+	if payload.AccountIdentifier.Address == "" {
+		t.Error("createDelegatorPayload() AccountIdentifier.Address is empty")
+	}
+
+	if len(payload.Bytes) != 32 {
+		t.Errorf("createDelegatorPayload() Bytes length = %d, want 32", len(payload.Bytes))
+	}
+
+	if payload.SignatureType != types.EcdsaRecovery {
+		t.Errorf("createDelegatorPayload() SignatureType = %v, want %v", payload.SignatureType, types.EcdsaRecovery)
+	}
+
+	// Verify that the delegator address is different from origin address
+	originAddress, _ := service.bytesHandler.ComputeAddress(publicKeys[0])
+	if payload.AccountIdentifier.Address == originAddress {
+		t.Error("createDelegatorPayload() delegator address should be different from origin address")
+	}
+}
+
+func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t *testing.T) {
+	service := createMockConstructionService()
+
+	// Create a valid VeChain transaction
+	request := types.ConstructionPayloadsRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.FirstSoloAddress,
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	if err != nil {
+		t.Fatalf("Failed to build transaction: %v", err)
+	}
+
+	// Create public keys with invalid delegator key
+	publicKeys := []*types.PublicKey{
+		{
+			Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+			CurveType: meshtests.SECP256k1,
+		},
+		{
+			Bytes:     []byte{0x01, 0x02, 0x03}, // Invalid public key (too short)
+			CurveType: meshtests.SECP256k1,
+		},
+	}
+
+	// Call the private method
+	_, err = service.createDelegatorPayload(vechainTx, publicKeys)
+
+	if err == nil {
+		t.Error("createDelegatorPayload() expected error for invalid delegator public key")
+	}
+}
+
+func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *testing.T) {
+	service := createMockConstructionService()
+
+	// Create a valid VeChain transaction
+	request := types.ConstructionPayloadsRequest{
+		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.FirstSoloAddress,
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	if err != nil {
+		t.Fatalf("Failed to build transaction: %v", err)
+	}
+
+	// Create public keys with invalid origin key
+	publicKeys := []*types.PublicKey{
+		{
+			Bytes:     []byte{0x01, 0x02, 0x03}, // Invalid public key (too short)
+			CurveType: meshtests.SECP256k1,
+		},
+		{
+			Bytes:     []byte{0x02, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98},
+			CurveType: meshtests.SECP256k1,
+		},
+	}
+
+	// Call the private method
+	_, err = service.createDelegatorPayload(vechainTx, publicKeys)
+
+	if err == nil {
+		t.Error("createDelegatorPayload() expected error for invalid origin public key")
+	}
+}

@@ -6,10 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	meshcommon "github.com/vechain/mesh/common"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
 	meshoperations "github.com/vechain/mesh/common/operations"
@@ -649,16 +647,15 @@ func (c *ConstructionService) createSigningPayloads(vechainTx *tx.Transaction, r
 
 // createOriginPayload creates the origin signing payload
 func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, publicKey *types.PublicKey) (*types.SigningPayload, error) {
-	originPubKey, err := crypto.DecompressPubkey(publicKey.Bytes)
+	originAddress, err := c.bytesHandler.ComputeAddress(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin public key: %w", err)
 	}
-	originAddress := crypto.PubkeyToAddress(*originPubKey)
 
 	hash := vechainTx.SigningHash()
 	return &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: strings.ToLower(originAddress.Hex()),
+			Address: originAddress,
 		},
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,
@@ -667,19 +664,17 @@ func (c *ConstructionService) createOriginPayload(vechainTx *tx.Transaction, pub
 
 // createDelegatorPayload creates the delegator signing payload
 func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, publicKeys []*types.PublicKey) (*types.SigningPayload, error) {
-	delegatorAddr, err := crypto.DecompressPubkey(publicKeys[1].Bytes)
+	delegatorAddress, err := c.bytesHandler.ComputeAddress(publicKeys[1])
 	if err != nil {
 		return nil, fmt.Errorf("invalid delegator public key: %w", err)
 	}
-	delegatorAddress := crypto.PubkeyToAddress(*delegatorAddr)
 
 	// Create hash for delegator signing
-	originAddr, err := crypto.DecompressPubkey(publicKeys[0].Bytes)
+	originAddress, err := c.bytesHandler.ComputeAddress(publicKeys[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin public key: %w", err)
 	}
-	originAddress := crypto.PubkeyToAddress(*originAddr)
-	thorOriginAddr, err := thor.ParseAddress(originAddress.Hex())
+	thorOriginAddr, err := thor.ParseAddress(originAddress)
 	if err != nil {
 		return nil, fmt.Errorf("invalid origin address: %w", err)
 	}
@@ -687,7 +682,7 @@ func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, 
 
 	return &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{
-			Address: strings.ToLower(delegatorAddress.Hex()),
+			Address: delegatorAddress,
 		},
 		Bytes:         hash[:],
 		SignatureType: types.EcdsaRecovery,
