@@ -58,7 +58,7 @@ func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"origin": meshtests.FirstSoloAddress,
 		},
 	}

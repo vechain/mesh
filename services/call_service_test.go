@@ -98,7 +98,7 @@ func TestCallService_Call_ValidInspectClauses(t *testing.T) {
 	}
 
 	// Verify results
-	results, ok := response.Result["results"].([]any)
+	results, ok := response.Result["results"].([]map[string]any)
 	if !ok {
 		t.Error("Call() result['results'] is not an array")
 		return
@@ -110,8 +110,8 @@ func TestCallService_Call_ValidInspectClauses(t *testing.T) {
 	}
 
 	// Verify first result
-	result := results[0].(map[string]any)
-	if gasUsed, ok := result["gasUsed"].(float64); !ok || gasUsed != 21000 {
+	result := results[0]
+	if gasUsed, ok := result["gasUsed"].(uint64); !ok || gasUsed != 21000 {
 		t.Errorf("Call() result gasUsed = %v, want 21000", gasUsed)
 	}
 
@@ -346,37 +346,36 @@ func TestCallService_Call_WithEventsAndTransfers(t *testing.T) {
 	}
 
 	// Verify results with events and transfers
-	results, ok := response.Result["results"].([]any)
+	results, ok := response.Result["results"].([]map[string]any)
 	if !ok || len(results) == 0 {
 		t.Fatal("Call() result['results'] is not an array or is empty")
 	}
 
-	result := results[0].(map[string]any)
-
+	result := results[0]
 	// Verify events
-	events, ok := result["events"].([]any)
+	events, ok := result["events"].([]map[string]any)
 	if !ok {
 		t.Error("Call() result['events'] is not an array")
 	} else if len(events) != 1 {
 		t.Errorf("Call() events length = %v, want 1", len(events))
 	} else {
-		event := events[0].(map[string]any)
+		event := events[0]
 		if address, ok := event["address"].(string); !ok || address == "" {
 			t.Error("Call() event address is invalid")
 		}
-		if topics, ok := event["topics"].([]any); !ok || len(topics) != 2 {
+		if topics, ok := event["topics"].([]string); !ok || len(topics) != 2 {
 			t.Errorf("Call() event topics length = %v, want 2", len(topics))
 		}
 	}
 
 	// Verify transfers
-	transfers, ok := result["transfers"].([]any)
+	transfers, ok := result["transfers"].([]map[string]any)
 	if !ok {
 		t.Error("Call() result['transfers'] is not an array")
 	} else if len(transfers) != 1 {
 		t.Errorf("Call() transfers length = %v, want 1", len(transfers))
 	} else {
-		transfer := transfers[0].(map[string]any)
+		transfer := transfers[0]
 		if sender, ok := transfer["sender"].(string); !ok || sender == "" {
 			t.Error("Call() transfer sender is invalid")
 		}
@@ -647,12 +646,12 @@ func TestCallService_Call_WithRevertedTransaction(t *testing.T) {
 		t.Fatalf("Call() error = %v", err)
 	}
 
-	results, ok := response.Result["results"].([]any)
+	results, ok := response.Result["results"].([]map[string]any)
 	if !ok || len(results) == 0 {
 		t.Fatal("Call() result['results'] is not an array or is empty")
 	}
 
-	result := results[0].(map[string]any)
+	result := results[0]
 	if reverted, ok := result["reverted"].(bool); !ok || !reverted {
 		t.Errorf("Call() result reverted = %v, want true", reverted)
 	}

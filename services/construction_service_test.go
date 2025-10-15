@@ -199,34 +199,33 @@ func TestConstructionService_ConstructionPreprocess_VIP180Token(t *testing.T) {
 	}
 
 	// Verify clauses were created for VIP180 token transfer
-	if clauses, ok := response.Options["clauses"].([]any); ok {
+	if clauses, ok := response.Options["clauses"].([]map[string]any); ok {
 		if len(clauses) == 0 {
 			t.Errorf("ConstructionPreprocess() expected clauses, got empty array")
 		}
 		// Verify the clause has the token contract address as "to"
 		if len(clauses) > 0 {
-			if clause, ok := clauses[0].(map[string]any); ok {
-				if to, exists := clause["to"]; exists {
-					if to != "0x1234567890123456789012345678901234567890" {
-						t.Errorf("ConstructionPreprocess() clause 'to' = %v, want contract address", to)
-					}
-				} else {
-					t.Errorf("ConstructionPreprocess() clause missing 'to' field")
+			clause := clauses[0]
+			if to, exists := clause["to"]; exists {
+				if to != "0x1234567890123456789012345678901234567890" {
+					t.Errorf("ConstructionPreprocess() clause 'to' = %v, want contract address", to)
 				}
-				// Verify the clause has value "0" for token transfer
-				if value, exists := clause["value"]; exists {
-					if value != "0" {
-						t.Errorf("ConstructionPreprocess() clause 'value' = %v, want '0' for token transfer", value)
-					}
+			} else {
+				t.Errorf("ConstructionPreprocess() clause missing 'to' field")
+			}
+			// Verify the clause has value "0" for token transfer
+			if value, exists := clause["value"]; exists {
+				if value != "0" {
+					t.Errorf("ConstructionPreprocess() clause 'value' = %v, want '0' for token transfer", value)
 				}
-				// Verify the clause has encoded data
-				if data, exists := clause["data"]; exists {
-					if dataStr, ok := data.(string); !ok || dataStr == "" || dataStr == "0x" {
-						t.Errorf("ConstructionPreprocess() clause 'data' should contain encoded VIP180 transfer data")
-					}
-				} else {
-					t.Errorf("ConstructionPreprocess() clause missing 'data' field")
+			}
+			// Verify the clause has encoded data
+			if data, exists := clause["data"]; exists {
+				if dataStr, ok := data.(string); !ok || dataStr == "" || dataStr == "0x" {
+					t.Errorf("ConstructionPreprocess() clause 'data' should contain encoded VIP180 transfer data")
 				}
+			} else {
+				t.Errorf("ConstructionPreprocess() clause missing 'data' field")
 			}
 		}
 	} else {
