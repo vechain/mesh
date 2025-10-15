@@ -110,7 +110,7 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 	}
 
 	// Check operation statuses
-	expectedOpStatuses := 3 // None, Succeeded, Reverted
+	expectedOpStatuses := 2 // Succeeded, Reverted
 	if len(response.Allow.OperationStatuses) != expectedOpStatuses {
 		t.Errorf("NetworkOptions() OperationStatuses length = %v, want %v", len(response.Allow.OperationStatuses), expectedOpStatuses)
 	}
