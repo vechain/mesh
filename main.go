@@ -109,12 +109,31 @@ func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
 		meshcommon.OperationTypeContractCall,
 	}
 
+	supportedNetworks := []*types.NetworkIdentifier{cfg.GetNetworkIdentifier()}
+
+	if cfg.Mode == meshcommon.OfflineMode {
+		supportedNetworks = []*types.NetworkIdentifier{
+			{
+				Blockchain: meshcommon.BlockchainName,
+				Network:    "main",
+			},
+			{
+				Blockchain: meshcommon.BlockchainName,
+				Network:    "test",
+			},
+			{
+				Blockchain: meshcommon.BlockchainName,
+				Network:    "solo",
+			},
+		}
+	}
+
 	// Create asserter
 	return asserter.NewServer(
 		supportedOperationTypes,
 		cfg.Mode == meshcommon.OnlineMode, // historical balance lookup
-		[]*types.NetworkIdentifier{cfg.GetNetworkIdentifier()},
-		nil,   // CallMethods - VeChain doesn't use this
+		supportedNetworks,
+		[]string{meshcommon.CallMethodInspectClauses},
 		false, // ValidationFilePath
 		"",    // RequestFundsEndpoint
 	)
