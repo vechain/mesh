@@ -110,14 +110,12 @@ func CreateVTHOCurrency() *types.Currency {
 
 // CreateTransferOperations creates transfer operations for testing
 func CreateTransferOperations(senderAddress, recipientAddress, amount string) []*types.Operation {
-	status := meshcommon.OperationStatusNone
 	return []*types.Operation{
 		{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Type:   meshcommon.OperationTypeTransfer,
-			Status: &status,
+			Type: meshcommon.OperationTypeTransfer,
 			Account: &types.AccountIdentifier{
 				Address: recipientAddress,
 			},
@@ -130,8 +128,7 @@ func CreateTransferOperations(senderAddress, recipientAddress, amount string) []
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Type:   meshcommon.OperationTypeTransfer,
-			Status: &status,
+			Type: meshcommon.OperationTypeTransfer,
 			Account: &types.AccountIdentifier{
 				Address: senderAddress,
 			},

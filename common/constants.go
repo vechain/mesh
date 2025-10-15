@@ -41,7 +41,6 @@ const (
 
 // Operation statuses for VeChain
 const (
-	OperationStatusNone      = "None"
 	OperationStatusPending   = "Pending"
 	OperationStatusSucceeded = "Succeeded"
 	OperationStatusReverted  = "Reverted"

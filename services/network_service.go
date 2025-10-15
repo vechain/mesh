@@ -126,10 +126,6 @@ func (n *NetworkService) NetworkOptions(
 	// Define operation statuses
 	operationStatuses := []*types.OperationStatus{
 		{
-			Status:     meshcommon.OperationStatusNone,
-			Successful: true,
-		},
-		{
 			Status:     meshcommon.OperationStatusSucceeded,
 			Successful: true,
 		},

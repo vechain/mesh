@@ -301,14 +301,12 @@ func testDelegationFlow(
 
 // createDelegationTransferOperations creates transfer operations for delegation test
 func createDelegationTransferOperations(senderAddress, recipientAddress, amount string) []*types.Operation {
-	status := meshcommon.OperationStatusNone
 	return []*types.Operation{
 		{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Type:   meshcommon.OperationTypeTransfer,
-			Status: &status,
+			Type: meshcommon.OperationTypeTransfer,
 			Account: &types.AccountIdentifier{
 				Address: recipientAddress,
 			},
@@ -321,8 +319,7 @@ func createDelegationTransferOperations(senderAddress, recipientAddress, amount 
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Type:   meshcommon.OperationTypeTransfer,
-			Status: &status,
+			Type: meshcommon.OperationTypeTransfer,
 			Account: &types.AccountIdentifier{
 				Address: senderAddress,
 			},
