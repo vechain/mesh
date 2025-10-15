@@ -58,7 +58,7 @@ func (b *BlockService) Block(
 		})
 	}
 
-	response, err := b.buildRosettaBlock(block, parent)
+	response, err := b.buildMeshBlock(block, parent)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
 			"error": err.Error(),
@@ -159,8 +159,8 @@ func (b *BlockService) findTransactionInBlock(block *api.JSONExpandedBlock, txHa
 	return nil, fmt.Errorf("transaction %s not found in block %s", txHash, block.ID.String())
 }
 
-// buildRosettaBlock builds the response for a block request
-func (b *BlockService) buildRosettaBlock(block, parent *api.JSONExpandedBlock) (*types.BlockResponse, error) {
+// buildMeshBlock builds the response for a block request
+func (b *BlockService) buildMeshBlock(block, parent *api.JSONExpandedBlock) (*types.BlockResponse, error) {
 	blockIdentifier := &types.BlockIdentifier{
 		Index: int64(block.Number),
 		Hash:  block.ID.String(),
