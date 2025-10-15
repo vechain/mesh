@@ -1,0 +1,14 @@
+coverage:
+  status:
+    patch:
+      default:
+        only_pulls: true
+        target: auto
+        threshold: 1%
+
+# Comments on PRs
+comment:
+  layout: "header, diff, files"
+  behavior: default
+  require_changes: false
+
