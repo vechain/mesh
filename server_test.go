@@ -33,9 +33,9 @@ func createTestAsserter() (*asserter.Asserter, error) {
 				Network:    "test",
 			},
 		},
-		nil,   // CallMethods
-		false, // ValidationFilePath
-		"",    // RequestFundsEndpoint
+		nil,
+		false,
+		"",
 	)
 }
 

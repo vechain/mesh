@@ -132,8 +132,8 @@ func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
 		cfg.Mode == meshcommon.OnlineMode, // historical balance lookup
 		supportedNetworks,
 		[]string{meshcommon.CallMethodInspectClauses},
-		false, // ValidationFilePath
-		"",    // RequestFundsEndpoint
+		false,
+		"",
 	)
 }
 
