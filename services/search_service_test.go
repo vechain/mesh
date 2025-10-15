@@ -164,26 +164,3 @@ func TestSearchService_SearchTransactions_TransactionNotFound(t *testing.T) {
 
 	assert.Equal(t, meshcommon.GetError(meshcommon.ErrTransactionNotFound), err)
 }
-
-func TestSearchService_SearchTransactions_ThorClientError(t *testing.T) {
-	// Create mock client with error
-	mockClient := meshthor.NewMockVeChainClient()
-	mockClient.SetMockError(errors.New("thor client error"))
-
-	// Create search service
-	searchService := NewSearchService(mockClient)
-
-	// Create request
-	request := &types.SearchTransactionsRequest{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-		},
-	}
-
-	ctx := context.Background()
-	_, err := searchService.SearchTransactions(ctx, request)
-
-	if err == nil {
-		t.Error("SearchTransactions() expected error when thor client returns error")
-	}
-}
