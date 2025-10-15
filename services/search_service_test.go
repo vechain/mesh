@@ -7,6 +7,8 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/stretchr/testify/assert"
+	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
@@ -138,8 +140,7 @@ func TestSearchService_SearchTransactions_EmptyTransactionHash(t *testing.T) {
 func TestSearchService_SearchTransactions_TransactionNotFound(t *testing.T) {
 	// Create mock client
 	mockClient := meshthor.NewMockVeChainClient()
-
-	// Don't set any transaction in the mock client
+	mockClient.SetMockError(errors.New("transaction not found"))
 
 	// Create search service
 	searchService := NewSearchService(mockClient)
@@ -154,18 +155,14 @@ func TestSearchService_SearchTransactions_TransactionNotFound(t *testing.T) {
 	ctx := context.Background()
 	response, err := searchService.SearchTransactions(ctx, request)
 
-	if err != nil {
-		t.Fatalf("SearchTransactions() error = %v", err)
+	if response != nil {
+		t.Errorf("Expected nil response, got %v", response)
+	}
+	if err == nil {
+		t.Error("SearchTransactions() expected error for transaction not found")
 	}
 
-	// Verify empty response
-	if response.TotalCount != 0 {
-		t.Errorf("Expected TotalCount 0, got %d", response.TotalCount)
-	}
-
-	if len(response.Transactions) != 0 {
-		t.Errorf("Expected 0 transactions, got %d", len(response.Transactions))
-	}
+	assert.Equal(t, meshcommon.GetError(meshcommon.ErrTransactionNotFound), err)
 }
 
 func TestSearchService_SearchTransactions_ThorClientError(t *testing.T) {
