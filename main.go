@@ -101,7 +101,6 @@ func startThorWithConfig(thorServer *thor.Server, cfg *meshconfig.Config) error 
 
 // createAsserter creates and configures the asserter for request validation
 func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
-	// Define VeChain operation types
 	supportedOperationTypes := []string{
 		meshcommon.OperationTypeTransfer,
 		meshcommon.OperationTypeFee,
@@ -110,7 +109,6 @@ func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
 	}
 
 	supportedNetworks := []*types.NetworkIdentifier{cfg.GetNetworkIdentifier()}
-
 	if cfg.Mode == meshcommon.OfflineMode {
 		supportedNetworks = []*types.NetworkIdentifier{
 			{
@@ -141,7 +139,6 @@ func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
 
 // createMeshServer creates and configures the Mesh API server
 func createMeshServer(cfg *meshconfig.Config) *VeChainMeshServer {
-	// Create asserter
 	asrt, err := createAsserter(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create asserter: %v", err)
