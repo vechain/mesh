@@ -12,29 +12,26 @@ import (
 
 type SigningHandler struct {
 	privateKeyBytes []byte
+	bytesHandler    *BytesHandler
 }
 
 func NewSigningHandler(privateKeyHex string) *SigningHandler {
-	privateKeyHex = strings.TrimPrefix(privateKeyHex, "0x")
-
-	// Parse private key
-	privateKeyBytes, err := hex.DecodeString(privateKeyHex)
+	bytesHandler := NewBytesHandler()
+	privateKeyBytes, err := bytesHandler.DecodeHexStringWithPrefix(privateKeyHex)
 	if err != nil {
 		panic(fmt.Errorf("error decoding private key: %v", err))
 	}
 
 	return &SigningHandler{
 		privateKeyBytes: privateKeyBytes,
+		bytesHandler:    bytesHandler,
 	}
 }
 
 // SignPayload signs a payload using secp256k1 and returns the signature in hex format
 // This function is used by both the sign_payload script and e2e tests
 func (h *SigningHandler) SignPayload(payloadHex string) (string, error) {
-	payloadHex = strings.TrimPrefix(payloadHex, "0x")
-
-	// Parse payload
-	payloadBytes, err := hex.DecodeString(payloadHex)
+	payloadBytes, err := h.bytesHandler.DecodeHexStringWithPrefix(payloadHex)
 	if err != nil {
 		return "", fmt.Errorf("error decoding payload: %v", err)
 	}

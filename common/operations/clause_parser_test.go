@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 	"testing"
@@ -39,6 +40,32 @@ func createTestClause(to *thor.Address, value *big.Int, data string) *api.Clause
 func createTestAddress(addr string) *thor.Address {
 	address, _ := thor.ParseAddress(addr)
 	return &address
+}
+
+// Mock ClauseValue that returns error on MarshalText
+type errorClauseValue struct{}
+
+func (e errorClauseValue) MarshalText() ([]byte, error) {
+	return nil, fmt.Errorf("mock marshal error")
+}
+
+// Mock ClauseData with error ClauseValue
+type errorClauseData struct {
+	to    *thor.Address
+	data  string
+	value ClauseValue
+}
+
+func (e errorClauseData) GetValue() ClauseValue {
+	return e.value
+}
+
+func (e errorClauseData) GetTo() *thor.Address {
+	return e.to
+}
+
+func (e errorClauseData) GetData() string {
+	return e.data
 }
 
 func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
@@ -115,7 +142,10 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hasValueTransfer, hasContractInteraction, hasEnergyTransfer := parser.analyzeClauses(tt.clauseData, tt.gas)
+			hasValueTransfer, hasContractInteraction, hasEnergyTransfer, err := parser.analyzeClauses(tt.clauseData, tt.gas)
+			if err != nil {
+				t.Errorf("analyzeClauses() error = %v", err)
+			}
 
 			if hasValueTransfer != tt.expectedValueTransfer {
 				t.Errorf("analyzeClauses() hasValueTransfer = %v, want %v", hasValueTransfer, tt.expectedValueTransfer)
@@ -125,54 +155,6 @@ func TestMeshTransactionEncoder_analyzeClauses(t *testing.T) {
 			}
 			if hasEnergyTransfer != tt.expectedEnergyTransfer {
 				t.Errorf("analyzeClauses() hasEnergyTransfer = %v, want %v", hasEnergyTransfer, tt.expectedEnergyTransfer)
-			}
-		})
-	}
-}
-
-func TestMeshTransactionEncoder_getClauseValue(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	parser := NewClauseParser(mockClient, NewOperationsExtractor())
-
-	tests := []struct {
-		name     string
-		clause   ClauseData
-		expected *big.Int
-	}{
-		{
-			name: "zero value",
-			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress(meshtests.TestAddress1),
-				big.NewInt(0),
-				"0x",
-			)},
-			expected: big.NewInt(0),
-		},
-		{
-			name: "positive value",
-			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress(meshtests.TestAddress1),
-				big.NewInt(1000000000000000000),
-				"0x",
-			)},
-			expected: big.NewInt(1000000000000000000),
-		},
-		{
-			name: "large value",
-			clause: JSONClauseAdapter{Clause: createTestJSONClause(
-				createTestAddress(meshtests.TestAddress1),
-				func() *big.Int { val, _ := big.NewInt(0).SetString("1000000000000000000000000", 10); return val }(),
-				"0x",
-			)},
-			expected: func() *big.Int { val, _ := big.NewInt(0).SetString("1000000000000000000000000", 10); return val }(),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := parser.getClauseValue(tt.clause)
-			if result.Cmp(tt.expected) != 0 {
-				t.Errorf("getClauseValue() = %v, want %v", result, tt.expected)
 			}
 		})
 	}
@@ -654,7 +636,10 @@ func TestMeshTransactionEncoder_parseTransactionOperationsFromClauses(t *testing
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := parser.ParseTransactionOperationsFromJSONClauses(tt.clauses, tt.originAddr, "", tt.gas, tt.status)
+			operations, err := parser.ParseTransactionOperationsFromJSONClauses(tt.clauses, tt.originAddr, "", tt.gas, tt.status)
+			if err != nil {
+				t.Errorf("ParseTransactionOperationsFromJSONClauses() error = %v", err)
+			}
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseTransactionOperationsFromClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -701,7 +686,10 @@ func TestMeshTransactionEncoder_ParseTransactionOperationsFromTransactionClauses
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, "", tt.gas, tt.status)
+			operations, err := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, "", tt.gas, tt.status)
+			if err != nil {
+				t.Errorf("ParseOperationsFromAPIClauses() error = %v", err)
+			}
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("ParseTransactionOperationsFromTransactionClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -798,7 +786,10 @@ func TestClauseParser_ParseOperationsWithFeeDelegation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, tt.delegatorAddr, tt.gas, tt.status)
+			operations, err := parser.ParseOperationsFromAPIClauses(tt.clauses, tt.originAddr, tt.delegatorAddr, tt.gas, tt.status)
+			if err != nil {
+				t.Errorf("ParseOperationsFromAPIClauses() error = %v", err)
+			}
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("ParseOperationsFromAPIClauses() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -1272,6 +1263,182 @@ func TestParseAPIClause(t *testing.T) {
 
 			if tt.validate != nil {
 				tt.validate(t, result)
+			}
+		})
+	}
+}
+
+func TestClauseParser_ErrorHandlingInGetClauseValue(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	// Create a clause with a value that will fail to marshal
+	errorClause := errorClauseData{
+		to:    createTestAddress(meshtests.TestAddress1),
+		data:  "0x",
+		value: errorClauseValue{},
+	}
+
+	t.Run("error in getClauseValue propagates in ParseTransactionOperationsFromClauseData", func(t *testing.T) {
+		clauseData := []ClauseData{errorClause}
+		operations, err := parser.ParseTransactionOperationsFromClauseData(clauseData, meshtests.FirstSoloAddress, "", 0, &testStatus)
+
+		if err == nil {
+			t.Error("Expected error from MarshalText failure but got none")
+		}
+
+		if operations != nil {
+			t.Errorf("Expected nil operations on error, got %v", operations)
+		}
+
+		if err.Error() != "failed to marshal clause value: mock marshal error" {
+			t.Errorf("Expected specific error message, got: %v", err)
+		}
+	})
+
+	t.Run("error in getClauseValue propagates in analyzeClauses", func(t *testing.T) {
+		clauseData := []ClauseData{errorClause}
+		hasValue, hasContract, hasEnergy, err := parser.analyzeClauses(clauseData, 0)
+
+		if err == nil {
+			t.Error("Expected error from MarshalText failure but got none")
+		}
+
+		if hasValue || hasContract || hasEnergy {
+			t.Error("Expected all flags to be false on error")
+		}
+
+		if err.Error() != "failed to marshal clause value: mock marshal error" {
+			t.Errorf("Expected specific error message, got: %v", err)
+		}
+	})
+}
+
+func TestClauseParser_ErrorHandlingInAnalyzeClauses(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	errorClause := errorClauseData{
+		to:    createTestAddress(meshtests.TestAddress1),
+		data:  "0x1234",
+		value: errorClauseValue{},
+	}
+
+	t.Run("error in analyzeClauses stops processing", func(t *testing.T) {
+		// Mix valid and invalid clauses
+		clauseData := []ClauseData{
+			JSONClauseAdapter{Clause: createTestJSONClause(
+				createTestAddress(meshtests.TestAddress1),
+				big.NewInt(1000000000000000000),
+				"0x",
+			)},
+			errorClause, // This should cause error
+		}
+
+		operations, err := parser.ParseTransactionOperationsFromClauseData(clauseData, meshtests.FirstSoloAddress, "", 0, &testStatus)
+
+		if err == nil {
+			t.Error("Expected error but got none")
+		}
+
+		if operations != nil {
+			t.Errorf("Expected nil operations on error, got %v operations", len(operations))
+		}
+	})
+}
+
+func TestClauseParser_ParseTransactionOperationsFromJSONClauses_ErrorHandling(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	t.Run("empty clauses returns empty operations without error", func(t *testing.T) {
+		operations, err := parser.ParseTransactionOperationsFromJSONClauses([]*api.JSONClause{}, meshtests.FirstSoloAddress, "", 0, &testStatus)
+
+		if err != nil {
+			t.Errorf("Expected no error for empty clauses, got: %v", err)
+		}
+
+		if len(operations) != 0 {
+			t.Errorf("Expected 0 operations for empty clauses, got %v", len(operations))
+		}
+	})
+}
+
+func TestClauseParser_ParseOperationsFromAPIClauses_ErrorHandling(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	t.Run("empty API clauses returns empty operations without error", func(t *testing.T) {
+		operations, err := parser.ParseOperationsFromAPIClauses(api.Clauses{}, meshtests.FirstSoloAddress, "", 0, &testStatus)
+
+		if err != nil {
+			t.Errorf("Expected no error for empty clauses, got: %v", err)
+		}
+
+		if len(operations) != 0 {
+			t.Errorf("Expected 0 operations for empty clauses, got %v", len(operations))
+		}
+	})
+}
+
+func TestClauseParser_GetClauseValue_DirectTest(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	parser := NewClauseParser(mockClient, NewOperationsExtractor())
+
+	tests := []struct {
+		name        string
+		clause      ClauseData
+		expectError bool
+		expectedVal string
+	}{
+		{
+			name: "valid clause with positive value",
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
+				createTestAddress(meshtests.TestAddress1),
+				big.NewInt(1000000000000000000),
+				"0x",
+			)},
+			expectError: false,
+			expectedVal: "1000000000000000000",
+		},
+		{
+			name: "valid clause with zero value",
+			clause: JSONClauseAdapter{Clause: createTestJSONClause(
+				createTestAddress(meshtests.TestAddress1),
+				big.NewInt(0),
+				"0x",
+			)},
+			expectError: false,
+			expectedVal: "0",
+		},
+		{
+			name: "invalid clause with marshal error",
+			clause: errorClauseData{
+				to:    createTestAddress(meshtests.TestAddress1),
+				data:  "0x",
+				value: errorClauseValue{},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value, err := parser.getClauseValue(tt.clause)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Expected no error, got: %v", err)
+			}
+
+			if value.String() != tt.expectedVal {
+				t.Errorf("Expected value %s, got %s", tt.expectedVal, value.String())
 			}
 		})
 	}

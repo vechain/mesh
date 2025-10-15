@@ -1,7 +1,6 @@
 package operations
 
 import (
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -10,6 +9,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 	"github.com/vechain/mesh/common/vip180"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/api"
@@ -54,24 +54,31 @@ type ClauseParser struct {
 	vechainClient       meshthor.VeChainClientInterface
 	operationsExtractor *OperationsExtractor
 	vip180Encoder       *vip180.VIP180Encoder
+	bytesHandler        *meshcrypto.BytesHandler
 }
 
 func NewClauseParser(vechainClient meshthor.VeChainClientInterface, operationsExtractor *OperationsExtractor) *ClauseParser {
-	return &ClauseParser{vechainClient: vechainClient, operationsExtractor: operationsExtractor, vip180Encoder: vip180.NewVIP180Encoder()}
+	return &ClauseParser{vechainClient: vechainClient, operationsExtractor: operationsExtractor, vip180Encoder: vip180.NewVIP180Encoder(), bytesHandler: meshcrypto.NewBytesHandler()}
 }
 
 // ParseTransactionOperationsFromClauseData parses operations from clause data with client for contract calls
-func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []ClauseData, originAddr string, delegatorAddr string, gas uint64, status *string) []*types.Operation {
+func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []ClauseData, originAddr string, delegatorAddr string, gas uint64, status *string) ([]*types.Operation, error) {
 	var operations []*types.Operation
-	hasValueTransfer, hasContractInteraction, hasEnergyTransfer := e.analyzeClauses(clauseData, gas)
+	hasValueTransfer, hasContractInteraction, hasEnergyTransfer, err := e.analyzeClauses(clauseData, gas)
+	if err != nil {
+		return nil, err
+	}
 
 	if !hasValueTransfer && !hasContractInteraction && !hasEnergyTransfer {
-		return operations
+		return operations, nil
 	}
 
 	operationIndex := 0
 	for clauseIndex, clause := range clauseData {
-		value := e.getClauseValue(clause)
+		value, err := e.getClauseValue(clause)
+		if err != nil {
+			return nil, err
+		}
 
 		// Try VIP180 token transfer first
 		if e.isVIP180Transfer(clause, value) {
@@ -102,15 +109,18 @@ func (e *ClauseParser) ParseTransactionOperationsFromClauseData(clauseData []Cla
 		operations = append(operations, op)
 	}
 
-	return operations
+	return operations, nil
 }
 
 // analyzeClauses analyzes clauses to determine what types of operations are present
-func (e *ClauseParser) analyzeClauses(clauseData []ClauseData, gas uint64) (hasValueTransfer, hasContractInteraction, hasEnergyTransfer bool) {
+func (e *ClauseParser) analyzeClauses(clauseData []ClauseData, gas uint64) (hasValueTransfer, hasContractInteraction, hasEnergyTransfer bool, err error) {
 	hasEnergyTransfer = gas > 0
 
 	for _, clause := range clauseData {
-		value := e.getClauseValue(clause)
+		value, err := e.getClauseValue(clause)
+		if err != nil {
+			return false, false, false, err
+		}
 		if value.Cmp(big.NewInt(0)) > 0 {
 			hasValueTransfer = true
 		}
@@ -119,15 +129,18 @@ func (e *ClauseParser) analyzeClauses(clauseData []ClauseData, gas uint64) (hasV
 		}
 	}
 
-	return hasValueTransfer, hasContractInteraction, hasEnergyTransfer
+	return hasValueTransfer, hasContractInteraction, hasEnergyTransfer, nil
 }
 
 // getClauseValue extracts the value from a clause as big.Int
-func (e *ClauseParser) getClauseValue(clause ClauseData) *big.Int {
-	valueBytes, _ := clause.GetValue().MarshalText()
+func (e *ClauseParser) getClauseValue(clause ClauseData) (*big.Int, error) {
+	valueBytes, err := clause.GetValue().MarshalText()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal clause value: %w", err)
+	}
 	value := new(big.Int)
 	value.SetString(string(valueBytes), 0) // 0 means auto-detect base (hex with 0x prefix or decimal)
-	return value
+	return value, nil
 }
 
 // isVIP180Transfer checks if a clause represents a VIP180 token transfer
@@ -243,7 +256,7 @@ func (e *ClauseParser) createEnergyTransferOperation(operationIndex int, originA
 }
 
 // ParseTransactionOperationsFromJSONClauses is a helper function that parses operations from clauses
-func (e *ClauseParser) ParseTransactionOperationsFromJSONClauses(clauses []*api.JSONClause, originAddr string, delegatorAddr string, gas uint64, status *string) []*types.Operation {
+func (e *ClauseParser) ParseTransactionOperationsFromJSONClauses(clauses []*api.JSONClause, originAddr string, delegatorAddr string, gas uint64, status *string) ([]*types.Operation, error) {
 	clauseData := make([]ClauseData, len(clauses))
 	for i, clause := range clauses {
 		clauseData[i] = JSONClauseAdapter{Clause: clause}
@@ -252,7 +265,7 @@ func (e *ClauseParser) ParseTransactionOperationsFromJSONClauses(clauses []*api.
 }
 
 // ParseOperationsFromAPIClauses is a helper function that parses operations from transactions.Clauses
-func (e *ClauseParser) ParseOperationsFromAPIClauses(clauses api.Clauses, originAddr string, delegatorAddr string, gas uint64, status *string) []*types.Operation {
+func (e *ClauseParser) ParseOperationsFromAPIClauses(clauses api.Clauses, originAddr string, delegatorAddr string, gas uint64, status *string) ([]*types.Operation, error) {
 	clauseData := make([]ClauseData, len(clauses))
 	for i, clause := range clauses {
 		clauseData[i] = ClauseAdapter{Clause: clause}
@@ -297,10 +310,8 @@ func (e *ClauseParser) ParseClausesFromOptions(clausesRaw any) ([]*tx.Clause, er
 		// Parse "data"
 		var data []byte
 		if dataStr, ok := clauseMap["data"].(string); ok && dataStr != "" && dataStr != "0x" {
-			// Remove 0x prefix if present
-			dataStr = dataStr[2:]
 			var err error
-			data, err = hex.DecodeString(dataStr)
+			data, err = e.bytesHandler.DecodeHexStringWithPrefix(dataStr)
 			if err != nil {
 				return nil, fmt.Errorf("invalid 'data' hex string at index %d: %w", i, err)
 			}

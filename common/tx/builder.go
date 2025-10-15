@@ -1,13 +1,13 @@
 package tx
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 	"github.com/vechain/mesh/common/vip180"
 	"github.com/vechain/mesh/config"
 	"github.com/vechain/thor/v2/api"
@@ -18,11 +18,13 @@ import (
 
 type TransactionBuilder struct {
 	vip180Encoder *vip180.VIP180Encoder
+	bytesHandler  *meshcrypto.BytesHandler
 }
 
 func NewTransactionBuilder() *TransactionBuilder {
 	return &TransactionBuilder{
 		vip180Encoder: vip180.NewVIP180Encoder(),
+		bytesHandler:  meshcrypto.NewBytesHandler(),
 	}
 }
 
@@ -70,7 +72,7 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 	// Set common fields
 	builder.ChainTag(byte(chainTag))
 
-	blockRefBytes, err := hex.DecodeString(blockRef[2:])
+	blockRefBytes, err := b.bytesHandler.DecodeHexStringWithPrefix(blockRef)
 	if err != nil {
 		return nil, fmt.Errorf("invalid blockRef: %w", err)
 	}
@@ -180,14 +182,13 @@ func (b *TransactionBuilder) addClausesToBuilder(builder *thorTx.Builder, operat
 						}
 
 						// Convert hex string to bytes
-						transferData, err := hex.DecodeString(strings.TrimPrefix(transferDataHex, "0x"))
+						transferData, err := b.bytesHandler.DecodeHexStringWithPrefix(transferDataHex)
 						if err != nil {
 							return fmt.Errorf("failed to decode transfer data: %w", err)
 						}
 
 						// Create clause with contract call
 						clause := thorTx.NewClause(&contractAddress)
-						clause = clause.WithValue(big.NewInt(0)) // VIP180 transfers have 0 value
 						clause = clause.WithData(transferData)
 						builder.Clause(clause)
 						continue

@@ -78,7 +78,13 @@ func (s *SearchService) SearchTransactions(w http.ResponseWriter, r *http.Reques
 		delegatorAddr = tx.Delegator.String()
 	}
 
-	operations := s.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, txReceipt.GasUsed, &status)
+	operations, err := s.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, txReceipt.GasUsed, &status)
+	if err != nil {
+		s.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
+		return
+	}
 
 	// Create transaction identifier
 	transactionIdentifier := &types.TransactionIdentifier{

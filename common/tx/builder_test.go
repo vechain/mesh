@@ -220,7 +220,10 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	status := meshcommon.OperationStatusSucceeded
-	operations := encoder.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), "", tx.Gas, &status)
+	operations, err := encoder.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), "", tx.Gas, &status)
+	if err != nil {
+		t.Errorf("ParseOperationsFromAPIClauses() error = %v", err)
+	}
 	builder := NewTransactionBuilder()
 	meshTx := builder.BuildMeshTransactionFromTransaction(tx, operations)
 
@@ -256,11 +259,128 @@ func TestBuildMeshTransactionFromAPI(t *testing.T) {
 	}
 
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-	operations := encoder.ParseTransactionOperationsFromAPI(tx)
+	operations, err := encoder.ParseTransactionOperationsFromAPI(tx)
+	if err != nil {
+		t.Errorf("ParseTransactionOperationsFromAPI() error = %v", err)
+	}
 	builder := NewTransactionBuilder()
 	meshTx := builder.BuildMeshTransactionFromAPI(tx, operations)
 
 	if meshTx.TransactionIdentifier == nil {
 		t.Errorf("BuildMeshTransactionFromAPI() returned nil TransactionIdentifier")
+	}
+}
+func TestTransactionBuilder_AddClausesToBuilder_ErrorHandling(t *testing.T) {
+	builder := NewTransactionBuilder()
+
+	tests := []struct {
+		name       string
+		operations []*types.Operation
+		expectErr  bool
+	}{
+		{
+			name: "invalid amount format",
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{Index: 0},
+					Type:                meshcommon.OperationTypeTransfer,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+					Amount: &types.Amount{
+						Value:    "invalid",
+						Currency: meshcommon.VETCurrency,
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "invalid address format",
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{Index: 0},
+					Type:                meshcommon.OperationTypeTransfer,
+					Account: &types.AccountIdentifier{
+						Address: "invalid_address",
+					},
+					Amount: &types.Amount{
+						Value:    "1000000000000000000",
+						Currency: meshcommon.VETCurrency,
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "VIP180 with invalid contract address",
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{Index: 0},
+					Type:                meshcommon.OperationTypeTransfer,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+					Amount: &types.Amount{
+						Value: "1000000000000000000",
+						Currency: &types.Currency{
+							Symbol:   "VTHO",
+							Decimals: 18,
+							Metadata: map[string]any{
+								"contractAddress": "invalid_contract",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "VIP180 with failed encoding - invalid amount",
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{Index: 0},
+					Type:                meshcommon.OperationTypeTransfer,
+					Account: &types.AccountIdentifier{
+						Address: meshtests.TestAddress1,
+					},
+					Amount: &types.Amount{
+						Value: "invalid_value",
+						Currency: &types.Currency{
+							Symbol:   "TEST",
+							Decimals: 18,
+							Metadata: map[string]any{
+								"contractAddress": "0x0000000000000000000000000000456e65726779",
+							},
+						},
+					},
+				},
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			txBuilder := thorTx.NewBuilder(thorTx.TypeLegacy)
+			txBuilder.ChainTag(0x27)
+			txBuilder.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+			txBuilder.Expiration(720)
+			txBuilder.Gas(21000)
+			txBuilder.GasPriceCoef(0)
+			txBuilder.Nonce(0x1234567890abcdef)
+
+			err := builder.addClausesToBuilder(txBuilder, tt.operations)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			}
+		})
 	}
 }

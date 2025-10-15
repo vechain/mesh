@@ -6,6 +6,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/pkg/errors"
 	meshcommon "github.com/vechain/mesh/common"
 	meshoperations "github.com/vechain/mesh/common/operations"
 	meshthor "github.com/vechain/mesh/thor"
@@ -117,7 +118,7 @@ func (e *MeshTransactionEncoder) DecodeSignedTransaction(data []byte) (*MeshTran
 }
 
 // ParseTransactionOperationsFromAPI parses operations directly from api.JSONEmbeddedTx
-func (e *MeshTransactionEncoder) ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) []*types.Operation {
+func (e *MeshTransactionEncoder) ParseTransactionOperationsFromAPI(tx *api.JSONEmbeddedTx) ([]*types.Operation, error) {
 	status := meshcommon.OperationStatusSucceeded
 	if tx.Reverted {
 		status = meshcommon.OperationStatusReverted
@@ -149,13 +150,16 @@ func (e *MeshTransactionEncoder) ParseTransactionFromBytes(txBytes []byte, signe
 	}
 
 	// Parse operations and signers
-	operations, signers := e.parseTransactionSignersAndOperations(meshTx, signed)
+	operations, signers, err := e.parseTransactionSignersAndOperations(meshTx, signed)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to parse transaction signers and operations")
+	}
 
 	return meshTx, operations, signers, nil
 }
 
 // parseTransactionSignersAndOperations parses signers and operations from a transaction
-func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *MeshTransaction, signed bool) ([]*types.Operation, []*types.AccountIdentifier) {
+func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *MeshTransaction, signed bool) ([]*types.Operation, []*types.AccountIdentifier, error) {
 	originAddr := thor.BytesToAddress(meshTx.Origin)
 	var delegatorAddr *thor.Address
 	if len(meshTx.Delegator) > 0 {
@@ -199,7 +203,10 @@ func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *Me
 	if delegatorAddr != nil {
 		delegatorAddrStr = delegatorAddr.String()
 	}
-	operations := e.clauseParser.ParseTransactionOperationsFromClauseData(clauseData, originAddr.String(), delegatorAddrStr, uint64(meshTx.Gas()), nil)
+	operations, err := e.clauseParser.ParseTransactionOperationsFromClauseData(clauseData, originAddr.String(), delegatorAddrStr, uint64(meshTx.Gas()), nil)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to parse operations")
+	}
 
-	return operations, signers
+	return operations, signers, nil
 }

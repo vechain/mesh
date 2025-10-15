@@ -7,18 +7,20 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 	"github.com/vechain/mesh/common/vip180/contracts"
 	"github.com/vechain/thor/v2/abi"
 )
 
 // vip180TransferData represents decoded transfer data from a VIP180 token
 type vip180TransferData struct {
-	To    common.Address `abi:"_to"`
-	Value *big.Int       `abi:"_value"`
+	To    common.Address
+	Value *big.Int
 }
 
 type VIP180Encoder struct {
-	abi *abi.ABI
+	abi          *abi.ABI
+	bytesHandler *meshcrypto.BytesHandler
 }
 
 func NewVIP180Encoder() *VIP180Encoder {
@@ -29,15 +31,14 @@ func NewVIP180Encoder() *VIP180Encoder {
 		panic(fmt.Errorf("failed to create ABI: %w", err))
 	}
 	return &VIP180Encoder{
-		abi: contractABI,
+		abi:          contractABI,
+		bytesHandler: meshcrypto.NewBytesHandler(),
 	}
 }
 
 // DecodeVIP180TransferCallData decodes VIP180 transfer function call data using ABI
 func (e *VIP180Encoder) DecodeVIP180TransferCallData(data string) (*vip180TransferData, error) {
-	cleanData := strings.TrimPrefix(data, "0x")
-
-	dataBytes, err := hex.DecodeString(cleanData)
+	dataBytes, err := e.bytesHandler.DecodeHexStringWithPrefix(data)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hex data: %w", err)
 	}
@@ -63,13 +64,11 @@ func (e *VIP180Encoder) DecodeVIP180TransferCallData(data string) (*vip180Transf
 
 // IsVIP180TransferCallData checks if the data represents a VIP180 transfer call
 func (e *VIP180Encoder) IsVIP180TransferCallData(data string) bool {
-	cleanData := strings.TrimPrefix(data, "0x")
-
-	if len(cleanData) < 8 {
+	if len(strings.TrimPrefix(data, "0x")) < 8 {
 		return false
 	}
 
-	dataBytes, err := hex.DecodeString(cleanData)
+	dataBytes, err := e.bytesHandler.DecodeHexStringWithPrefix(data)
 	if err != nil {
 		return false
 	}

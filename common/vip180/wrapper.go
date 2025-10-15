@@ -1,11 +1,10 @@
 package vip180
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strings"
 
+	meshcrypto "github.com/vechain/mesh/common/crypto"
 	"github.com/vechain/mesh/common/vip180/contracts"
 	meshthor "github.com/vechain/mesh/thor"
 	"github.com/vechain/thor/v2/abi"
@@ -14,9 +13,10 @@ import (
 
 // VIP180Contract represents a VIP180 token contract
 type VIP180Contract struct {
-	address string
-	abi     *abi.ABI
-	client  meshthor.VeChainClientInterface
+	address      string
+	abi          *abi.ABI
+	client       meshthor.VeChainClientInterface
+	bytesHandler *meshcrypto.BytesHandler
 }
 
 // NewVIP180Contract creates a new VIP180 contract wrapper
@@ -29,9 +29,10 @@ func NewVIP180Contract(address string, client meshthor.VeChainClientInterface) (
 	}
 
 	return &VIP180Contract{
-		address: address,
-		abi:     contractABI,
-		client:  client,
+		address:      address,
+		abi:          contractABI,
+		client:       client,
+		bytesHandler: meshcrypto.NewBytesHandler(),
 	}, nil
 }
 
@@ -143,9 +144,7 @@ func (c *VIP180Contract) callBigIntMethod(methodName string) (*big.Int, error) {
 
 // decodeStringResult decodes a string result from a contract call
 func (c *VIP180Contract) decodeStringResult(method *abi.Method, result string) (string, error) {
-
-	hexStr := strings.TrimPrefix(result, "0x")
-	resultBytes, err := hex.DecodeString(hexStr)
+	resultBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode hex result for %s: %w, %s", method.Name(), err, result)
 	}
@@ -160,9 +159,7 @@ func (c *VIP180Contract) decodeStringResult(method *abi.Method, result string) (
 
 // decodeInt32Result decodes an int32 result from a contract call
 func (c *VIP180Contract) decodeInt32Result(method *abi.Method, result string) (int32, error) {
-
-	hexStr := strings.TrimPrefix(result, "0x")
-	resultBytes, err := hex.DecodeString(hexStr)
+	resultBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(result)
 	if err != nil {
 		return 0, fmt.Errorf("failed to decode hex result: %w", err)
 	}
@@ -178,9 +175,7 @@ func (c *VIP180Contract) decodeInt32Result(method *abi.Method, result string) (i
 
 // decodeBigIntResult decodes a big.Int result from a contract call
 func (c *VIP180Contract) decodeBigIntResult(method *abi.Method, result string) (*big.Int, error) {
-
-	hexStr := strings.TrimPrefix(result, "0x")
-	resultBytes, err := hex.DecodeString(hexStr)
+	resultBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hex result: %w", err)
 	}

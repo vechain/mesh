@@ -56,7 +56,15 @@ func (b *BlockService) Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b.responseHandler.WriteJSONResponse(w, b.buildBlockResponse(block, parent))
+	response, err := b.buildBlockResponse(block, parent)
+	if err != nil {
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
+		return
+	}
+
+	b.responseHandler.WriteJSONResponse(w, response)
 }
 
 // BlockTransaction gets a specific transaction from a block
@@ -84,7 +92,15 @@ func (b *BlockService) BlockTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	b.responseHandler.WriteJSONResponse(w, b.buildBlockTransactionResponse(foundTx))
+	response, err := b.buildBlockTransactionResponse(foundTx)
+	if err != nil {
+		b.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
+		return
+	}
+
+	b.responseHandler.WriteJSONResponse(w, response)
 }
 
 // parseBlockRequest parses and validates a block request
@@ -181,7 +197,7 @@ func (b *BlockService) findTransactionInBlock(block *api.JSONExpandedBlock, txHa
 }
 
 // buildBlockResponse builds the response for a block request
-func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) *types.BlockResponse {
+func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) (*types.BlockResponse, error) {
 	blockIdentifier := &types.BlockIdentifier{
 		Index: int64(block.Number),
 		Hash:  block.ID.String(),
@@ -196,7 +212,10 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 	var otherTransactions []*types.TransactionIdentifier
 
 	for _, tx := range block.Transactions {
-		operations := b.encoder.ParseTransactionOperationsFromAPI(tx)
+		operations, err := b.encoder.ParseTransactionOperationsFromAPI(tx)
+		if err != nil {
+			return nil, err
+		}
 
 		if len(operations) > 0 {
 			transaction := b.builder.BuildMeshTransactionFromAPI(tx, operations)
@@ -223,15 +242,18 @@ func (b *BlockService) buildBlockResponse(block, parent *api.JSONExpandedBlock) 
 		response.OtherTransactions = otherTransactions
 	}
 
-	return response
+	return response, nil
 }
 
 // buildBlockTransactionResponse builds the response for a block transaction request
-func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) *types.BlockTransactionResponse {
-	operations := b.encoder.ParseTransactionOperationsFromAPI(tx)
+func (b *BlockService) buildBlockTransactionResponse(tx *api.JSONEmbeddedTx) (*types.BlockTransactionResponse, error) {
+	operations, err := b.encoder.ParseTransactionOperationsFromAPI(tx)
+	if err != nil {
+		return nil, err
+	}
 	meshTx := b.builder.BuildMeshTransactionFromAPI(tx, operations)
 
 	return &types.BlockTransactionResponse{
 		Transaction: meshTx,
-	}
+	}, nil
 }

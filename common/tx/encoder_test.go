@@ -237,17 +237,6 @@ func TestDecodeUnsignedTransaction_Dynamic(t *testing.T) {
 	}
 }
 
-func TestDecodeUnsignedTransaction_InvalidData(t *testing.T) {
-	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-
-	invalidData := []byte{0x01, 0x02, 0x03} // Invalid RLP data
-
-	_, err := encoder.DecodeUnsignedTransaction(invalidData)
-	if err == nil {
-		t.Errorf("DecodeUnsignedTransaction() should return error for invalid data")
-	}
-}
-
 func TestDecodeSignedTransaction_ValidData(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 
@@ -363,17 +352,6 @@ func TestDecodeSignedTransaction_Dynamic(t *testing.T) {
 	}
 }
 
-func TestDecodeSignedTransaction_InvalidData(t *testing.T) {
-	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-
-	invalidData := []byte{0x01, 0x02, 0x03} // Invalid RLP data
-
-	_, err := encoder.DecodeSignedTransaction(invalidData)
-	if err == nil {
-		t.Errorf("DecodeSignedTransaction() should return error for invalid data")
-	}
-}
-
 func TestEncodeSignedTransaction_Legacy(t *testing.T) {
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
 	meshTx := createTestMeshTransaction()
@@ -414,7 +392,10 @@ func TestParseTransactionOperationsFromAPI(t *testing.T) {
 	}
 
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-	operations := encoder.ParseTransactionOperationsFromAPI(tx)
+	operations, err := encoder.ParseTransactionOperationsFromAPI(tx)
+	if err != nil {
+		t.Errorf("ParseTransactionOperationsFromAPI() error = %v", err)
+	}
 	if len(operations) == 0 {
 		t.Errorf("ParseTransactionOperationsFromAPI() returned no operations")
 	}
@@ -455,7 +436,10 @@ func TestParseTransactionOperationsFromAPI_WithDelegation(t *testing.T) {
 	}
 
 	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-	operations := encoder.ParseTransactionOperationsFromAPI(tx)
+	operations, err := encoder.ParseTransactionOperationsFromAPI(tx)
+	if err != nil {
+		t.Errorf("ParseTransactionOperationsFromAPI() error = %v", err)
+	}
 
 	if len(operations) == 0 {
 		t.Errorf("ParseTransactionOperationsFromAPI() returned no operations")
@@ -486,35 +470,6 @@ func TestParseTransactionOperationsFromAPI_WithDelegation(t *testing.T) {
 	}
 	if delegatorInMetadata != delegatorAddr.String() {
 		t.Errorf("Expected delegator %s, got %s", delegatorAddr.String(), delegatorInMetadata)
-	}
-}
-
-func TestParseTransactionFromBytes(t *testing.T) {
-	encoder := NewMeshTransactionEncoder(meshthor.NewMockVeChainClient())
-
-	// Create and encode a transaction
-	vechainTx := createTestVeChainTransaction()
-
-	encoded, err := encoder.EncodeTransaction(&MeshTransaction{
-		Transaction: vechainTx,
-	})
-	if err != nil {
-		t.Fatalf("EncodeUnsignedTransaction() error = %v", err)
-	}
-
-	// Parse unsigned transaction
-	meshTx, operations, signers, err := encoder.ParseTransactionFromBytes(encoded, false)
-	if err != nil {
-		t.Errorf("ParseTransactionFromBytes() error = %v", err)
-	}
-	if meshTx == nil {
-		t.Errorf("ParseTransactionFromBytes() returned nil meshTx")
-	}
-	if operations == nil {
-		t.Errorf("ParseTransactionFromBytes() returned nil operations")
-	}
-	if signers != nil {
-		t.Errorf("ParseTransactionFromBytes() returned signers")
 	}
 }
 
@@ -627,7 +582,10 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			operations, signers := encoder.parseTransactionSignersAndOperations(tt.meshTx, true)
+			operations, signers, err := encoder.parseTransactionSignersAndOperations(tt.meshTx, true)
+			if err != nil {
+				t.Errorf("parseTransactionSignersAndOperations() error = %v", err)
+			}
 
 			if len(operations) != tt.expectedOps {
 				t.Errorf("parseTransactionSignersAndOperations() operations length = %v, want %v", len(operations), tt.expectedOps)
@@ -681,6 +639,187 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 				feeOp := operations[len(operations)-1]
 				if feeOp.Type != meshcommon.OperationTypeFee {
 					t.Errorf("parseTransactionSignersAndOperations() expected OperationTypeFee, got %v", feeOp.Type)
+				}
+			}
+		})
+	}
+}
+
+func TestParseTransactionFromBytes_ErrorHandling(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	encoder := NewMeshTransactionEncoder(mockClient)
+
+	tests := []struct {
+		name      string
+		txBytes   []byte
+		signed    bool
+		expectErr bool
+	}{
+		{
+			name:      "invalid signed transaction bytes",
+			txBytes:   []byte{0x01, 0x02, 0x03},
+			signed:    true,
+			expectErr: true,
+		},
+		{
+			name:      "invalid unsigned transaction bytes",
+			txBytes:   []byte{0x01, 0x02, 0x03},
+			signed:    false,
+			expectErr: true,
+		},
+		{
+			name:      "empty bytes",
+			txBytes:   []byte{},
+			signed:    true,
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, err := encoder.ParseTransactionFromBytes(tt.txBytes, tt.signed)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestParseTransactionFromBytes_ValidTransaction(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	encoder := NewMeshTransactionEncoder(mockClient)
+
+	// Create a valid unsigned transaction
+	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
+	builder.ChainTag(0x27)
+	blockRef := thorTx.BlockRef([8]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef})
+	builder.BlockRef(blockRef)
+	builder.Expiration(720)
+	builder.Gas(21000)
+	builder.GasPriceCoef(0)
+	builder.Nonce(0x1234567890abcdef)
+
+	// Add a VET transfer clause
+	toAddr, _ := thor.ParseAddress(meshtests.TestAddress1)
+	value := new(big.Int)
+	value.SetString("1000000000000000000", 10) // 1 VET
+
+	thorClause := thorTx.NewClause(&toAddr)
+	thorClause = thorClause.WithValue(value)
+	thorClause = thorClause.WithData([]byte{})
+	builder.Clause(thorClause)
+
+	thorTx := builder.Build()
+
+	originAddr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
+	meshTx := &MeshTransaction{
+		Transaction: thorTx,
+		Origin:      originAddr.Bytes(),
+		Delegator:   []byte{},
+	}
+
+	// Encode the unsigned transaction
+	txBytes, err := encoder.EncodeTransaction(meshTx)
+	if err != nil {
+		t.Fatalf("Failed to encode transaction: %v", err)
+	}
+
+	// Parse it back
+	parsedTx, operations, signers, err := encoder.ParseTransactionFromBytes(txBytes, false)
+	if err != nil {
+		t.Errorf("ParseTransactionFromBytes() error = %v", err)
+	}
+
+	if parsedTx == nil {
+		t.Error("Expected non-nil transaction")
+	}
+
+	if len(operations) != 3 { // sender, receiver, fee
+		t.Errorf("Expected 3 operations, got %d", len(operations))
+	}
+
+	if len(signers) != 0 { // unsigned transaction should have no signers
+		t.Errorf("Expected 0 signers for unsigned transaction, got %d", len(signers))
+	}
+}
+
+func TestDecodeUnsignedTransaction_ErrorHandling(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	encoder := NewMeshTransactionEncoder(mockClient)
+
+	tests := []struct {
+		name      string
+		txBytes   []byte
+		expectErr bool
+	}{
+		{
+			name:      "invalid RLP data",
+			txBytes:   []byte{0x01, 0x02, 0x03},
+			expectErr: true,
+		},
+		{
+			name:      "empty bytes",
+			txBytes:   []byte{},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := encoder.DecodeUnsignedTransaction(tt.txBytes)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestDecodeSignedTransaction_ErrorHandling(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	encoder := NewMeshTransactionEncoder(mockClient)
+
+	tests := []struct {
+		name      string
+		txBytes   []byte
+		expectErr bool
+	}{
+		{
+			name:      "invalid transaction bytes",
+			txBytes:   []byte{0x01, 0x02, 0x03},
+			expectErr: true,
+		},
+		{
+			name:      "empty bytes",
+			txBytes:   []byte{},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := encoder.DecodeSignedTransaction(tt.txBytes)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
 				}
 			}
 		})

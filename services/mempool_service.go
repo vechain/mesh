@@ -108,8 +108,6 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 		}), http.StatusNotFound)
 		return
 	}
-
-	// Parse operations directly from transactions.Transaction
 	status := meshcommon.OperationStatusPending
 
 	var delegatorAddr string
@@ -117,7 +115,13 @@ func (m *MempoolService) MempoolTransaction(w http.ResponseWriter, r *http.Reque
 		delegatorAddr = tx.Delegator.String()
 	}
 
-	operations := m.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, tx.Gas, &status)
+	operations, err := m.clauseParser.ParseOperationsFromAPIClauses(tx.Clauses, tx.Origin.String(), delegatorAddr, tx.Gas, &status)
+	if err != nil {
+		m.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": err.Error(),
+		}), http.StatusInternalServerError)
+		return
+	}
 	meshTx := m.builder.BuildMeshTransactionFromTransaction(tx, operations)
 
 	// Build the response

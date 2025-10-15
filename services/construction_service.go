@@ -307,18 +307,32 @@ func (c *ConstructionService) ConstructionPayloads(w http.ResponseWriter, r *htt
 		}), http.StatusBadRequest)
 		return
 	}
-	originBytes, _ := hex.DecodeString(originAddr[2:]) // Remove 0x prefix
+	originBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(originAddr)
+	if err != nil {
+		c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+			"error":      err.Error(),
+			"originAddr": originAddr,
+		}), http.StatusBadRequest)
+		return
+	}
 
 	var delegatorBytes []byte
 	if hasFeeDelegation {
 		delegatorAddr, err := c.bytesHandler.ComputeAddress(request.PublicKeys[1])
 		if err != nil {
 			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+				"error":         err.Error(),
+				"delegatorAddr": delegatorAddr,
+			}), http.StatusBadRequest)
+			return
+		}
+		delegatorBytes, err = c.bytesHandler.DecodeHexStringWithPrefix(delegatorAddr)
+		if err != nil {
+			c.responseHandler.WriteErrorResponse(w, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
 				"error": err.Error(),
 			}), http.StatusBadRequest)
 			return
 		}
-		delegatorBytes, _ = hex.DecodeString(delegatorAddr[2:]) // Remove 0x prefix
 	}
 
 	// Encode transaction using Mesh schema
@@ -734,9 +748,15 @@ func (c *ConstructionService) createDelegatorPayload(vechainTx *tx.Transaction, 
 	delegatorAddress := crypto.PubkeyToAddress(*delegatorAddr)
 
 	// Create hash for delegator signing
-	originAddr, _ := crypto.DecompressPubkey(publicKeys[0].Bytes)
+	originAddr, err := crypto.DecompressPubkey(publicKeys[0].Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid origin public key: %w", err)
+	}
 	originAddress := crypto.PubkeyToAddress(*originAddr)
-	thorOriginAddr, _ := thor.ParseAddress(originAddress.Hex())
+	thorOriginAddr, err := thor.ParseAddress(originAddress.Hex())
+	if err != nil {
+		return nil, fmt.Errorf("invalid origin address: %w", err)
+	}
 	hash := vechainTx.DelegatorSigningHash(thorOriginAddr)
 
 	return &types.SigningPayload{
