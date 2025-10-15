@@ -2,110 +2,200 @@ package services
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
+	"github.com/vechain/thor/v2/api"
+	"github.com/vechain/thor/v2/thor"
 )
 
-func TestNewEventsService(t *testing.T) {
+func TestEventsService_EventsBlocks_Success(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-
 	service := NewEventsService(mockClient)
 
-	if service == nil {
-		t.Fatal("NewEventsService() returned nil")
+	// Mock best block response (for GetBlock("best"))
+	mockClient.SetMockBlock(&api.JSONExpandedBlock{
+		JSONBlockSummary: &api.JSONBlockSummary{
+			Number: 100,
+			ID: func() thor.Bytes32 {
+				hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+				return hash
+			}(),
+		},
+	})
+
+	// Mock block response for specific numbers
+	mockClient.SetBlockByNumber(&api.JSONExpandedBlock{
+		JSONBlockSummary: &api.JSONBlockSummary{
+			Number: 10,
+			ID: func() thor.Bytes32 {
+				hash, _ := thor.ParseBytes32("0x4567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef123")
+				return hash
+			}(),
+		},
+	})
+
+	offset := int64(10)
+	limit := int64(5)
+	request := &types.EventsBlocksRequest{
+		Offset: &offset,
+		Limit:  &limit,
 	}
 
-	if service.vechainClient == nil {
-		t.Errorf("NewEventsService() vechainClient is nil")
+	ctx := context.Background()
+	response, err := service.EventsBlocks(ctx, request)
+
+	if err != nil {
+		t.Fatalf("EventsBlocks() error = %v", err)
+	}
+
+	if response.MaxSequence < 0 {
+		t.Errorf("Expected max_sequence >= 0, got %d", response.MaxSequence)
+	}
+
+	if len(response.Events) == 0 {
+		t.Error("Expected events, got none")
 	}
 }
 
-func TestEventsService_EventsBlocks(t *testing.T) {
+func TestEventsService_EventsBlocks_DefaultValues(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewEventsService(mockClient)
 
-	tests := []struct {
-		name      string
-		offset    *int64
-		limit     *int64
-		wantError bool
-	}{
-		{
-			name:      "default parameters",
-			offset:    nil,
-			limit:     nil,
-			wantError: false,
+	// Mock best block response
+	mockClient.SetMockBlock(&api.JSONExpandedBlock{
+		JSONBlockSummary: &api.JSONBlockSummary{
+			Number: 100,
+			ID: func() thor.Bytes32 {
+				hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+				return hash
+			}(),
 		},
-		{
-			name:      "with offset",
-			offset:    int64Ptr(10),
-			limit:     nil,
-			wantError: false,
-		},
-		{
-			name:      "with limit",
-			offset:    nil,
-			limit:     int64Ptr(50),
-			wantError: false,
-		},
-		{
-			name:      "negative offset",
-			offset:    int64Ptr(-1),
-			limit:     nil,
-			wantError: true,
-		},
-		{
-			name:      "limit too small",
-			offset:    nil,
-			limit:     int64Ptr(0),
-			wantError: true,
-		},
-		{
-			name:      "limit too large",
-			offset:    nil,
-			limit:     int64Ptr(101),
-			wantError: true,
-		},
+	})
+
+	// Create request with nil offset and limit (should use defaults)
+	request := &types.EventsBlocksRequest{
+		Offset: nil,
+		Limit:  nil,
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			request := &types.EventsBlocksRequest{
-				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: meshcommon.BlockchainName,
-					Network:    "test",
-				},
-				Offset: tt.offset,
-				Limit:  tt.limit,
-			}
+	ctx := context.Background()
+	response, err := service.EventsBlocks(ctx, request)
 
-			ctx := context.Background()
-			response, err := service.EventsBlocks(ctx, request)
+	if err != nil {
+		t.Fatalf("EventsBlocks() error = %v", err)
+	}
 
-			if tt.wantError {
-				if err == nil {
-					t.Error("EventsBlocks() expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("EventsBlocks() returned error: %v", err)
-				}
+	if response == nil {
+		t.Error("EventsBlocks() returned nil response")
+	}
+}
 
-				if response == nil {
-					t.Fatal("EventsBlocks() returned nil response")
-				}
+func TestEventsService_EventsBlocks_OffsetBeyondBestBlock(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewEventsService(mockClient)
 
-				if response.Events == nil {
-					t.Error("EventsBlocks() Events is nil")
-				}
+	// Mock best block response
+	mockClient.SetMockBlock(&api.JSONExpandedBlock{
+		JSONBlockSummary: &api.JSONBlockSummary{
+			Number: 100,
+			ID: func() thor.Bytes32 {
+				hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+				return hash
+			}(),
+		},
+	})
 
-				if response.MaxSequence < 0 {
-					t.Errorf("EventsBlocks() MaxSequence = %v, want >= 0", response.MaxSequence)
-				}
-			}
-		})
+	// Request with offset beyond best block
+	offset := int64(200)
+	limit := int64(5)
+	request := &types.EventsBlocksRequest{
+		Offset: &offset,
+		Limit:  &limit,
+	}
+
+	ctx := context.Background()
+	response, err := service.EventsBlocks(ctx, request)
+
+	if err != nil {
+		t.Fatalf("EventsBlocks() error = %v", err)
+	}
+
+	// Should return empty events array
+	if len(response.Events) != 0 {
+		t.Errorf("Expected empty events array, got %d events", len(response.Events))
+	}
+}
+
+func TestEventsService_EventsBlocks_InvalidOffset(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewEventsService(mockClient)
+
+	// Request with negative offset
+	offset := int64(-1)
+	request := &types.EventsBlocksRequest{
+		Offset: &offset,
+	}
+
+	ctx := context.Background()
+	_, err := service.EventsBlocks(ctx, request)
+
+	if err == nil {
+		t.Error("EventsBlocks() expected error for negative offset")
+	}
+}
+
+func TestEventsService_EventsBlocks_InvalidLimit(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewEventsService(mockClient)
+
+	// Request with negative limit
+	limit := int64(-1)
+	request := &types.EventsBlocksRequest{
+		Limit: &limit,
+	}
+
+	ctx := context.Background()
+	_, err := service.EventsBlocks(ctx, request)
+
+	if err == nil {
+		t.Error("EventsBlocks() expected error for negative limit")
+	}
+}
+
+func TestEventsService_EventsBlocks_InvalidLimitTooHigh(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewEventsService(mockClient)
+
+	// Request with limit > 1000
+	limit := int64(2000)
+	request := &types.EventsBlocksRequest{
+		Limit: &limit,
+	}
+
+	ctx := context.Background()
+	_, err := service.EventsBlocks(ctx, request)
+
+	if err == nil {
+		t.Error("EventsBlocks() expected error for limit > 1000")
+	}
+}
+
+func TestEventsService_EventsBlocks_ThorClientError(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewEventsService(mockClient)
+
+	// Set error on mock client
+	mockClient.SetMockError(errors.New("thor client error"))
+
+	request := &types.EventsBlocksRequest{}
+
+	ctx := context.Background()
+	_, err := service.EventsBlocks(ctx, request)
+
+	if err == nil {
+		t.Error("EventsBlocks() expected error when thor client returns error")
 	}
 }

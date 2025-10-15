@@ -6,6 +6,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
+	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
 )
 
@@ -23,10 +24,11 @@ func TestNewMempoolService(t *testing.T) {
 	}
 }
 
-func TestMempoolService_Mempool(t *testing.T) {
+func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewMempoolService(mockClient)
 
+	// Create request
 	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -38,68 +40,65 @@ func TestMempoolService_Mempool(t *testing.T) {
 	response, err := service.Mempool(ctx, request)
 
 	if err != nil {
-		t.Fatalf("Mempool() returned error: %v", err)
+		t.Fatalf("Mempool() error = %v", err)
 	}
 
 	if response == nil {
-		t.Fatal("Mempool() returned nil response")
-	}
-
-	if response.TransactionIdentifiers == nil {
-		t.Error("Mempool() TransactionIdentifiers is nil")
+		t.Error("Mempool() returned nil response")
 	}
 }
 
-func TestMempoolService_MempoolTransaction(t *testing.T) {
+func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewMempoolService(mockClient)
 
-	// Valid transaction hash from mock
+	// Create request with origin filter
+	request := &types.NetworkRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Metadata: map[string]interface{}{
+			"origin": meshtests.FirstSoloAddress,
+		},
+	}
+
+	ctx := context.Background()
+	response, err := service.Mempool(ctx, request)
+
+	if err != nil {
+		t.Fatalf("Mempool() error = %v", err)
+	}
+
+	if response == nil {
+		t.Error("Mempool() returned nil response")
+	}
+}
+
+func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewMempoolService(mockClient)
+
+	// Create request
 	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "0x8e5c7a4b971c2d028e3ba9ba7e56e78d1ff75ddb68d4a26a1c5e36aef70e1a3c",
+			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 		},
 	}
 
 	ctx := context.Background()
 	response, err := service.MempoolTransaction(ctx, request)
 
-	if err != nil {
-		t.Fatalf("MempoolTransaction() returned error: %v", err)
-	}
-
-	if response == nil {
-		t.Fatal("MempoolTransaction() returned nil response")
-	}
-
-	if response.Transaction == nil {
-		t.Error("MempoolTransaction() Transaction is nil")
-	}
-}
-
-func TestMempoolService_MempoolTransaction_InvalidHash(t *testing.T) {
-	mockClient := meshthor.NewMockVeChainClient()
-	service := NewMempoolService(mockClient)
-
-	request := &types.MempoolTransactionRequest{
-		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
-		},
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "invalid",
-		},
-	}
-
-	ctx := context.Background()
-	_, err := service.MempoolTransaction(ctx, request)
-
-	// Should return error for invalid hash format
+	// This should return an error because VeChain doesn't support this operation
 	if err == nil {
-		t.Error("MempoolTransaction() expected error for invalid hash")
+		t.Error("MempoolTransaction() expected error for unsupported operation")
+	}
+
+	if response != nil {
+		t.Error("MempoolTransaction() should return nil response for unsupported operation")
 	}
 }

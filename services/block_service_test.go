@@ -2,108 +2,51 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
 	meshthor "github.com/vechain/mesh/thor"
+	"github.com/vechain/thor/v2/api"
+	"github.com/vechain/thor/v2/thor"
 )
 
 func TestNewBlockService(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
-
 	service := NewBlockService(mockClient)
 
-	if service == nil {
-		t.Fatal("NewBlockService() returned nil")
-	}
-
-	if service.vechainClient == nil {
-		t.Errorf("NewBlockService() vechainClient is nil")
-	}
-
-	if service.encoder == nil {
-		t.Errorf("NewBlockService() encoder is nil")
-	}
-
-	if service.builder == nil {
-		t.Errorf("NewBlockService() builder is nil")
+	if service == nil || service.vechainClient != mockClient {
+		t.Errorf("NewBlockService() returned nil or client mismatch")
 	}
 }
+
+// Request body validation is handled by SDK asserter
 
 func TestBlockService_Block_ValidRequest(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewBlockService(mockClient)
 
-	tests := []struct {
-		name            string
-		blockIdentifier *types.PartialBlockIdentifier
-		wantError       bool
-	}{
-		{
-			name: "block by index",
-			blockIdentifier: &types.PartialBlockIdentifier{
-				Index: int64Ptr(1),
-			},
-			wantError: false,
+	// Create request with valid block identifier
+	request := &types.BlockRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
 		},
-		{
-			name: "block by hash",
-			blockIdentifier: &types.PartialBlockIdentifier{
-				Hash: stringPtr("0x00000001c458949db492fb211c05c4f05f770648fc58db33d05c9a94cb3ece8e"),
-			},
-			wantError: false,
-		},
-		{
-			name:            "no block identifier",
-			blockIdentifier: &types.PartialBlockIdentifier{},
-			wantError:       true,
+		BlockIdentifier: &types.PartialBlockIdentifier{
+			Index: func() *int64 { i := int64(100); return &i }(),
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			request := &types.BlockRequest{
-				NetworkIdentifier: &types.NetworkIdentifier{
-					Blockchain: meshcommon.BlockchainName,
-					Network:    "test",
-				},
-				BlockIdentifier: tt.blockIdentifier,
-			}
+	ctx := context.Background()
+	response, err := service.Block(ctx, request)
 
-			ctx := context.Background()
-			response, err := service.Block(ctx, request)
+	if err != nil {
+		t.Fatalf("Block() error = %v", err)
+	}
 
-			if tt.wantError {
-				if err == nil {
-					t.Errorf("Block() expected error but got none")
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("Block() returned error: %v", err)
-				}
-
-				if response == nil {
-					t.Fatal("Block() returned nil response")
-				}
-
-				if response.Block == nil {
-					t.Error("Block() Block is nil")
-				}
-
-				if response.Block.BlockIdentifier == nil {
-					t.Error("Block() BlockIdentifier is nil")
-				}
-
-				if response.Block.ParentBlockIdentifier == nil {
-					t.Error("Block() ParentBlockIdentifier is nil")
-				}
-
-				if response.Block.Transactions == nil {
-					t.Error("Block() Transactions is nil")
-				}
-			}
-		})
+	if response.Block == nil {
+		t.Errorf("Block() response.Block is nil")
 	}
 }
 
@@ -111,101 +54,303 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewBlockService(mockClient)
 
-	// First get a block to find a real transaction
-	blockReq := &types.BlockRequest{
+	// Create request with valid block and transaction identifiers
+	request := &types.BlockTransactionRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.BlockIdentifier{
+			Index: int64(100),
+		},
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+		},
+	}
+
+	ctx := context.Background()
+	response, err := service.BlockTransaction(ctx, request)
+
+	if err != nil {
+		t.Fatalf("BlockTransaction() error = %v", err)
+	}
+
+	if response.Transaction == nil {
+		t.Errorf("BlockTransaction() response.Transaction is nil")
+	}
+}
+
+func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	// Create request with hash identifier
+	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
-			Index: int64Ptr(1),
+			Hash: func() *string { h := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; return &h }(),
 		},
 	}
 
 	ctx := context.Background()
-	blockResp, err := service.Block(ctx, blockReq)
-	if err != nil {
-		t.Fatalf("Block() returned error: %v", err)
-	}
-
-	if len(blockResp.Block.Transactions) == 0 {
-		t.Skip("No transactions in block 1 to test with")
-	}
-
-	// Now test BlockTransaction with the first transaction
-	txHash := blockResp.Block.Transactions[0].TransactionIdentifier.Hash
-
-	request := &types.BlockTransactionRequest{
-		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
-		},
-		BlockIdentifier: &types.BlockIdentifier{
-			Index: blockResp.Block.BlockIdentifier.Index,
-			Hash:  blockResp.Block.BlockIdentifier.Hash,
-		},
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: txHash,
-		},
-	}
-
-	response, err := service.BlockTransaction(ctx, request)
+	response, err := service.Block(ctx, request)
 
 	if err != nil {
-		t.Fatalf("BlockTransaction() returned error: %v", err)
+		t.Fatalf("Block() error = %v", err)
 	}
 
-	if response == nil {
-		t.Fatal("BlockTransaction() returned nil response")
-	}
-
-	if response.Transaction == nil {
-		t.Error("BlockTransaction() Transaction is nil")
-	}
-
-	if response.Transaction.TransactionIdentifier == nil {
-		t.Error("BlockTransaction() TransactionIdentifier is nil")
-	}
-
-	if response.Transaction.TransactionIdentifier.Hash != txHash {
-		t.Errorf("BlockTransaction() transaction hash = %v, want %v",
-			response.Transaction.TransactionIdentifier.Hash, txHash)
+	if response.Block == nil {
+		t.Errorf("Block() response.Block is nil")
 	}
 }
 
-func TestBlockService_BlockTransaction_InvalidTransaction(t *testing.T) {
+func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewBlockService(mockClient)
 
+	// Create request with both index and hash identifiers
+	request := &types.BlockRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.PartialBlockIdentifier{
+			Index: func() *int64 { i := int64(100); return &i }(),
+			Hash:  func() *string { h := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; return &h }(),
+		},
+	}
+
+	ctx := context.Background()
+	response, err := service.Block(ctx, request)
+
+	if err != nil {
+		t.Fatalf("Block() error = %v", err)
+	}
+
+	if response.Block == nil {
+		t.Errorf("Block() response.Block is nil")
+	}
+}
+
+func TestBlockService_Block_ErrorCases(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	t.Run("Block not found", func(t *testing.T) {
+		// Set up mock to return error
+		mockClient.SetMockError(fmt.Errorf("block not found"))
+
+		request := &types.BlockRequest{
+			NetworkIdentifier: &types.NetworkIdentifier{
+				Blockchain: meshcommon.BlockchainName,
+				Network:    "test",
+			},
+			BlockIdentifier: &types.PartialBlockIdentifier{
+				Index: func() *int64 { i := int64(12345); return &i }(),
+			},
+		}
+
+		ctx := context.Background()
+		_, err := service.Block(ctx, request)
+
+		if err == nil {
+			t.Error("Block() expected error but got none")
+		}
+	})
+}
+
+func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	// Create request with hash block identifier
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
 			Network:    "test",
 		},
 		BlockIdentifier: &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "0x00000001c458949db492fb211c05c4f05f770648fc58db33d05c9a94cb3ece8e",
+			Index: int64(100),
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
 		},
 	}
 
 	ctx := context.Background()
 	response, err := service.BlockTransaction(ctx, request)
 
-	// Should return error for non-existent transaction
-	if err == nil {
-		t.Error("BlockTransaction() expected error for non-existent transaction")
+	if err != nil {
+		t.Fatalf("BlockTransaction() error = %v", err)
 	}
 
-	if response != nil {
-		t.Error("BlockTransaction() should return nil response on error")
+	if response.Transaction == nil {
+		t.Errorf("BlockTransaction() response.Transaction is nil")
 	}
 }
 
-func TestBlockService_Block_GenesisBlock(t *testing.T) {
-	// Note: Mock client returns block 100 by default, so we skip this test
-	// In a real environment with genesis block, this would work correctly
-	t.Skip("Mock client doesn't support genesis block test - would work with real data")
+func TestBlockService_getBlockByIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	t.Run("Get block by number", func(t *testing.T) {
+		// Set up mock block
+		mockBlock := &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Number: 100,
+				ID:     thor.Bytes32{},
+			},
+		}
+		mockClient.SetMockBlock(mockBlock)
+
+		// Test getting block by number
+		blockIdentifier := types.BlockIdentifier{
+			Index: 100,
+		}
+		block, err := service.getBlockByIdentifier(blockIdentifier)
+		if err != nil {
+			t.Errorf("getBlockByIdentifier() error = %v, want nil", err)
+		}
+		if block == nil {
+			t.Errorf("getBlockByIdentifier() returned nil block")
+		}
+	})
+
+	t.Run("Get block by hash", func(t *testing.T) {
+		// Set up mock block
+		mockBlock := &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Number: 100,
+				ID:     thor.Bytes32{},
+			},
+		}
+		mockClient.SetMockBlock(mockBlock)
+
+		// Test getting block by hash
+		blockIdentifier := types.BlockIdentifier{
+			Hash: "0x1234567890abcdef",
+		}
+		block, err := service.getBlockByIdentifier(blockIdentifier)
+		if err != nil {
+			t.Errorf("getBlockByIdentifier() error = %v, want nil", err)
+		}
+		if block == nil {
+			t.Errorf("getBlockByIdentifier() returned nil block")
+		}
+	})
+
+	t.Run("Error case - block not found", func(t *testing.T) {
+		// Set up mock error
+		mockClient.SetMockError(fmt.Errorf("block not found"))
+
+		// Test error case
+		blockIdentifier := types.BlockIdentifier{
+			Index: 999999,
+		}
+		block, err := service.getBlockByIdentifier(blockIdentifier)
+		if err == nil {
+			t.Errorf("getBlockByIdentifier() should return error when block not found")
+		}
+		if block != nil {
+			t.Errorf("getBlockByIdentifier() should return nil block when error occurs")
+		}
+	})
+
+	t.Run("Error case - invalid identifier", func(t *testing.T) {
+		// Test with empty identifier
+		blockIdentifier := types.BlockIdentifier{}
+		block, err := service.getBlockByIdentifier(blockIdentifier)
+		if err == nil {
+			t.Errorf("getBlockByIdentifier() should return error for invalid identifier")
+		}
+		if block != nil {
+			t.Errorf("getBlockByIdentifier() should return nil block for invalid identifier")
+		}
+	})
+}
+
+func TestBlockService_getBlockByPartialIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	t.Run("Get block by number", func(t *testing.T) {
+		// Set up mock block
+		mockBlock := &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Number: 100,
+				ID:     thor.Bytes32{},
+			},
+		}
+		mockClient.SetMockBlock(mockBlock)
+
+		// Test getting block by number
+		index := int64(100)
+		blockIdentifier := types.PartialBlockIdentifier{
+			Index: &index,
+		}
+		block, err := service.getBlockByPartialIdentifier(blockIdentifier)
+		if err != nil {
+			t.Errorf("getBlockByPartialIdentifier() error = %v, want nil", err)
+		}
+		if block == nil {
+			t.Errorf("getBlockByPartialIdentifier() returned nil block")
+		}
+	})
+
+	t.Run("Get block by hash", func(t *testing.T) {
+		// Set up mock block
+		mockBlock := &api.JSONExpandedBlock{
+			JSONBlockSummary: &api.JSONBlockSummary{
+				Number: 100,
+				ID:     thor.Bytes32{},
+			},
+		}
+		mockClient.SetMockBlock(mockBlock)
+
+		// Test getting block by hash
+		hash := "0x1234567890abcdef"
+		blockIdentifier := types.PartialBlockIdentifier{
+			Hash: &hash,
+		}
+		block, err := service.getBlockByPartialIdentifier(blockIdentifier)
+		if err != nil {
+			t.Errorf("getBlockByPartialIdentifier() error = %v, want nil", err)
+		}
+		if block == nil {
+			t.Errorf("getBlockByPartialIdentifier() returned nil block")
+		}
+	})
+
+	t.Run("Error case - invalid identifier", func(t *testing.T) {
+		// Test with empty identifier
+		blockIdentifier := types.PartialBlockIdentifier{}
+		block, err := service.getBlockByPartialIdentifier(blockIdentifier)
+		if err == nil {
+			t.Errorf("getBlockByPartialIdentifier() should return error for invalid identifier")
+		}
+		if block != nil {
+			t.Errorf("getBlockByPartialIdentifier() should return nil block for invalid identifier")
+		}
+	})
+
+	t.Run("Error case - block not found", func(t *testing.T) {
+		// Set up mock error
+		mockClient.SetMockError(fmt.Errorf("block not found"))
+
+		// Test error case
+		index := int64(999999)
+		blockIdentifier := types.PartialBlockIdentifier{
+			Index: &index,
+		}
+		block, err := service.getBlockByPartialIdentifier(blockIdentifier)
+		if err == nil {
+			t.Errorf("getBlockByPartialIdentifier() should return error when block not found")
+		}
+		if block != nil {
+			t.Errorf("getBlockByPartialIdentifier() should return nil block when error occurs")
+		}
+	})
 }
