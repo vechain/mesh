@@ -32,18 +32,6 @@ func (b *BlockService) Block(
 	ctx context.Context,
 	req *types.BlockRequest,
 ) (*types.BlockResponse, *types.Error) {
-	// Validate that a block identifier is provided
-	var revision any
-	if req.BlockIdentifier.Hash != nil && *req.BlockIdentifier.Hash != "" {
-		revision = *req.BlockIdentifier.Hash
-	} else if req.BlockIdentifier.Index != nil {
-		revision = *req.BlockIdentifier.Index
-	}
-
-	if revision == nil {
-		return nil, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter)
-	}
-
 	block, err := b.getBlockByPartialIdentifier(*req.BlockIdentifier)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrBlockNotFound, map[string]any{
@@ -73,18 +61,6 @@ func (b *BlockService) BlockTransaction(
 	ctx context.Context,
 	req *types.BlockTransactionRequest,
 ) (*types.BlockTransactionResponse, *types.Error) {
-	// Validate that a block identifier is provided
-	var revision any
-	if req.BlockIdentifier.Hash != "" {
-		revision = req.BlockIdentifier.Hash
-	} else if req.BlockIdentifier.Index != 0 {
-		revision = req.BlockIdentifier.Index
-	}
-
-	if revision == nil {
-		return nil, meshcommon.GetError(meshcommon.ErrInvalidBlockIdentifierParameter)
-	}
-
 	// Validate that transaction identifier is provided
 	if req.TransactionIdentifier == nil || req.TransactionIdentifier.Hash == "" {
 		return nil, meshcommon.GetError(meshcommon.ErrInvalidRequestBody)

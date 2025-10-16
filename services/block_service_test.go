@@ -103,8 +103,8 @@ func TestBlockService_BlockTransaction_InvalidBlockIdentifier(t *testing.T) {
 		t.Error("BlockTransaction() expected error for invalid block identifier")
 	}
 
-	if err != nil && err.Code != int32(meshcommon.ErrInvalidBlockIdentifierParameter) {
-		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrInvalidBlockIdentifierParameter)
+	if err != nil && err.Code != int32(meshcommon.ErrBlockNotFound) {
+		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrBlockNotFound)
 	}
 }
 
