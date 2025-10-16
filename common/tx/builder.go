@@ -9,7 +9,6 @@ import (
 	meshcommon "github.com/vechain/mesh/common"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
 	"github.com/vechain/mesh/common/vip180"
-	"github.com/vechain/mesh/config"
 	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/api/transactions"
 	"github.com/vechain/thor/v2/thor"
@@ -46,7 +45,7 @@ func (b *TransactionBuilder) BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx,
 }
 
 // BuildTransactionFromRequest builds a VeChain transaction from a construction request
-func (b *TransactionBuilder) BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, config *config.Config) (*thorTx.Transaction, error) {
+func (b *TransactionBuilder) BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, expiration uint32) (*thorTx.Transaction, error) {
 	// Extract metadata
 	metadata := request.Metadata
 	blockRef := metadata["blockRef"].(string)
@@ -80,7 +79,6 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 	builder.BlockRef(thorTx.BlockRef(blockRefBytes))
 
 	// Set expiration from configuration
-	expiration := config.GetExpiration()
 	builder.Expiration(expiration)
 
 	builder.Gas(uint64(gas))

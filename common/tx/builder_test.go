@@ -103,7 +103,7 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 	}
 
 	builder := NewTransactionBuilder()
-	tx, err := builder.BuildTransactionFromRequest(request, config)
+	tx, err := builder.BuildTransactionFromRequest(request, config.Expiration)
 	if err != nil {
 		t.Errorf("BuildTransactionFromRequest() error = %v", err)
 	}
@@ -153,7 +153,7 @@ func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 	}
 
 	builder := NewTransactionBuilder()
-	tx, err := builder.BuildTransactionFromRequest(request, config)
+	tx, err := builder.BuildTransactionFromRequest(request, config.Expiration)
 	if err != nil {
 		t.Errorf("BuildTransactionFromRequest() error = %v", err)
 	}

@@ -245,7 +245,7 @@ func (c *ConstructionService) ConstructionPayloads(
 	}
 
 	// Build transaction
-	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config)
+	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config.GetExpiration())
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
 			"error": err.Error(),
@@ -280,14 +280,14 @@ func (c *ConstructionService) ConstructionPayloads(
 		delegatorAddr, err := c.bytesHandler.ComputeAddress(req.PublicKeys[1])
 		if err != nil {
 			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
-				"error":         err.Error(),
-				"delegatorAddr": delegatorAddr,
+				"error": err.Error(),
 			})
 		}
 		delegatorBytes, err = c.bytesHandler.DecodeHexStringWithPrefix(delegatorAddr)
 		if err != nil {
 			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
-				"error": err.Error(),
+				"error":         err.Error(),
+				"delegatorAddr": delegatorAddr,
 			})
 		}
 	}
@@ -315,7 +315,6 @@ func (c *ConstructionService) ConstructionParse(
 	ctx context.Context,
 	req *types.ConstructionParseRequest,
 ) (*types.ConstructionParseResponse, *types.Error) {
-	// Decode transaction
 	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.Transaction)
 	if err != nil {
 		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)
@@ -483,7 +482,6 @@ func (c *ConstructionService) ConstructionSubmit(
 	ctx context.Context,
 	req *types.ConstructionSubmitRequest,
 ) (*types.TransactionIdentifierResponse, *types.Error) {
-	// Decode transaction using our utility method
 	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.SignedTransaction)
 	if err != nil {
 		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)

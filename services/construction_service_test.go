@@ -1157,7 +1157,7 @@ func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 		},
 	}
 
-	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config.Expiration)
 	if err != nil {
 		t.Fatalf("Failed to build transaction: %v", err)
 	}
@@ -1238,7 +1238,7 @@ func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t 
 		},
 	}
 
-	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config.Expiration)
 	if err != nil {
 		t.Fatalf("Failed to build transaction: %v", err)
 	}
@@ -1292,7 +1292,7 @@ func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *te
 		},
 	}
 
-	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config.Expiration)
 	if err != nil {
 		t.Fatalf("Failed to build transaction: %v", err)
 	}
