@@ -16,7 +16,7 @@ func createMockConstructionService() *ConstructionService {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      meshcommon.TestNetwork,
 		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000",
 	}
@@ -41,7 +41,7 @@ func TestNewConstructionService(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      meshcommon.TestNetwork,
 		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000", // 1 VTHO
 	}
@@ -67,7 +67,7 @@ func TestConstructionService_ConstructionDerive_ValidRequest(t *testing.T) {
 
 	// Create valid request
 	request := &types.ConstructionDeriveRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		PublicKey:         createTestPublicKey(),
 	}
 
@@ -92,7 +92,7 @@ func TestConstructionService_ConstructionPreprocess_ValidRequest(t *testing.T) {
 
 	// Create valid request with both sender (negative) and receiver (positive) operations
 	request := &types.ConstructionPreprocessRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			// Sender operation (negative amount)
 			{
@@ -142,7 +142,7 @@ func TestConstructionService_ConstructionPreprocess_VIP180Token(t *testing.T) {
 
 	// Create valid request with VIP180 token operations
 	request := &types.ConstructionPreprocessRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			// Sender operation (negative amount)
 			{
@@ -241,7 +241,7 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
@@ -278,7 +278,7 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeDynamic,
@@ -312,7 +312,7 @@ func TestConstructionService_ConstructionMetadata_ClientError(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      meshcommon.TestNetwork,
 		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000",
 	}
@@ -324,7 +324,7 @@ func TestConstructionService_ConstructionMetadata_ClientError(t *testing.T) {
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
@@ -356,7 +356,7 @@ func TestConstructionService_ConstructionMetadata_MissingClauses(t *testing.T) {
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
@@ -382,7 +382,7 @@ func TestConstructionService_ConstructionMetadata_EmptyClauses(t *testing.T) {
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
@@ -408,7 +408,7 @@ func TestConstructionService_ConstructionMetadata_InvalidClauses(t *testing.T) {
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
@@ -437,7 +437,7 @@ func TestConstructionService_ConstructionMetadata_InvalidDynamicMetadata(t *test
 	mockClient := meshthor.NewMockVeChainClient()
 	config := &meshconfig.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      meshcommon.TestNetwork,
 		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000",
 	}
@@ -449,7 +449,7 @@ func TestConstructionService_ConstructionMetadata_InvalidDynamicMetadata(t *test
 	request := &types.ConstructionMetadataRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Options: map[string]any{
 			"transactionType": meshcommon.TransactionTypeDynamic,
@@ -482,7 +482,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Operations: []*types.Operation{
 			{
@@ -533,7 +533,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Operations: []*types.Operation{
 			{
@@ -579,7 +579,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Operations: []*types.Operation{
 			{
@@ -624,7 +624,7 @@ func TestConstructionService_ConstructionPayloads_NoPublicKeys(t *testing.T) {
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Operations: []*types.Operation{
 			{
@@ -664,7 +664,7 @@ func TestConstructionService_ConstructionPayloads_TooManyPublicKeys(t *testing.T
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Operations: []*types.Operation{
 			{
@@ -718,7 +718,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Operations: []*types.Operation{
 			{
@@ -768,7 +768,7 @@ func TestConstructionService_ConstructionParse_ValidRequest(t *testing.T) {
 	request := &types.ConstructionParseRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Signed:      false,
 		Transaction: "0xf85db84551f84281f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac08094f077b491b355e64048ce21e3a6fc4751eeea77fa80",
@@ -789,7 +789,7 @@ func TestConstructionService_ConstructionCombine_ValidRequest(t *testing.T) {
 	request := &types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "solo",
+			Network:    meshcommon.SoloNetwork,
 		},
 		UnsignedTransaction: "0xf85db84551f84281f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac08094f077b491b355e64048ce21e3a6fc4751eeea77fa80",
 		Signatures: []*types.Signature{
@@ -830,7 +830,7 @@ func TestConstructionService_ConstructionCombine_InvalidUnsignedTransaction(t *t
 	request := &types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "solo",
+			Network:    meshcommon.SoloNetwork,
 		},
 		UnsignedTransaction: "invalid_hex",
 		Signatures: []*types.Signature{
@@ -867,7 +867,7 @@ func TestConstructionService_ConstructionCombine_InvalidNumberOfSignatures(t *te
 	request := &types.ConstructionCombineRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "solo",
+			Network:    meshcommon.SoloNetwork,
 		},
 		UnsignedTransaction: "0xf85281f68800000005e6911c7481b4dad99416277a1ff38678291c41d1820957c78bb5da59ce8227108082bb808864d53d1260b9a69f94f077b491b355e64048ce21e3a6fc4751eeea77fa808609184e72a00080",
 		Signatures:          []*types.Signature{}, // No signatures
@@ -943,7 +943,7 @@ func TestConstructionService_ConstructionHash_ValidRequest(t *testing.T) {
 	request := &types.ConstructionHashRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		SignedTransaction: "0x51f88481f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac0b8411bc4aff0c0d425ecd1a931ad435156a48b3e74b9a76b79fcc6e866337a73f05a7e05773a5fcbd4cf1251cf026e70c5cc5b3524866446de93a7d49897c0bac57900",
 	}
@@ -963,7 +963,7 @@ func TestConstructionService_ConstructionSubmit_ValidRequest(t *testing.T) {
 	request := &types.ConstructionSubmitRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "solo",
+			Network:    meshcommon.SoloNetwork,
 		},
 		SignedTransaction: "0x51f88481f68502b506882881b4e0df9416277a1ff38678291c41d1820957c78bb5da59ce880de0b6b3a764000080808609184e72a00082bb80808827706abefbc974eac0b8411bc4aff0c0d425ecd1a931ad435156a48b3e74b9a76b79fcc6e866337a73f05a7e05773a5fcbd4cf1251cf026e70c5cc5b3524866446de93a7d49897c0bac57900",
 	}
@@ -982,7 +982,7 @@ func TestConstructionService_ConstructionDerive_EmptyPublicKey(t *testing.T) {
 	service := createMockConstructionService()
 
 	request := &types.ConstructionDeriveRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		PublicKey: &types.PublicKey{
 			Bytes:     []byte{},
 			CurveType: meshtests.SECP256k1,
@@ -1001,7 +1001,7 @@ func TestConstructionService_ConstructionDerive_InvalidPublicKey(t *testing.T) {
 	service := createMockConstructionService()
 
 	request := &types.ConstructionDeriveRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		PublicKey: &types.PublicKey{
 			Bytes:     []byte{0x01, 0x02, 0x03},
 			CurveType: meshtests.SECP256k1,
@@ -1020,7 +1020,7 @@ func TestConstructionService_ConstructionPreprocess_MultipleOrigins(t *testing.T
 	service := createMockConstructionService()
 
 	request := &types.ConstructionPreprocessRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
@@ -1064,7 +1064,7 @@ func TestConstructionService_ConstructionPreprocess_NoOrigins(t *testing.T) {
 	service := createMockConstructionService()
 
 	request := &types.ConstructionPreprocessRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
@@ -1090,7 +1090,7 @@ func TestConstructionService_ConstructionPreprocess_NoTransferOperations(t *test
 	service := createMockConstructionService()
 
 	request := &types.ConstructionPreprocessRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
@@ -1116,7 +1116,7 @@ func TestConstructionService_ConstructionParse_InvalidTransactionHex(t *testing.
 	service := createMockConstructionService()
 
 	request := &types.ConstructionParseRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Signed:            false,
 		Transaction:       "0xINVALID_HEX",
 	}
@@ -1133,7 +1133,7 @@ func TestConstructionService_ConstructionParse_InvalidTransactionBytes(t *testin
 	service := createMockConstructionService()
 
 	request := &types.ConstructionParseRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Signed:            false,
 		Transaction:       "0x0102030405", // Invalid transaction bytes
 	}
@@ -1150,7 +1150,7 @@ func TestConstructionService_ConstructionHash_InvalidTransactionHex(t *testing.T
 	service := createMockConstructionService()
 
 	request := &types.ConstructionHashRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		SignedTransaction: "0xINVALID_HEX",
 	}
 
@@ -1166,7 +1166,7 @@ func TestConstructionService_ConstructionHash_InvalidTransactionBytes(t *testing
 	service := createMockConstructionService()
 
 	request := &types.ConstructionHashRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		SignedTransaction: "0x0102030405", // Invalid transaction bytes
 	}
 
@@ -1182,7 +1182,7 @@ func TestConstructionService_ConstructionSubmit_InvalidTransactionHex(t *testing
 	service := createMockConstructionService()
 
 	request := &types.ConstructionSubmitRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		SignedTransaction: "0xINVALID_HEX",
 	}
 
@@ -1198,7 +1198,7 @@ func TestConstructionService_ConstructionSubmit_InvalidTransactionBytes(t *testi
 	service := createMockConstructionService()
 
 	request := &types.ConstructionSubmitRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		SignedTransaction: "0x0102030405", // Invalid transaction bytes
 	}
 
@@ -1215,7 +1215,7 @@ func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 
 	// Create a valid VeChain transaction for testing using thor.Builder
 	request := types.ConstructionPayloadsRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
@@ -1307,7 +1307,7 @@ func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t 
 
 	// Create a valid VeChain transaction
 	request := types.ConstructionPayloadsRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
@@ -1361,7 +1361,7 @@ func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *te
 
 	// Create a valid VeChain transaction
 	request := types.ConstructionPayloadsRequest{
-		NetworkIdentifier: createTestNetworkIdentifier("test"),
+		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
 			{
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},

@@ -20,7 +20,7 @@ func createMockCallService() *CallService {
 
 func createMockCallServiceWithClient(client *meshthor.MockVeChainClient) *CallService {
 	config := &meshconfig.Config{}
-	config.Network = "solo"
+	config.Network = meshcommon.SoloNetwork
 	return NewCallService(client, config)
 }
 
@@ -28,7 +28,7 @@ func createTestCallRequest(method string, params map[string]any) *types.CallRequ
 	return &types.CallRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "solo",
+			Network:    meshcommon.SoloNetwork,
 		},
 		Method:     method,
 		Parameters: params,
@@ -39,7 +39,7 @@ func TestCallService_Call_UnsupportedMethod(t *testing.T) {
 	service := createMockCallService()
 
 	request := createTestCallRequest("unsupported_method", map[string]any{
-		"test": "value",
+		meshcommon.TestNetwork: "value",
 	})
 
 	ctx := context.Background()

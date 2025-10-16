@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	meshcommon "github.com/vechain/mesh/common"
 	"github.com/vechain/mesh/common/vip180/contracts"
 	meshtests "github.com/vechain/mesh/tests"
 )
@@ -23,7 +24,7 @@ type TestConfig struct {
 func GetTestConfig() *TestConfig {
 	config := &TestConfig{
 		BaseURL:          getEnv("MESH_BASE_URL", "http://localhost:8080"),
-		Network:          getEnv("MESH_NETWORK", "solo"),
+		Network:          getEnv("MESH_NETWORK", meshcommon.SoloNetwork),
 		SenderPrivateKey: getEnv("SENDER_PRIVATE_KEY", "99f0500549792796c14fed62011a51081dc5b5e68fe8bd8a13b86be829c4fd36"),
 		SenderAddress:    getEnv("SENDER_ADDRESS", meshtests.FirstSoloAddress),
 		RecipientAddress: getEnv("RECIPIENT_ADDRESS", meshtests.TestAddress1),

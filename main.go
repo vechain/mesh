@@ -79,7 +79,7 @@ func createThorConfig(cfg *meshconfig.Config) thor.Config {
 		P2PPort:     11235,
 	}
 
-	if cfg.Network == "solo" {
+	if cfg.Network == meshcommon.SoloNetwork {
 		thorConfig.OnDemand = true
 		thorConfig.Persist = true
 		thorConfig.APICORS = "*"
@@ -90,7 +90,7 @@ func createThorConfig(cfg *meshconfig.Config) thor.Config {
 
 // startThorWithConfig starts Thor with the appropriate method based on network type
 func startThorWithConfig(thorServer *thor.Server, cfg *meshconfig.Config) error {
-	if cfg.Network == "solo" {
+	if cfg.Network == meshcommon.SoloNetwork {
 		log.Println("Starting Thor node in solo mode...")
 		return thorServer.StartSoloNode()
 	}
@@ -113,15 +113,15 @@ func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
 		supportedNetworks = []*types.NetworkIdentifier{
 			{
 				Blockchain: meshcommon.BlockchainName,
-				Network:    "main",
+				Network:    meshcommon.MainNetwork,
 			},
 			{
 				Blockchain: meshcommon.BlockchainName,
-				Network:    "test",
+				Network:    meshcommon.TestNetwork,
 			},
 			{
 				Blockchain: meshcommon.BlockchainName,
-				Network:    "solo",
+				Network:    meshcommon.SoloNetwork,
 			},
 		}
 	}

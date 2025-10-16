@@ -32,7 +32,7 @@ func TestBlockService_Block_ValidRequest(t *testing.T) {
 	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
 			Index: func() *int64 { i := int64(100); return &i }(),
@@ -59,7 +59,7 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{
 			Index: int64(100),
@@ -88,7 +88,7 @@ func TestBlockService_BlockTransaction_InvalidBlockIdentifier(t *testing.T) {
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{},
 		TransactionIdentifier: &types.TransactionIdentifier{
@@ -115,7 +115,7 @@ func TestBlockService_BlockTransaction_NilTransactionIdentifier(t *testing.T) {
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{
 			Index: int64(100),
@@ -142,7 +142,7 @@ func TestBlockService_BlockTransaction_EmptyTransactionHash(t *testing.T) {
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{
 			Index: int64(100),
@@ -173,7 +173,7 @@ func TestBlockService_BlockTransaction_BlockNotFound(t *testing.T) {
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{
 			Index: int64(999999),
@@ -202,7 +202,7 @@ func TestBlockService_BlockTransaction_TransactionNotFoundInBlock(t *testing.T) 
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{
 			Index: int64(100),
@@ -232,7 +232,7 @@ func TestBlockService_Block_WithHashIdentifier(t *testing.T) {
 	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
 			Hash: func() *string { h := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; return &h }(),
@@ -259,7 +259,7 @@ func TestBlockService_Block_WithBothIdentifiers(t *testing.T) {
 	request := &types.BlockRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.PartialBlockIdentifier{
 			Index: func() *int64 { i := int64(100); return &i }(),
@@ -290,7 +290,7 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 		request := &types.BlockRequest{
 			NetworkIdentifier: &types.NetworkIdentifier{
 				Blockchain: meshcommon.BlockchainName,
-				Network:    "test",
+				Network:    meshcommon.TestNetwork,
 			},
 			BlockIdentifier: &types.PartialBlockIdentifier{
 				Index: func() *int64 { i := int64(12345); return &i }(),
@@ -314,7 +314,7 @@ func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {
 	request := &types.BlockTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		BlockIdentifier: &types.BlockIdentifier{
 			Index: int64(100),

@@ -33,7 +33,7 @@ func TestMempoolService_Mempool_ValidRequest(t *testing.T) {
 	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 	}
 
@@ -57,7 +57,7 @@ func TestMempoolService_Mempool_WithOriginFilter(t *testing.T) {
 	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		Metadata: map[string]any{
 			"origin": meshtests.FirstSoloAddress,
@@ -84,7 +84,7 @@ func TestMempoolService_MempoolTransaction_ValidRequest(t *testing.T) {
 	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -114,7 +114,7 @@ func TestMempoolService_Mempool_ClientError(t *testing.T) {
 	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 	}
 
@@ -137,7 +137,7 @@ func TestMempoolService_MempoolTransaction_NilTransactionIdentifier(t *testing.T
 	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		TransactionIdentifier: nil,
 	}
@@ -161,7 +161,7 @@ func TestMempoolService_MempoolTransaction_EmptyHash(t *testing.T) {
 	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "",
@@ -187,7 +187,7 @@ func TestMempoolService_MempoolTransaction_InvalidHash(t *testing.T) {
 	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "0xINVALID",
@@ -216,7 +216,7 @@ func TestMempoolService_MempoolTransaction_TransactionNotFound(t *testing.T) {
 	request := &types.MempoolTransactionRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",

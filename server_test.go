@@ -30,7 +30,7 @@ func createTestAsserter() (*asserter.Asserter, error) {
 		[]*types.NetworkIdentifier{
 			{
 				Blockchain: meshcommon.BlockchainName,
-				Network:    "test",
+				Network:    meshcommon.TestNetwork,
 			},
 		},
 		nil,
@@ -42,7 +42,7 @@ func createTestAsserter() (*asserter.Asserter, error) {
 func TestNewVeChainMeshServer(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 	}
 
@@ -76,7 +76,7 @@ func TestNewVeChainMeshServer(t *testing.T) {
 func TestVeChainMeshServer_Start(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 		Port:    8080,
 	}
@@ -114,7 +114,7 @@ func TestVeChainMeshServer_Start(t *testing.T) {
 func TestVeChainMeshServer_Stop(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 		Port:    8080,
 	}
@@ -139,7 +139,7 @@ func TestVeChainMeshServer_Stop(t *testing.T) {
 func TestVeChainMeshServer_NetworkEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 	}
 
@@ -168,7 +168,7 @@ func TestVeChainMeshServer_NetworkEndpoints(t *testing.T) {
 func TestVeChainMeshServer_AccountEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 	}
 
@@ -198,7 +198,7 @@ func TestVeChainMeshServer_AccountEndpoints(t *testing.T) {
 func TestVeChainMeshServer_ConstructionEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 	}
 
@@ -228,7 +228,7 @@ func TestVeChainMeshServer_ConstructionEndpoints(t *testing.T) {
 func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 	}
 
@@ -304,7 +304,7 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 func TestVeChainMeshServer_NetworkListWithValidRequest(t *testing.T) {
 	config := &meshconfig.Config{
 		NodeAPI: "http://localhost:8669",
-		Network: "test",
+		Network: meshcommon.TestNetwork,
 		Mode:    meshcommon.OnlineMode,
 	}
 

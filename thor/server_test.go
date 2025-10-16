@@ -7,12 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	meshcommon "github.com/vechain/mesh/common"
 )
 
 func TestConfig(t *testing.T) {
 	config := Config{
 		NodeID:      "test-node",
-		NetworkType: "solo",
+		NetworkType: meshcommon.SoloNetwork,
 		APIAddr:     "localhost:8669",
 		P2PPort:     11235,
 		OnDemand:    true,
@@ -24,7 +26,7 @@ func TestConfig(t *testing.T) {
 	if config.NodeID != "test-node" {
 		t.Errorf("Config.NodeID = %v, want test-node", config.NodeID)
 	}
-	if config.NetworkType != "solo" {
+	if config.NetworkType != meshcommon.SoloNetwork {
 		t.Errorf("Config.NetworkType = %v, want solo", config.NetworkType)
 	}
 	if config.APIAddr != "localhost:8669" {
@@ -47,7 +49,7 @@ func TestConfig(t *testing.T) {
 func TestNewServer_WithMockThorBinary(t *testing.T) {
 	config := Config{
 		NodeID:      "test-node",
-		NetworkType: "solo",
+		NetworkType: meshcommon.SoloNetwork,
 		APIAddr:     "localhost:8669",
 		P2PPort:     11235,
 		OnDemand:    true,
@@ -83,7 +85,7 @@ func TestServer_Stop_NoProcess(t *testing.T) {
 	server := &Server{
 		config: Config{
 			NodeID:      "test-node",
-			NetworkType: "solo",
+			NetworkType: meshcommon.SoloNetwork,
 			APIAddr:     "localhost:8669",
 			P2PPort:     11235,
 		},
@@ -104,7 +106,7 @@ func TestServer_Stop_WithMockProcess(t *testing.T) {
 	server := &Server{
 		config: Config{
 			NodeID:      "test-node",
-			NetworkType: "solo",
+			NetworkType: meshcommon.SoloNetwork,
 			APIAddr:     "localhost:8669",
 			P2PPort:     11235,
 		},
@@ -115,7 +117,7 @@ func TestServer_Stop_WithMockProcess(t *testing.T) {
 	// Create a mock process that will exit immediately
 	server.process = &exec.Cmd{
 		Path: "/bin/echo", // Use a simple command that exits quickly
-		Args: []string{"echo", "test"},
+		Args: []string{"echo", meshcommon.TestNetwork},
 	}
 
 	// Start the mock process
@@ -138,7 +140,7 @@ func TestServer_AttachToPublicNetworkAndStart_NoThorBinary(t *testing.T) {
 	server := &Server{
 		config: Config{
 			NodeID:      "test-node",
-			NetworkType: "test",
+			NetworkType: meshcommon.TestNetwork,
 			APIAddr:     "localhost:8669",
 			P2PPort:     11235,
 		},
@@ -159,7 +161,7 @@ func TestServer_StartSoloNode_NoThorBinary(t *testing.T) {
 	server := &Server{
 		config: Config{
 			NodeID:      "test-node",
-			NetworkType: "solo",
+			NetworkType: meshcommon.SoloNetwork,
 			APIAddr:     "localhost:8669",
 			P2PPort:     11235,
 			OnDemand:    true,
@@ -202,7 +204,7 @@ func TestServer_StartSoloNode_WithMockThorBinary(t *testing.T) {
 	server := &Server{
 		config: Config{
 			NodeID:      "test-node",
-			NetworkType: "solo",
+			NetworkType: meshcommon.SoloNetwork,
 			APIAddr:     "localhost:8669",
 			P2PPort:     11235,
 			OnDemand:    true,

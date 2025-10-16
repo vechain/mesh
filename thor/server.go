@@ -17,7 +17,7 @@ import (
 // Config represents the configuration for a Thor node
 type Config struct {
 	NodeID      string
-	NetworkType string // "test", "main", or "solo"
+	NetworkType string // meshcommon.TestNetwork, meshcommon.MainNetwork, or meshcommon.SoloNetwork
 	APIAddr     string
 	P2PPort     int
 	// Solo mode specific options
@@ -108,7 +108,7 @@ func (ts *Server) StartSoloNode() error {
 
 	// Build command arguments for solo mode
 	args := []string{
-		"solo", // Solo mode command
+		meshcommon.SoloNetwork, // Solo mode command
 		"--api-addr", ts.config.APIAddr,
 		"--data-dir", meshcommon.DataDirectory,
 		"--api-enable-txpool", // Enable txpool API

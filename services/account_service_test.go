@@ -64,7 +64,7 @@ func TestAccountService_AccountBalance_ValidRequest(t *testing.T) {
 			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
-					Network:    "test",
+					Network:    meshcommon.TestNetwork,
 				},
 				AccountIdentifier: &types.AccountIdentifier{
 					Address: meshtests.FirstSoloAddress,
@@ -219,7 +219,7 @@ func TestAccountService_AccountBalance_WithCurrenciesAndBlocks(t *testing.T) {
 			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
-					Network:    "test",
+					Network:    meshcommon.TestNetwork,
 				},
 				AccountIdentifier: &types.AccountIdentifier{
 					Address: meshtests.FirstSoloAddress,
@@ -253,7 +253,7 @@ func TestAccountService_AccountBalance_WithVIP180Token_Success(t *testing.T) {
 	request := &types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		AccountIdentifier: &types.AccountIdentifier{
 			Address: meshtests.FirstSoloAddress,
@@ -367,7 +367,7 @@ func TestAccountService_AccountBalance_WithBlockIdentifiers(t *testing.T) {
 			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
-					Network:    "test",
+					Network:    meshcommon.TestNetwork,
 				},
 				AccountIdentifier: &types.AccountIdentifier{
 					Address: meshtests.FirstSoloAddress,
@@ -445,7 +445,7 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 			request := &types.AccountBalanceRequest{
 				NetworkIdentifier: &types.NetworkIdentifier{
 					Blockchain: meshcommon.BlockchainName,
-					Network:    "test",
+					Network:    meshcommon.TestNetwork,
 				},
 				AccountIdentifier: &types.AccountIdentifier{
 					Address: meshtests.FirstSoloAddress,
@@ -471,7 +471,7 @@ func TestAccountService_AccountBalance_InvalidContractAddressType(t *testing.T) 
 	request := &types.AccountBalanceRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 		AccountIdentifier: &types.AccountIdentifier{
 			Address: meshtests.FirstSoloAddress,

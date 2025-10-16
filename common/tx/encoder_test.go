@@ -76,7 +76,7 @@ func createTestMeshTransaction() *MeshTransaction {
 func createTestConfig() *config.Config {
 	return &config.Config{
 		NodeAPI:      "http://localhost:8669",
-		Network:      "test",
+		Network:      meshcommon.TestNetwork,
 		Mode:         meshcommon.OnlineMode,
 		BaseGasPrice: "1000000000000000000",
 	}

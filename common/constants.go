@@ -2,6 +2,14 @@ package common
 
 import "github.com/coinbase/rosetta-sdk-go/types"
 
+// Networks
+const (
+	SoloNetwork = "solo"
+	TestNetwork = "test"
+	MainNetwork = "main"
+)
+
+// Modes
 const (
 	OfflineMode = "offline"
 	OnlineMode  = "online"

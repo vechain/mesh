@@ -33,7 +33,7 @@ func TestNewNetworkService(t *testing.T) {
 func TestNetworkService_NetworkList(t *testing.T) {
 	// Create test config
 	config := &meshconfig.Config{}
-	config.Network = "test"
+	config.Network = meshcommon.TestNetwork
 
 	mockClient := meshthor.NewMockVeChainClient()
 	service := NewNetworkService(mockClient, config)
@@ -58,7 +58,7 @@ func TestNetworkService_NetworkList(t *testing.T) {
 		t.Errorf("NetworkList() blockchain = %v, want vechainthor", network.Blockchain)
 	}
 
-	if network.Network != "test" {
+	if network.Network != meshcommon.TestNetwork {
 		t.Errorf("NetworkList() network = %v, want test", network.Network)
 	}
 }
@@ -72,7 +72,7 @@ func TestNetworkService_NetworkOptions(t *testing.T) {
 	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 	}
 
@@ -102,7 +102,7 @@ func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 	request := &types.NetworkRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
-			Network:    "test",
+			Network:    meshcommon.TestNetwork,
 		},
 	}
 

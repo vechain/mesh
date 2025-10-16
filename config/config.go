@@ -74,14 +74,14 @@ func (c *Config) setDerivedFields() {
 	// Set network identifier based on network
 	var networkName string
 	switch c.Network {
-	case "main", "mainnet":
-		networkName = "main"
+	case meshcommon.MainNetwork, "mainnet":
+		networkName = meshcommon.MainNetwork
 		c.ChainTag = 0x4a // Mainnet chain tag
-	case "test", "testnet":
-		networkName = "test"
+	case meshcommon.TestNetwork, "testnet":
+		networkName = meshcommon.TestNetwork
 		c.ChainTag = 0x27 // Testnet chain tag
-	case "solo":
-		networkName = "solo"
+	case meshcommon.SoloNetwork:
+		networkName = meshcommon.SoloNetwork
 		c.ChainTag = 0xf6 // Solo chain tag
 	default:
 		networkName = "custom"

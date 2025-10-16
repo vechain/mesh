@@ -138,7 +138,7 @@ func TestGetErrorWithMetadata(t *testing.T) {
 		{
 			name:     "non-existent error code",
 			code:     9999,
-			metadata: map[string]any{"test": "value"},
+			metadata: map[string]any{TestNetwork: "value"},
 			expected: nil,
 		},
 	}

@@ -89,7 +89,7 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to set MODE environment variable: %v", err)
 	}
-	err = os.Setenv("NETWORK", "test")
+	err = os.Setenv("NETWORK", meshcommon.TestNetwork)
 	if err != nil {
 		t.Fatalf("Failed to set NETWORK environment variable: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	if config.Mode != meshcommon.OfflineMode {
 		t.Errorf("NewConfig() Mode = %v, want offline", config.Mode)
 	}
-	if config.Network != "test" {
+	if config.Network != meshcommon.TestNetwork {
 		t.Errorf("NewConfig() Network = %v, want test", config.Network)
 	}
 	if config.Port != 9090 {
@@ -133,7 +133,7 @@ func TestNewConfigWithEnvironmentVariables(t *testing.T) {
 	if config.NetworkIdentifier == nil {
 		t.Errorf("NewConfig() NetworkIdentifier is nil")
 	} else {
-		if config.NetworkIdentifier.Network != "test" {
+		if config.NetworkIdentifier.Network != meshcommon.TestNetwork {
 			t.Errorf("NewConfig() NetworkIdentifier.Network = %v, want test", config.NetworkIdentifier.Network)
 		}
 	}
@@ -154,38 +154,38 @@ func TestSetDerivedFields(t *testing.T) {
 	}{
 		{
 			name:            "main network",
-			network:         "main",
+			network:         meshcommon.MainNetwork,
 			chainTag:        0,
 			expectedTag:     0x4a,
-			expectedNetwork: "main",
+			expectedNetwork: meshcommon.MainNetwork,
 		},
 		{
 			name:            "mainnet network",
 			network:         "mainnet",
 			chainTag:        0,
 			expectedTag:     0x4a,
-			expectedNetwork: "main",
+			expectedNetwork: meshcommon.MainNetwork,
 		},
 		{
 			name:            "test network",
-			network:         "test",
+			network:         meshcommon.TestNetwork,
 			chainTag:        0,
 			expectedTag:     0x27,
-			expectedNetwork: "test",
+			expectedNetwork: meshcommon.TestNetwork,
 		},
 		{
 			name:            "testnet network",
 			network:         "testnet",
 			chainTag:        0,
 			expectedTag:     0x27,
-			expectedNetwork: "test",
+			expectedNetwork: meshcommon.TestNetwork,
 		},
 		{
 			name:            "solo network",
-			network:         "solo",
+			network:         meshcommon.SoloNetwork,
 			chainTag:        0,
 			expectedTag:     0xf6,
-			expectedNetwork: "solo",
+			expectedNetwork: meshcommon.SoloNetwork,
 		},
 		{
 			name:            "custom network",
@@ -196,10 +196,10 @@ func TestSetDerivedFields(t *testing.T) {
 		},
 		{
 			name:            "network with existing chain tag",
-			network:         "solo",
+			network:         meshcommon.SoloNetwork,
 			chainTag:        0xf6,
 			expectedTag:     0xf6,
-			expectedNetwork: "solo",
+			expectedNetwork: meshcommon.SoloNetwork,
 		},
 	}
 
@@ -259,7 +259,7 @@ func TestLoadFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to set MODE environment variable: %v", err)
 	}
-	err = os.Setenv("NETWORK", "test")
+	err = os.Setenv("NETWORK", meshcommon.TestNetwork)
 	if err != nil {
 		t.Fatalf("Failed to set NETWORK environment variable: %v", err)
 	}
@@ -284,7 +284,7 @@ func TestLoadFromEnv(t *testing.T) {
 
 	config := &Config{
 		Mode:    meshcommon.OnlineMode,
-		Network: "solo",
+		Network: meshcommon.SoloNetwork,
 		Port:    8080,
 	}
 
@@ -294,7 +294,7 @@ func TestLoadFromEnv(t *testing.T) {
 	if config.Mode != meshcommon.OfflineMode {
 		t.Errorf("loadFromEnv() Mode = %v, want offline", config.Mode)
 	}
-	if config.Network != "test" {
+	if config.Network != meshcommon.TestNetwork {
 		t.Errorf("loadFromEnv() Network = %v, want test", config.Network)
 	}
 	if config.Port != 9090 {
@@ -389,7 +389,7 @@ func TestPrintConfig(t *testing.T) {
 		Mode:        meshcommon.OnlineMode,
 		NodeAPI:     "http://localhost:8669",
 		NodeVersion: "1.0.0",
-		Network:     "main",
+		Network:     meshcommon.MainNetwork,
 		ChainTag:    0x27,
 	}
 
@@ -422,7 +422,7 @@ func TestPrintConfig(t *testing.T) {
 		"1.0.0",
 		meshcommon.OnlineMode,
 		"http://localhost:8669",
-		"main",
+		meshcommon.MainNetwork,
 		"0x27",
 	}
 
