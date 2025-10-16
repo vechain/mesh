@@ -56,7 +56,7 @@ test-unit:
 	go test $(GO_PACKAGES_TEST)
 
 test-unit-coverage-threshold:
-	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=86
+	@$(MAKE) test-unit-coverage-threshold-custom THRESHOLD=86.3
 
 test-unit-coverage-threshold-custom:
 	@echo "Generating coverage report with custom threshold check..."

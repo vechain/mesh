@@ -180,7 +180,6 @@ func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *Me
 		}
 	}
 
-	// Parse clauses as operations using the existing clause parser
 	clauses := meshTx.Clauses()
 	clauseData := make([]meshoperations.ClauseData, len(clauses))
 	for i, clause := range clauses {

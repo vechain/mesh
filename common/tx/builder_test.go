@@ -191,8 +191,82 @@ func TestAddClausesToBuilder(t *testing.T) {
 	}
 }
 
+func TestAddClausesToBuilder_VIP180Transfer(t *testing.T) {
+	builder := thorTx.NewBuilder(thorTx.TypeLegacy)
+
+	// VIP180 token transfer operations (sender with negative value, recipient with positive)
+	operations := []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{Index: 0},
+			Type:                meshcommon.OperationTypeTransfer,
+			Account: &types.AccountIdentifier{
+				Address: meshtests.FirstSoloAddress,
+			},
+			Amount: &types.Amount{
+				Value: "-1000000000000000000",
+				Currency: &types.Currency{
+					Symbol:   "TVIP",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{Index: 1},
+			Type:                meshcommon.OperationTypeTransfer,
+			Account: &types.AccountIdentifier{
+				Address: meshtests.TestAddress1,
+			},
+			Amount: &types.Amount{
+				Value: "1000000000000000000",
+				Currency: &types.Currency{
+					Symbol:   "TVIP",
+					Decimals: 18,
+					Metadata: map[string]any{
+						"contractAddress": "0x0000000000000000000000000000456e65726779",
+					},
+				},
+			},
+		},
+	}
+
+	meshTxBuilder := NewTransactionBuilder()
+	err := meshTxBuilder.addClausesToBuilder(builder, operations)
+	if err != nil {
+		t.Errorf("addClausesToBuilder() VIP180 error = %v", err)
+	}
+
+	// Build transaction and verify clause was added
+	tx := builder.Build()
+	clauses := tx.Clauses()
+	if len(clauses) != 1 {
+		t.Errorf("Expected 1 clause for VIP180 transfer, got %d", len(clauses))
+	}
+
+	// Verify the clause points to the contract address
+	if clauses[0].To() == nil {
+		t.Error("Clause 'to' address should not be nil")
+	} else {
+		expectedAddr, _ := thor.ParseAddress("0x0000000000000000000000000000456e65726779")
+		if *clauses[0].To() != expectedAddr {
+			t.Errorf("Clause 'to' = %v, want %v", clauses[0].To(), expectedAddr)
+		}
+	}
+
+	// Verify the clause has data (VIP180 transfer function call)
+	if len(clauses[0].Data()) == 0 {
+		t.Error("Clause data should not be empty for VIP180 transfer")
+	}
+
+	// Verify value is 0 for token transfer
+	if clauses[0].Value().Sign() != 0 {
+		t.Errorf("Clause value should be 0 for VIP180 transfer, got %v", clauses[0].Value())
+	}
+}
+
 func TestBuildMeshTransactionFromTransactions(t *testing.T) {
-	// Create test transaction
 	tx := &transactions.Transaction{
 		ID: func() thor.Bytes32 {
 			hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
@@ -233,7 +307,6 @@ func TestBuildMeshTransactionFromTransactions(t *testing.T) {
 }
 
 func TestBuildMeshTransactionFromAPI(t *testing.T) {
-	// Create test transaction
 	tx := &api.JSONEmbeddedTx{
 		ID: func() thor.Bytes32 {
 			hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
