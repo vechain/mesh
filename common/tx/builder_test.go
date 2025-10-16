@@ -73,6 +73,66 @@ func TestCreateTransactionBuilder(t *testing.T) {
 			t.Errorf("createTransactionBuilder() returned nil builder")
 		}
 	})
+
+	t.Run("Dynamic transaction with maxFeePerGas not string", func(t *testing.T) {
+		metadata := map[string]any{
+			"maxFeePerGas":         123456,
+			"maxPriorityFeePerGas": "1000000000",
+		}
+
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeDynamic, metadata)
+		if err == nil {
+			t.Error("createTransactionBuilder() should return error when maxFeePerGas is not string")
+		}
+		if builder != nil {
+			t.Error("createTransactionBuilder() should return nil builder when error occurs")
+		}
+	})
+
+	t.Run("Dynamic transaction with invalid maxFeePerGas format", func(t *testing.T) {
+		metadata := map[string]any{
+			"maxFeePerGas":         "invalid_number",
+			"maxPriorityFeePerGas": "1000000000",
+		}
+
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeDynamic, metadata)
+		if err == nil {
+			t.Error("createTransactionBuilder() should return error for invalid maxFeePerGas format")
+		}
+		if builder != nil {
+			t.Error("createTransactionBuilder() should return nil builder when error occurs")
+		}
+	})
+
+	t.Run("Dynamic transaction with maxPriorityFeePerGas not string", func(t *testing.T) {
+		metadata := map[string]any{
+			"maxFeePerGas":         "1000000000",
+			"maxPriorityFeePerGas": 123456,
+		}
+
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeDynamic, metadata)
+		if err == nil {
+			t.Error("createTransactionBuilder() should return error when maxPriorityFeePerGas is not string")
+		}
+		if builder != nil {
+			t.Error("createTransactionBuilder() should return nil builder when error occurs")
+		}
+	})
+
+	t.Run("Dynamic transaction with invalid maxPriorityFeePerGas format", func(t *testing.T) {
+		metadata := map[string]any{
+			"maxFeePerGas":         "1000000000",
+			"maxPriorityFeePerGas": "invalid_number",
+		}
+
+		builder, err := builder.createTransactionBuilder(meshcommon.TransactionTypeDynamic, metadata)
+		if err == nil {
+			t.Error("createTransactionBuilder() should return error for invalid maxPriorityFeePerGas format")
+		}
+		if builder != nil {
+			t.Error("createTransactionBuilder() should return nil builder when error occurs")
+		}
+	})
 }
 
 func TestBuildTransactionFromRequest(t *testing.T) {
@@ -164,6 +224,152 @@ func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 	// Verify delegation feature is set
 	if !tx.Features().IsDelegated() {
 		t.Errorf("BuildTransactionFromRequest() expected delegation feature to be set")
+	}
+}
+
+func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
+	config := createTestConfig()
+
+	tests := []struct {
+		name     string
+		metadata map[string]any
+		wantErr  bool
+	}{
+		{
+			name: "missing blockRef",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"chainTag":        float64(1),
+				"gas":             float64(21000),
+				"nonce":           "0x1",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "blockRef not string",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"blockRef":        123456,
+				"chainTag":        float64(1),
+				"gas":             float64(21000),
+				"nonce":           "0x1",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "chainTag not number",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"blockRef":        "0x0000000000000000",
+				"chainTag":        "invalid",
+				"gas":             float64(21000),
+				"nonce":           "0x1",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "gas not number",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"blockRef":        "0x0000000000000000",
+				"chainTag":        float64(1),
+				"gas":             "invalid",
+				"nonce":           "0x1",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "transactionType not string",
+			metadata: map[string]any{
+				"transactionType": 123,
+				"blockRef":        "0x0000000000000000",
+				"chainTag":        float64(1),
+				"gas":             float64(21000),
+				"nonce":           "0x1",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nonce not string",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"blockRef":        "0x0000000000000000",
+				"chainTag":        float64(1),
+				"gas":             float64(21000),
+				"nonce":           123456,
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid blockRef format",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"blockRef":        "invalid_hex",
+				"chainTag":        float64(1),
+				"gas":             float64(21000),
+				"nonce":           "0x1",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid nonce format",
+			metadata: map[string]any{
+				"transactionType": meshcommon.TransactionTypeLegacy,
+				"blockRef":        "0x0000000000000000",
+				"chainTag":        float64(1),
+				"gas":             float64(21000),
+				"nonce":           "0xZZZ",
+				"gasPriceCoef":    uint8(128),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := types.ConstructionPayloadsRequest{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{Index: 0},
+						Type:                meshcommon.OperationTypeTransfer,
+						Account: &types.AccountIdentifier{
+							Address: meshtests.TestAddress1,
+						},
+						Amount: &types.Amount{
+							Value:    "-1000000000000000000",
+							Currency: meshcommon.VETCurrency,
+						},
+					},
+				},
+				Metadata: tt.metadata,
+			}
+
+			builder := NewTransactionBuilder()
+			tx, err := builder.BuildTransactionFromRequest(request, config.Expiration)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("BuildTransactionFromRequest() expected error for %s", tt.name)
+				}
+				if tx != nil {
+					t.Errorf("BuildTransactionFromRequest() should return nil tx on error")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("BuildTransactionFromRequest() unexpected error = %v", err)
+				}
+				if tx == nil {
+					t.Errorf("BuildTransactionFromRequest() returned nil tx")
+				}
+			}
+		})
 	}
 }
 

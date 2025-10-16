@@ -3,6 +3,7 @@ package tx
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -90,16 +91,38 @@ func (b *TransactionBuilder) buildTransactionMetadata(
 func (b *TransactionBuilder) BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, expiration uint32) (*thorTx.Transaction, error) {
 	// Extract metadata
 	metadata := request.Metadata
-	blockRef := metadata["blockRef"].(string)
-	chainTag := int(metadata["chainTag"].(float64))
-	gas := int64(metadata["gas"].(float64))
-	transactionType := metadata["transactionType"].(string)
-	nonce := metadata["nonce"].(string)
+	blockRef, ok := metadata["blockRef"].(string)
+	if !ok {
+		return nil, fmt.Errorf("blockRef is required and must be a string")
+	}
+
+	chainTagFloat, ok := metadata["chainTag"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("chainTag is required and must be a number")
+	}
+
+	gasFloat, ok := metadata["gas"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("gas is required and must be a number")
+	}
+
+	transactionType, ok := metadata["transactionType"].(string)
+	if !ok {
+		return nil, fmt.Errorf("transactionType is required and must be a string")
+	}
+
+	nonce, ok := metadata["nonce"].(string)
+	if !ok {
+		return nil, fmt.Errorf("nonce is required and must be a string")
+	}
+
+	chainTag := int(chainTagFloat)
+	gas := int64(gasFloat)
 
 	// Parse nonce to uint64
 	nonceStr := strings.TrimPrefix(nonce, "0x")
 	nonceValue := new(big.Int)
-	nonceValue, ok := nonceValue.SetString(nonceStr, 16)
+	nonceValue, ok = nonceValue.SetString(nonceStr, 16)
 	if !ok {
 		return nil, fmt.Errorf("invalid nonce: %s", nonceStr)
 	}
@@ -158,13 +181,23 @@ func (b *TransactionBuilder) createTransactionBuilder(transactionType string, me
 
 	// Dynamic fee transaction
 	builder := thorTx.NewBuilder(thorTx.TypeDynamicFee)
-	maxFee, ok := new(big.Int).SetString(metadata["maxFeePerGas"].(string), 10)
+
+	maxFeeStr, ok := metadata["maxFeePerGas"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid maxFeePerGas: %s", metadata["maxFeePerGas"])
+		return nil, fmt.Errorf("maxFeePerGas is required and must be a string for dynamic transactions")
 	}
-	maxPriority, ok := new(big.Int).SetString(metadata["maxPriorityFeePerGas"].(string), 10)
+	maxFee, ok := new(big.Int).SetString(maxFeeStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", metadata["maxPriorityFeePerGas"])
+		return nil, fmt.Errorf("invalid maxFeePerGas: %s", maxFeeStr)
+	}
+
+	maxPriorityStr, ok := metadata["maxPriorityFeePerGas"].(string)
+	if !ok {
+		return nil, fmt.Errorf("maxPriorityFeePerGas is required and must be a string for dynamic transactions")
+	}
+	maxPriority, ok := new(big.Int).SetString(maxPriorityStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid maxPriorityFeePerGas: %s", maxPriorityStr)
 	}
 	builder.MaxFeePerGas(maxFee)
 	builder.MaxPriorityFeePerGas(maxPriority)
@@ -177,14 +210,9 @@ func (b *TransactionBuilder) addClausesToBuilder(builder *thorTx.Builder, operat
 	sortedOps := make([]*types.Operation, len(operations))
 	copy(sortedOps, operations)
 
-	// Simple sort by operation index
-	for i := 0; i < len(sortedOps)-1; i++ {
-		for j := i + 1; j < len(sortedOps); j++ {
-			if sortedOps[i].OperationIdentifier.Index > sortedOps[j].OperationIdentifier.Index {
-				sortedOps[i], sortedOps[j] = sortedOps[j], sortedOps[i]
-			}
-		}
-	}
+	sort.Slice(sortedOps, func(i, j int) bool {
+		return sortedOps[i].OperationIdentifier.Index < sortedOps[j].OperationIdentifier.Index
+	})
 
 	for _, op := range sortedOps {
 		if op.Type == meshcommon.OperationTypeTransfer {
