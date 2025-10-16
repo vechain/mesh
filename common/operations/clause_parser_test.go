@@ -485,7 +485,7 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 
 			// Check fee_delegator_account in metadata for delegation
 			if tt.delegatorAddr != "" {
-				delegatorInMetadata, ok := operation.Metadata["fee_delegator_account"].(string)
+				delegatorInMetadata, ok := operation.Metadata[meshcommon.DelegatorAccountMetadataKey].(string)
 				if !ok {
 					t.Errorf("createEnergyTransferOperation() fee_delegator_account not found in metadata")
 				}
@@ -493,7 +493,7 @@ func TestMeshTransactionEncoder_createEnergyTransferOperation(t *testing.T) {
 					t.Errorf("createEnergyTransferOperation() fee_delegator_account = %v, want %v", delegatorInMetadata, tt.delegatorAddr)
 				}
 			} else {
-				if _, exists := operation.Metadata["fee_delegator_account"]; exists {
+				if _, exists := operation.Metadata[meshcommon.DelegatorAccountMetadataKey]; exists {
 					t.Errorf("createEnergyTransferOperation() fee_delegator_account should not exist in metadata without delegation")
 				}
 			}
@@ -740,7 +740,7 @@ func TestClauseParser_ParseOperationsWithFeeDelegation(t *testing.T) {
 					t.Errorf("Expected account to be origin %s, got %s", meshtests.FirstSoloAddress, feeOp.Account.Address)
 				}
 				// Check delegator in metadata
-				delegator, ok := feeOp.Metadata["fee_delegator_account"].(string)
+				delegator, ok := feeOp.Metadata[meshcommon.DelegatorAccountMetadataKey].(string)
 				if !ok {
 					t.Error("Expected fee_delegator_account in metadata")
 				}
@@ -777,7 +777,7 @@ func TestClauseParser_ParseOperationsWithFeeDelegation(t *testing.T) {
 					t.Errorf("Expected account to be origin %s, got %s", meshtests.FirstSoloAddress, feeOp.Account.Address)
 				}
 				// Check no delegator in metadata
-				if _, exists := feeOp.Metadata["fee_delegator_account"]; exists {
+				if _, exists := feeOp.Metadata[meshcommon.DelegatorAccountMetadataKey]; exists {
 					t.Error("fee_delegator_account should not exist in metadata without delegation")
 				}
 			},

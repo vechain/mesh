@@ -141,14 +141,14 @@ func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType":       meshcommon.TransactionTypeDynamic,
-			"blockRef":              "0x0000000000000000",
-			"chainTag":              float64(1),
-			"gas":                   float64(21000),
-			"nonce":                 "0x1",
-			"maxFeePerGas":          "1000000000000000",
-			"maxPriorityFeePerGas":  "0",
-			"fee_delegator_account": meshtests.FirstSoloAddress,
+			"transactionType":                      meshcommon.TransactionTypeDynamic,
+			"blockRef":                             "0x0000000000000000",
+			"chainTag":                             float64(1),
+			"gas":                                  float64(21000),
+			"nonce":                                "0x1",
+			"maxFeePerGas":                         "1000000000000000",
+			"maxPriorityFeePerGas":                 "0",
+			meshcommon.DelegatorAccountMetadataKey: meshtests.FirstSoloAddress,
 		},
 	}
 

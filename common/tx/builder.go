@@ -44,6 +44,14 @@ func (b *TransactionBuilder) BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx,
 	})
 }
 
+// BuildMeshTransactionFromTransactions builds a Mesh transaction directly from transactions.Transaction
+func (b *TransactionBuilder) BuildMeshTransactionFromTransaction(tx *transactions.Transaction, operations []*types.Operation) *types.Transaction {
+	return b.buildMeshTransaction(tx.ID.String(), operations, map[string]any{
+		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
+		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
+	})
+}
+
 // BuildTransactionFromRequest builds a VeChain transaction from a construction request
 func (b *TransactionBuilder) BuildTransactionFromRequest(request types.ConstructionPayloadsRequest, expiration uint32) (*thorTx.Transaction, error) {
 	// Extract metadata
@@ -84,7 +92,7 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 	builder.Gas(uint64(gas))
 	builder.Nonce(nonceValue.Uint64())
 
-	if _, hasDelegator := metadata["fee_delegator_account"]; hasDelegator {
+	if _, hasDelegator := metadata[meshcommon.DelegatorAccountMetadataKey]; hasDelegator {
 		builder.Features(thorTx.DelegationFeature)
 	}
 
@@ -202,12 +210,4 @@ func (b *TransactionBuilder) addClausesToBuilder(builder *thorTx.Builder, operat
 		// FeeDelegation operations are handled in the signing process
 	}
 	return nil
-}
-
-// BuildMeshTransactionFromTransactions builds a Mesh transaction directly from transactions.Transaction
-func (b *TransactionBuilder) BuildMeshTransactionFromTransaction(tx *transactions.Transaction, operations []*types.Operation) *types.Transaction {
-	return b.buildMeshTransaction(tx.ID.String(), operations, map[string]any{
-		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
-		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
-	})
 }

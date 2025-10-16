@@ -67,6 +67,11 @@ const (
 	CallMethodInspectClauses = "inspect_clauses"
 )
 
+// Delegator account metadata key
+const (
+	DelegatorAccountMetadataKey = "fee_delegator_account"
+)
+
 const (
 	VTHOContractAddress = "0x0000000000000000000000000000456e65726779"
 )

@@ -651,13 +651,13 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType":       meshcommon.TransactionTypeLegacy,
-			"blockRef":              "0x0000000000000000",
-			"chainTag":              float64(1),
-			"gas":                   float64(21000),
-			"nonce":                 "0x1",
-			"gasPriceCoef":          uint8(128),
-			"fee_delegator_account": "0x1234567890123456789012345678901234567890",
+			"transactionType":                      meshcommon.TransactionTypeLegacy,
+			"blockRef":                             "0x0000000000000000",
+			"chainTag":                             float64(1),
+			"gas":                                  float64(21000),
+			"nonce":                                "0x1",
+			"gasPriceCoef":                         uint8(128),
+			meshcommon.DelegatorAccountMetadataKey: "0x1234567890123456789012345678901234567890",
 		},
 	}
 

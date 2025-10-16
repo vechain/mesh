@@ -50,7 +50,7 @@ func testDelegationFlow(
 		NetworkIdentifier: networkIdentifier,
 		Operations:        operations,
 		Metadata: map[string]any{
-			"fee_delegator_account": delegatorAddress,
+			meshcommon.DelegatorAccountMetadataKey: delegatorAddress,
 		},
 	}
 
@@ -100,7 +100,7 @@ func testDelegationFlow(
 	// Add fee_delegator_account to metadata for payloads endpoint
 	payloadsMetadata := make(map[string]any)
 	maps.Copy(payloadsMetadata, metadataResp.Metadata)
-	payloadsMetadata["fee_delegator_account"] = delegatorAddress
+	payloadsMetadata[meshcommon.DelegatorAccountMetadataKey] = delegatorAddress
 
 	payloadsResp, err := testConstructionPayloadsWithMetadata(
 		client,
@@ -206,7 +206,7 @@ func testDelegationFlow(
 			if op.Metadata == nil {
 				t.Fatal("Fee delegation operation should have metadata")
 			}
-			delegatorInMetadata, ok := op.Metadata["fee_delegator_account"].(string)
+			delegatorInMetadata, ok := op.Metadata[meshcommon.DelegatorAccountMetadataKey].(string)
 			if !ok {
 				t.Fatal("Fee delegation operation metadata should contain fee_delegator_account field")
 			}
@@ -271,7 +271,7 @@ func testDelegationFlow(
 			if op.Metadata == nil {
 				t.Fatal("Fee delegation operation should have metadata")
 			}
-			delegatorInMetadata, ok := op.Metadata["fee_delegator_account"].(string)
+			delegatorInMetadata, ok := op.Metadata[meshcommon.DelegatorAccountMetadataKey].(string)
 			if !ok {
 				t.Fatal("Fee delegation operation metadata should contain fee_delegator_account field")
 			}
