@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -77,6 +78,149 @@ func TestBlockService_BlockTransaction_ValidRequest(t *testing.T) {
 
 	if response.Transaction == nil {
 		t.Errorf("BlockTransaction() response.Transaction is nil")
+	}
+}
+
+func TestBlockService_BlockTransaction_InvalidBlockIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	request := &types.BlockTransactionRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.BlockIdentifier{},
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.BlockTransaction(ctx, request)
+
+	if err == nil {
+		t.Error("BlockTransaction() expected error for invalid block identifier")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrInvalidBlockIdentifierParameter) {
+		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrInvalidBlockIdentifierParameter)
+	}
+}
+
+func TestBlockService_BlockTransaction_NilTransactionIdentifier(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	request := &types.BlockTransactionRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.BlockIdentifier{
+			Index: int64(100),
+		},
+		TransactionIdentifier: nil,
+	}
+
+	ctx := context.Background()
+	_, err := service.BlockTransaction(ctx, request)
+
+	if err == nil {
+		t.Error("BlockTransaction() expected error for nil transaction identifier")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrInvalidRequestBody) {
+		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrInvalidRequestBody)
+	}
+}
+
+func TestBlockService_BlockTransaction_EmptyTransactionHash(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	request := &types.BlockTransactionRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.BlockIdentifier{
+			Index: int64(100),
+		},
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "",
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.BlockTransaction(ctx, request)
+
+	if err == nil {
+		t.Error("BlockTransaction() expected error for empty transaction hash")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrInvalidRequestBody) {
+		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrInvalidRequestBody)
+	}
+}
+
+func TestBlockService_BlockTransaction_BlockNotFound(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	mockClient.SetMockError(errors.New("block not found"))
+
+	request := &types.BlockTransactionRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.BlockIdentifier{
+			Index: int64(999999),
+		},
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.BlockTransaction(ctx, request)
+
+	if err == nil {
+		t.Error("BlockTransaction() expected error when block not found")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrBlockNotFound) {
+		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrBlockNotFound)
+	}
+}
+
+func TestBlockService_BlockTransaction_TransactionNotFoundInBlock(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	request := &types.BlockTransactionRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		BlockIdentifier: &types.BlockIdentifier{
+			Index: int64(100),
+		},
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.BlockTransaction(ctx, request)
+
+	if err == nil {
+		t.Error("BlockTransaction() expected error when transaction not found in block")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrTransactionNotFound) {
+		t.Errorf("BlockTransaction() error code = %d, want %d", err.Code, meshcommon.ErrTransactionNotFound)
 	}
 }
 
