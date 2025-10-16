@@ -144,7 +144,7 @@ func (e *OperationsExtractor) GetFeeDelegatorAccount(metadata map[string]any) st
 	if metadata == nil {
 		return ""
 	}
-	if delegator, ok := metadata["fee_delegator_account"].(string); ok {
+	if delegator, ok := metadata[meshcommon.DelegatorAccountMetadataKey].(string); ok {
 		return strings.ToLower(delegator)
 	}
 	return ""

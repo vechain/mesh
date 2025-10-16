@@ -93,41 +93,6 @@ func (c *Config) setDerivedFields() {
 	}
 }
 
-// GetNetworkIdentifier returns the network identifier
-func (c *Config) GetNetworkIdentifier() *types.NetworkIdentifier {
-	return c.NetworkIdentifier
-}
-
-// GetRunMode returns the run mode
-func (c *Config) GetRunMode() string {
-	return c.Mode
-}
-
-// GetPort returns the server port
-func (c *Config) GetPort() int {
-	return c.Port
-}
-
-// GetNodeAPI returns the VeChain node API URL
-func (c *Config) GetNodeAPI() string {
-	return c.NodeAPI
-}
-
-// GetNetwork returns the network name
-func (c *Config) GetNetwork() string {
-	return c.Network
-}
-
-// GetChainTag returns the chain tag
-func (c *Config) GetChainTag() int {
-	return c.ChainTag
-}
-
-// GetMeshVersion returns the Mesh version
-func (c *Config) GetMeshVersion() string {
-	return c.MeshVersion
-}
-
 // IsOnlineMode returns true if running in online mode
 func (c *Config) IsOnlineMode() bool {
 	return c.Mode == meshcommon.OnlineMode
@@ -169,9 +134,4 @@ func (c *Config) GetBaseGasPrice() *big.Int {
 	}
 
 	return baseGasPrice
-}
-
-// GetExpiration returns the transaction expiration in blocks
-func (c *Config) GetExpiration() uint32 {
-	return c.Expiration
 }

@@ -242,7 +242,7 @@ func (e *ClauseParser) createEnergyTransferOperation(operationIndex int, originA
 
 	if delegatorAddr != "" {
 		feeType = meshcommon.OperationTypeFeeDelegation
-		metadata["fee_delegator_account"] = delegatorAddr
+		metadata[meshcommon.DelegatorAccountMetadataKey] = delegatorAddr
 	}
 
 	return &types.Operation{

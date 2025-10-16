@@ -435,7 +435,7 @@ func TestGetFeeDelegatorAccount(t *testing.T) {
 		{
 			name: "valid fee delegator account",
 			metadata: map[string]any{
-				"fee_delegator_account": meshtests.TestAddress1,
+				meshcommon.DelegatorAccountMetadataKey: meshtests.TestAddress1,
 			},
 			expected: meshtests.TestAddress1,
 		},
@@ -452,14 +452,14 @@ func TestGetFeeDelegatorAccount(t *testing.T) {
 		{
 			name: "fee delegator account with uppercase (should be lowercased)",
 			metadata: map[string]any{
-				"fee_delegator_account": "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+				meshcommon.DelegatorAccountMetadataKey: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
 			},
 			expected: "0xabcdef1234567890abcdef1234567890abcdef12",
 		},
 		{
 			name: "wrong type for fee delegator account",
 			metadata: map[string]any{
-				"fee_delegator_account": 12345,
+				meshcommon.DelegatorAccountMetadataKey: 12345,
 			},
 			expected: "",
 		},

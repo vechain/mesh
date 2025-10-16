@@ -464,7 +464,7 @@ func TestParseTransactionOperationsFromAPI_WithDelegation(t *testing.T) {
 	}
 
 	// Verify delegator in metadata
-	delegatorInMetadata, ok := feeDelegationOp.Metadata["fee_delegator_account"].(string)
+	delegatorInMetadata, ok := feeDelegationOp.Metadata[meshcommon.DelegatorAccountMetadataKey].(string)
 	if !ok {
 		t.Fatal("Expected fee_delegator_account in metadata")
 	}
@@ -625,7 +625,7 @@ func TestParseTransactionSignersAndOperations(t *testing.T) {
 				}
 				// Verify delegator in metadata
 				delegatorAddr := thor.BytesToAddress(tt.meshTx.Delegator)
-				delegatorInMetadata, ok := feeOp.Metadata["fee_delegator_account"].(string)
+				delegatorInMetadata, ok := feeOp.Metadata[meshcommon.DelegatorAccountMetadataKey].(string)
 				if !ok {
 					t.Error("parseTransactionSignersAndOperations() fee_delegator_account not found in metadata")
 				} else if delegatorInMetadata != delegatorAddr.String() {

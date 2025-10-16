@@ -15,7 +15,6 @@ import (
 	"github.com/vechain/mesh/common/vip180"
 	"github.com/vechain/mesh/config"
 	meshthor "github.com/vechain/mesh/thor"
-	"github.com/vechain/thor/v2/api"
 	"github.com/vechain/thor/v2/thor"
 	"github.com/vechain/thor/v2/tx"
 )
@@ -154,19 +153,18 @@ func (c *ConstructionService) ConstructionMetadata(
 	ctx context.Context,
 	req *types.ConstructionMetadataRequest,
 ) (*types.ConstructionMetadataResponse, *types.Error) {
-	// Get basic transaction info
-	bestBlock, chainTag, err := c.getBasicTransactionInfo()
+	// Determine transaction type
+	transactionType := c.operationsExtractor.GetStringFromOptions(req.Options, "transactionType")
+
+	// Calculate gas and create blockRef
+	gas, err := c.calculateGas(req.Options)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
 		})
 	}
 
-	// Determine transaction type
-	transactionType := c.operationsExtractor.GetStringFromOptions(req.Options, "transactionType")
-
-	// Calculate gas and create blockRef
-	gas, err := c.calculateGas(req.Options)
+	bestBlock, err := c.vechainClient.GetBlock("best")
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
@@ -181,7 +179,7 @@ func (c *ConstructionService) ConstructionMetadata(
 	}
 
 	// Build metadata based on transaction type
-	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), uint64(chainTag), gas, nonce)
+	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), uint64(c.config.ChainTag), gas, nonce)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
@@ -245,7 +243,7 @@ func (c *ConstructionService) ConstructionPayloads(
 	}
 
 	// Build transaction
-	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config)
+	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config.Expiration)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
 			"error": err.Error(),
@@ -280,14 +278,14 @@ func (c *ConstructionService) ConstructionPayloads(
 		delegatorAddr, err := c.bytesHandler.ComputeAddress(req.PublicKeys[1])
 		if err != nil {
 			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
-				"error":         err.Error(),
-				"delegatorAddr": delegatorAddr,
+				"error": err.Error(),
 			})
 		}
 		delegatorBytes, err = c.bytesHandler.DecodeHexStringWithPrefix(delegatorAddr)
 		if err != nil {
 			return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
-				"error": err.Error(),
+				"error":         err.Error(),
+				"delegatorAddr": delegatorAddr,
 			})
 		}
 	}
@@ -315,7 +313,6 @@ func (c *ConstructionService) ConstructionParse(
 	ctx context.Context,
 	req *types.ConstructionParseRequest,
 ) (*types.ConstructionParseResponse, *types.Error) {
-	// Decode transaction
 	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.Transaction)
 	if err != nil {
 		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)
@@ -483,7 +480,6 @@ func (c *ConstructionService) ConstructionSubmit(
 	ctx context.Context,
 	req *types.ConstructionSubmitRequest,
 ) (*types.TransactionIdentifierResponse, *types.Error) {
-	// Decode transaction using our utility method
 	txBytes, err := c.bytesHandler.DecodeHexStringWithPrefix(req.SignedTransaction)
 	if err != nil {
 		return nil, meshcommon.GetError(meshcommon.ErrInvalidTransactionHex)
@@ -508,21 +504,6 @@ func (c *ConstructionService) ConstructionSubmit(
 			Hash: txID,
 		},
 	}, nil
-}
-
-// getBasicTransactionInfo gets basic transaction information from the network
-func (c *ConstructionService) getBasicTransactionInfo() (*api.JSONExpandedBlock, int, error) {
-	bestBlock, err := c.vechainClient.GetBlock("best")
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get best block: %w", err)
-	}
-
-	chainTag, err := c.vechainClient.GetChainID()
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get chain tag: %w", err)
-	}
-
-	return bestBlock, chainTag, nil
 }
 
 // calculateGas calculates gas based on clauses and applies a 20% buffer

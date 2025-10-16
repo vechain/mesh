@@ -26,7 +26,11 @@ func NewSearchService(vechainClient meshthor.VeChainClientInterface) *SearchServ
 	}
 }
 
-// SearchTransactions handles the /search/transactions endpoint
+// SearchTransactions handles the /search/transactions endpoint.
+// This implementation only supports searching by transaction hash.
+// It requires a TransactionIdentifier with a valid hash and returns
+// exactly one transaction with its operations and block information.
+// Searching by other criteria is not currently supported.
 func (s *SearchService) SearchTransactions(
 	ctx context.Context,
 	req *types.SearchTransactionsRequest,

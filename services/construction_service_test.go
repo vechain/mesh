@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -307,6 +308,173 @@ func TestConstructionService_ConstructionMetadata_DynamicRequest(t *testing.T) {
 	}
 }
 
+func TestConstructionService_ConstructionMetadata_ClientError(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         meshcommon.OnlineMode,
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Configure mock to return error for GetBestBlock
+	mockClient.SetMockBlockError(errors.New("failed to get best block"))
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"clauses": []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionMetadata(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionMetadata() expected error when client fails")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrGettingBlockchainMetadata) {
+		t.Errorf("ConstructionMetadata() error code = %d, want %d", err.Code, meshcommon.ErrGettingBlockchainMetadata)
+	}
+}
+
+func TestConstructionService_ConstructionMetadata_MissingClauses(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			// Missing clauses
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionMetadata(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionMetadata() expected error when clauses are missing")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrGettingBlockchainMetadata) {
+		t.Errorf("ConstructionMetadata() error code = %d, want %d", err.Code, meshcommon.ErrGettingBlockchainMetadata)
+	}
+}
+
+func TestConstructionService_ConstructionMetadata_EmptyClauses(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"clauses":         []any{},
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionMetadata(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionMetadata() expected error when clauses are empty")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrGettingBlockchainMetadata) {
+		t.Errorf("ConstructionMetadata() error code = %d, want %d", err.Code, meshcommon.ErrGettingBlockchainMetadata)
+	}
+}
+
+func TestConstructionService_ConstructionMetadata_InvalidClauses(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"clauses": []any{
+				map[string]any{
+					"to": "INVALID_ADDRESS",
+					// Missing value and data
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionMetadata(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionMetadata() expected error when clauses are invalid")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrGettingBlockchainMetadata) {
+		t.Errorf("ConstructionMetadata() error code = %d, want %d", err.Code, meshcommon.ErrGettingBlockchainMetadata)
+	}
+}
+
+func TestConstructionService_ConstructionMetadata_InvalidDynamicMetadata(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	config := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      "test",
+		Mode:         meshcommon.OnlineMode,
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, config)
+
+	// Set up mock to fail on GetDynamicGasPrice
+	mockClient.SetMockError(errors.New("failed to get dynamic gas price"))
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeDynamic,
+			"clauses": []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionMetadata(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionMetadata() expected error when dynamic metadata is invalid")
+	}
+
+	if err != nil && err.Code != int32(meshcommon.ErrGettingBlockchainMetadata) {
+		t.Errorf("ConstructionMetadata() error code = %d, want %d", err.Code, meshcommon.ErrGettingBlockchainMetadata)
+	}
+}
+
 func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 	service := createMockConstructionService()
 
@@ -372,7 +540,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 				OperationIdentifier: &types.OperationIdentifier{Index: 0},
 				Type:                meshcommon.OperationTypeTransfer,
 				Account: &types.AccountIdentifier{
-					Address: "0x1234567890123456789012345678901234567890", // Different address
+					Address: "0x1234567890123456789012345678901234567890",
 				},
 				Amount: &types.Amount{
 					Value:    "-1000000000000000000",
@@ -428,7 +596,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 		},
 		PublicKeys: []*types.PublicKey{
 			{
-				Bytes:     []byte{0x01, 0x02, 0x03}, // Invalid public key (too short)
+				Bytes:     []byte{0x01, 0x02, 0x03},
 				CurveType: meshtests.SECP256k1,
 			},
 		},
@@ -483,13 +651,13 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 			},
 		},
 		Metadata: map[string]any{
-			"transactionType":       meshcommon.TransactionTypeLegacy,
-			"blockRef":              "0x0000000000000000",
-			"chainTag":              float64(1),
-			"gas":                   float64(21000),
-			"nonce":                 "0x1",
-			"gasPriceCoef":          uint8(128),
-			"fee_delegator_account": "0x1234567890123456789012345678901234567890", // Different from public key
+			"transactionType":                      meshcommon.TransactionTypeLegacy,
+			"blockRef":                             "0x0000000000000000",
+			"chainTag":                             float64(1),
+			"gas":                                  float64(21000),
+			"nonce":                                "0x1",
+			"gasPriceCoef":                         uint8(128),
+			meshcommon.DelegatorAccountMetadataKey: "0x1234567890123456789012345678901234567890",
 		},
 	}
 
@@ -723,7 +891,7 @@ func TestConstructionService_ConstructionDerive_EmptyPublicKey(t *testing.T) {
 	request := &types.ConstructionDeriveRequest{
 		NetworkIdentifier: createTestNetworkIdentifier("test"),
 		PublicKey: &types.PublicKey{
-			Bytes:     []byte{}, // Empty bytes
+			Bytes:     []byte{},
 			CurveType: meshtests.SECP256k1,
 		},
 	}
@@ -742,7 +910,7 @@ func TestConstructionService_ConstructionDerive_InvalidPublicKey(t *testing.T) {
 	request := &types.ConstructionDeriveRequest{
 		NetworkIdentifier: createTestNetworkIdentifier("test"),
 		PublicKey: &types.PublicKey{
-			Bytes:     []byte{0x01, 0x02, 0x03}, // Invalid public key
+			Bytes:     []byte{0x01, 0x02, 0x03},
 			CurveType: meshtests.SECP256k1,
 		},
 	}
@@ -989,7 +1157,7 @@ func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 		},
 	}
 
-	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config.Expiration)
 	if err != nil {
 		t.Fatalf("Failed to build transaction: %v", err)
 	}
@@ -1070,7 +1238,7 @@ func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t 
 		},
 	}
 
-	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config.Expiration)
 	if err != nil {
 		t.Fatalf("Failed to build transaction: %v", err)
 	}
@@ -1124,7 +1292,7 @@ func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *te
 		},
 	}
 
-	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config)
+	vechainTx, err := service.builder.BuildTransactionFromRequest(request, service.config.Expiration)
 	if err != nil {
 		t.Fatalf("Failed to build transaction: %v", err)
 	}
