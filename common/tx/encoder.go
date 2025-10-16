@@ -160,23 +160,22 @@ func (e *MeshTransactionEncoder) ParseTransactionFromBytes(txBytes []byte, signe
 
 // parseTransactionSignersAndOperations parses signers and operations from a transaction
 func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *MeshTransaction, signed bool) ([]*types.Operation, []*types.AccountIdentifier, error) {
-	originAddr := thor.BytesToAddress(meshTx.Origin)
-	var delegatorAddr *thor.Address
+	originAddr := thor.BytesToAddress(meshTx.Origin).String()
+	var delegatorAddr string
 	if len(meshTx.Delegator) > 0 {
-		delegator := thor.BytesToAddress(meshTx.Delegator)
-		delegatorAddr = &delegator
+		delegatorAddr = thor.BytesToAddress(meshTx.Delegator).String()
 	}
 
 	var signers []*types.AccountIdentifier
 	if signed {
 		signers = []*types.AccountIdentifier{
-			{Address: originAddr.String()},
+			{Address: originAddr},
 		}
 
 		// Add delegator signer if present
-		if delegatorAddr != nil {
+		if delegatorAddr != "" {
 			signers = append(signers, &types.AccountIdentifier{
-				Address: delegatorAddr.String(),
+				Address: delegatorAddr,
 			})
 		}
 	}
@@ -198,12 +197,7 @@ func (e *MeshTransactionEncoder) parseTransactionSignersAndOperations(meshTx *Me
 		clauseData[i] = meshoperations.ClauseAdapter{Clause: apiClause}
 	}
 
-	// Use the existing parsing logic that handles both VET and token transfers
-	var delegatorAddrStr string
-	if delegatorAddr != nil {
-		delegatorAddrStr = delegatorAddr.String()
-	}
-	operations, err := e.clauseParser.ParseTransactionOperationsFromClauseData(clauseData, originAddr.String(), delegatorAddrStr, uint64(meshTx.Gas()), nil)
+	operations, err := e.clauseParser.ParseTransactionOperationsFromClauseData(clauseData, originAddr, delegatorAddr, uint64(meshTx.Gas()), nil)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to parse operations")
 	}
