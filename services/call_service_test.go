@@ -525,6 +525,28 @@ func TestCallService_Call_InvalidGasString(t *testing.T) {
 	}
 }
 
+func TestCallService_Call_GasOverflow(t *testing.T) {
+	service := createMockCallService()
+
+	request := createTestCallRequest(meshcommon.CallMethodInspectClauses, map[string]any{
+		"clauses": []any{
+			map[string]any{
+				"to":    meshcommon.VTHOContractAddress,
+				"value": "0x0",
+				"data":  "0x",
+			},
+		},
+		"gas": "99999999999999999999999999999999999999",
+	})
+
+	ctx := context.Background()
+	_, err := service.Call(ctx, request)
+
+	if err == nil {
+		t.Error("Call() expected error for gas overflow")
+	}
+}
+
 func TestCallService_Call_InvalidGasPrice(t *testing.T) {
 	service := createMockCallService()
 

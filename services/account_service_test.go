@@ -463,3 +463,34 @@ func TestAccountService_AccountBalance_ErrorCases(t *testing.T) {
 		})
 	}
 }
+
+func TestAccountService_AccountBalance_InvalidContractAddressType(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewAccountService(mockClient)
+
+	request := &types.AccountBalanceRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		AccountIdentifier: &types.AccountIdentifier{
+			Address: meshtests.FirstSoloAddress,
+		},
+		Currencies: []*types.Currency{
+			{
+				Symbol:   "TOKEN",
+				Decimals: 18,
+				Metadata: map[string]any{
+					"contractAddress": 123456,
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.AccountBalance(ctx, request)
+
+	if err == nil {
+		t.Error("AccountBalance() expected error for invalid contractAddress type")
+	}
+}

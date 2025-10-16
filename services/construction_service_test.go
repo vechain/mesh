@@ -618,6 +618,99 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 	}
 }
 
+func TestConstructionService_ConstructionPayloads_NoPublicKeys(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := &types.ConstructionPayloadsRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.FirstSoloAddress,
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+		PublicKeys: []*types.PublicKey{},
+		Metadata: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionPayloads(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionPayloads() expected error for no public keys")
+	}
+}
+
+func TestConstructionService_ConstructionPayloads_TooManyPublicKeys(t *testing.T) {
+	service := createMockConstructionService()
+
+	request := &types.ConstructionPayloadsRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    "test",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{Index: 0},
+				Type:                meshcommon.OperationTypeTransfer,
+				Account: &types.AccountIdentifier{
+					Address: meshtests.FirstSoloAddress,
+				},
+				Amount: &types.Amount{
+					Value:    "-1000000000000000000",
+					Currency: meshcommon.VETCurrency,
+				},
+			},
+		},
+		PublicKeys: []*types.PublicKey{
+			{
+				Bytes:     []byte{0x03, 0xe3, 0x2e, 0x59, 0x60, 0x78, 0x1c, 0xe0, 0xb4, 0x3d, 0x8c, 0x29, 0x52, 0xee, 0xea, 0x4b, 0x95, 0xe2, 0x86, 0xb1, 0xbb, 0x5f, 0x8c, 0x1f, 0x0c, 0x9f, 0x09, 0x98, 0x3b, 0xa7, 0x14, 0x1d, 0x2f},
+				CurveType: meshtests.SECP256k1,
+			},
+			{
+				Bytes:     []byte{0x04, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
+				CurveType: meshtests.SECP256k1,
+			},
+			{
+				Bytes:     []byte{0x05, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa},
+				CurveType: meshtests.SECP256k1,
+			},
+		},
+		Metadata: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"blockRef":        "0x0000000000000000",
+			"chainTag":        float64(1),
+			"gas":             float64(21000),
+			"nonce":           "0x1",
+			"gasPriceCoef":    uint8(128),
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.ConstructionPayloads(ctx, request)
+
+	if err == nil {
+		t.Error("ConstructionPayloads() expected error for too many public keys")
+	}
+}
+
 func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *testing.T) {
 	service := createMockConstructionService()
 

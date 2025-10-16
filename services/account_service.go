@@ -113,6 +113,8 @@ func (a *AccountService) validateCurrencies(currencies []*types.Currency) error 
 				if len(addr) != 42 || (addr[:2] != "0x" && addr[:2] != "-0x") {
 					return fmt.Errorf("invalid contract address format: %s", addr)
 				}
+			} else {
+				return fmt.Errorf("invalid contract address format: %v", contractAddr)
 			}
 		}
 	}

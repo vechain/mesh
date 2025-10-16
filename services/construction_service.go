@@ -212,6 +212,12 @@ func (c *ConstructionService) ConstructionPayloads(
 	txDelegator := c.operationsExtractor.GetFeeDelegatorAccount(req.Metadata)
 	hasFeeDelegation := txDelegator != ""
 
+	if len(req.PublicKeys) == 0 || len(req.PublicKeys) > 2 {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidPublicKeyFormat, map[string]any{
+			"error": "Invalid number of public keys",
+		})
+	}
+
 	// Validate origin address matches first public key
 	originAddress, err := c.bytesHandler.ComputeAddress(req.PublicKeys[0])
 	if err != nil {

@@ -117,6 +117,9 @@ func (c *CallService) parseBatchCallDataFromParameters(params map[string]any) (*
 		if _, ok := gasInt.SetString(gasStr, 0); !ok {
 			return nil, fmt.Errorf("invalid gas value: %s", gasStr)
 		}
+		if !gasInt.IsUint64() {
+			return nil, fmt.Errorf("gas value is too large: %s", gasStr)
+		}
 		batchCallData.Gas = gasInt.Uint64()
 	}
 
