@@ -74,12 +74,12 @@ func stopThorNode(thorServer *thor.Server) {
 func createThorConfig(cfg *meshconfig.Config) thor.Config {
 	thorConfig := thor.Config{
 		NodeID:      "thor-node-1",
-		NetworkType: cfg.GetNetwork(),
+		NetworkType: cfg.Network,
 		APIAddr:     "0.0.0.0:8669",
 		P2PPort:     11235,
 	}
 
-	if cfg.GetNetwork() == "solo" {
+	if cfg.Network == "solo" {
 		thorConfig.OnDemand = true
 		thorConfig.Persist = true
 		thorConfig.APICORS = "*"
@@ -90,12 +90,12 @@ func createThorConfig(cfg *meshconfig.Config) thor.Config {
 
 // startThorWithConfig starts Thor with the appropriate method based on network type
 func startThorWithConfig(thorServer *thor.Server, cfg *meshconfig.Config) error {
-	if cfg.GetNetwork() == "solo" {
+	if cfg.Network == "solo" {
 		log.Println("Starting Thor node in solo mode...")
 		return thorServer.StartSoloNode()
 	}
 
-	log.Printf("Starting Thor node connected to %s network...", cfg.GetNetwork())
+	log.Printf("Starting Thor node connected to %s network...", cfg.Network)
 	return thorServer.AttachToPublicNetworkAndStart()
 }
 
@@ -108,7 +108,7 @@ func createAsserter(cfg *meshconfig.Config) (*asserter.Asserter, error) {
 		meshcommon.OperationTypeContractCall,
 	}
 
-	supportedNetworks := []*types.NetworkIdentifier{cfg.GetNetworkIdentifier()}
+	supportedNetworks := []*types.NetworkIdentifier{cfg.NetworkIdentifier}
 	if cfg.Mode == meshcommon.OfflineMode {
 		supportedNetworks = []*types.NetworkIdentifier{
 			{

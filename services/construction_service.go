@@ -243,7 +243,7 @@ func (c *ConstructionService) ConstructionPayloads(
 	}
 
 	// Build transaction
-	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config.GetExpiration())
+	vechainTx, err := c.builder.BuildTransactionFromRequest(*req, c.config.Expiration)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInvalidRequestParameters, map[string]any{
 			"error": err.Error(),

@@ -25,7 +25,7 @@ type VeChainMeshServer struct {
 
 // NewVeChainMeshServer creates a new server instance
 func NewVeChainMeshServer(cfg *meshconfig.Config, asrt *asserter.Asserter) (*VeChainMeshServer, error) {
-	vechainClient := meshthor.NewVeChainClient(cfg.GetNodeAPI())
+	vechainClient := meshthor.NewVeChainClient(cfg.NodeAPI)
 
 	// Initialize services
 	networkService := services.NewNetworkService(vechainClient, cfg)
@@ -66,7 +66,7 @@ func NewVeChainMeshServer(cfg *meshconfig.Config, asrt *asserter.Asserter) (*VeC
 
 	meshServer := &VeChainMeshServer{
 		server: &http.Server{
-			Addr:        fmt.Sprintf(":%d", cfg.GetPort()),
+			Addr:        fmt.Sprintf(":%d", cfg.Port),
 			Handler:     corsRouter,
 			ReadTimeout: 30 * time.Second,
 		},

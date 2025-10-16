@@ -39,7 +39,7 @@ func (n *NetworkService) NetworkList(
 		NetworkIdentifiers: []*types.NetworkIdentifier{
 			{
 				Blockchain: meshcommon.BlockchainName,
-				Network:    n.config.GetNetwork(),
+				Network:    n.config.Network,
 			},
 		},
 	}, nil
@@ -164,7 +164,7 @@ func (n *NetworkService) NetworkOptions(
 
 	// Create version object
 	version := &types.Version{
-		RosettaVersion: n.config.GetMeshVersion(),
+		RosettaVersion: n.config.MeshVersion,
 		NodeVersion:    n.config.NodeVersion,
 	}
 

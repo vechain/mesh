@@ -10,8 +10,6 @@ import (
 	"testing"
 
 	meshcommon "github.com/vechain/mesh/common"
-
-	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -229,66 +227,6 @@ func TestSetDerivedFields(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestConfigGetters(t *testing.T) {
-	config := &Config{
-		MeshVersion: "1.0.0",
-		Port:        8080,
-		Mode:        meshcommon.OnlineMode,
-		Network:     "solo",
-		NodeAPI:     "http://localhost:8669",
-		ChainTag:    0xf6,
-		APIVersion:  "1.4.10",
-		NodeVersion: "1.0.0",
-		ServiceName: "vechain-mesh",
-		NetworkIdentifier: &types.NetworkIdentifier{
-			Blockchain: meshcommon.BlockchainName,
-			Network:    "solo",
-		},
-	}
-
-	networkID := config.GetNetworkIdentifier()
-	if networkID == nil {
-		t.Errorf("GetNetworkIdentifier() returned nil")
-	} else {
-		if networkID.Blockchain != meshcommon.BlockchainName {
-			t.Errorf("GetNetworkIdentifier() Blockchain = %v, want vechainthor", networkID.Blockchain)
-		}
-		if networkID.Network != "solo" {
-			t.Errorf("GetNetworkIdentifier() Network = %v, want solo", networkID.Network)
-		}
-	}
-
-	mode := config.GetRunMode()
-	if mode != meshcommon.OnlineMode {
-		t.Errorf("GetRunMode() = %v, want online", mode)
-	}
-
-	port := config.GetPort()
-	if port != 8080 {
-		t.Errorf("GetPort() = %v, want 8080", port)
-	}
-
-	nodeAPI := config.GetNodeAPI()
-	if nodeAPI != "http://localhost:8669" {
-		t.Errorf("GetNodeAPI() = %v, want http://localhost:8669", nodeAPI)
-	}
-
-	network := config.GetNetwork()
-	if network != "solo" {
-		t.Errorf("GetNetwork() = %v, want solo", network)
-	}
-
-	chainTag := config.GetChainTag()
-	if chainTag != 0xf6 {
-		t.Errorf("GetChainTag() = %v, want 0xf6", chainTag)
-	}
-
-	version := config.GetMeshVersion()
-	if version != "1.0.0" {
-		t.Errorf("GetMeshVersion() = %v, want 1.0.0", version)
 	}
 }
 
@@ -541,44 +479,6 @@ func TestGetBaseGasPrice(t *testing.T) {
 				} else if result.Cmp(tt.expectedResult) != 0 {
 					t.Errorf("GetBaseGasPrice() expected %v, got %v", tt.expectedResult, result)
 				}
-			}
-		})
-	}
-}
-
-func TestGetExpiration(t *testing.T) {
-	tests := []struct {
-		name       string
-		expiration uint32
-		expected   uint32
-	}{
-		{
-			name:       "default expiration",
-			expiration: 720,
-			expected:   720,
-		},
-		{
-			name:       "zero expiration",
-			expiration: 0,
-			expected:   0,
-		},
-		{
-			name:       "high expiration",
-			expiration: 10000,
-			expected:   10000,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config := &Config{
-				Expiration: tt.expiration,
-			}
-
-			result := config.GetExpiration()
-
-			if result != tt.expected {
-				t.Errorf("GetExpiration() expected %d, got %d", tt.expected, result)
 			}
 		})
 	}
