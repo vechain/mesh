@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/ethereum/go-ethereum/common/math"
 	meshcommon "github.com/vechain/mesh/common"
 	meshcrypto "github.com/vechain/mesh/common/crypto"
 	"github.com/vechain/mesh/common/vip180"
@@ -38,18 +39,51 @@ func (b *TransactionBuilder) buildMeshTransaction(hash string, operations []*typ
 
 // BuildMeshTransactionFromAPI builds a Mesh transaction directly from api.JSONEmbeddedTx
 func (b *TransactionBuilder) BuildMeshTransactionFromAPI(tx *api.JSONEmbeddedTx, operations []*types.Operation) *types.Transaction {
-	return b.buildMeshTransaction(tx.ID.String(), operations, map[string]any{
-		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
-		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
-	})
+	metadata := b.buildTransactionMetadata(tx.ChainTag, tx.BlockRef, tx.Expiration, tx.Gas, tx.Size, tx.GasPriceCoef, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas)
+	return b.buildMeshTransaction(tx.ID.String(), operations, metadata)
 }
 
 // BuildMeshTransactionFromTransactions builds a Mesh transaction directly from transactions.Transaction
 func (b *TransactionBuilder) BuildMeshTransactionFromTransaction(tx *transactions.Transaction, operations []*types.Operation) *types.Transaction {
-	return b.buildMeshTransaction(tx.ID.String(), operations, map[string]any{
-		"chainTag": tx.ChainTag, "blockRef": "0x" + fmt.Sprintf("%x", tx.BlockRef),
-		"expiration": tx.Expiration, "gas": tx.Gas, "gasPriceCoef": tx.GasPriceCoef, "size": tx.Size,
-	})
+	metadata := b.buildTransactionMetadata(tx.ChainTag, tx.BlockRef, tx.Expiration, tx.Gas, tx.Size, tx.GasPriceCoef, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas)
+	return b.buildMeshTransaction(tx.ID.String(), operations, metadata)
+}
+
+// buildTransactionMetadata builds metadata for a transaction, detecting whether it's legacy or dynamic
+func (b *TransactionBuilder) buildTransactionMetadata(
+	chainTag byte,
+	blockRef string,
+	expiration uint32,
+	gas uint64,
+	size uint32,
+	gasPriceCoef *uint8,
+	maxFeePerGas, maxPriorityFeePerGas *math.HexOrDecimal256,
+) map[string]any {
+	metadata := map[string]any{
+		"chainTag":   chainTag,
+		"blockRef":   blockRef,
+		"expiration": expiration,
+		"gas":        gas,
+		"size":       size,
+	}
+
+	// Detect transaction type and add appropriate fields
+	if gasPriceCoef != nil {
+		// Legacy transaction
+		metadata["transactionType"] = meshcommon.TransactionTypeLegacy
+		metadata["gasPriceCoef"] = *gasPriceCoef
+	} else {
+		// Dynamic transaction
+		metadata["transactionType"] = meshcommon.TransactionTypeDynamic
+		if maxFeePerGas != nil {
+			metadata["maxFeePerGas"] = (*big.Int)(maxFeePerGas).String()
+		}
+		if maxPriorityFeePerGas != nil {
+			metadata["maxPriorityFeePerGas"] = (*big.Int)(maxPriorityFeePerGas).String()
+		}
+	}
+
+	return metadata
 }
 
 // BuildTransactionFromRequest builds a VeChain transaction from a construction request
