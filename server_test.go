@@ -252,8 +252,9 @@ func TestVeChainMeshServer_GetEndpoints(t *testing.T) {
 		t.Errorf("GetEndpoints() returned empty slice")
 	}
 
-	// Check for specific expected endpoints (no health endpoint with SDK router)
+	// Check for specific expected endpoints
 	expectedEndpoints := map[string]bool{
+		"GET /health":                   false,
 		"POST /network/list":            false,
 		"POST /network/status":          false,
 		"POST /network/options":         false,
@@ -341,5 +342,49 @@ func TestVeChainMeshServer_NetworkListWithValidRequest(t *testing.T) {
 	// Check that network_identifiers exists
 	if _, ok := response["network_identifiers"]; !ok {
 		t.Error("Response missing network_identifiers field")
+	}
+}
+
+func TestVeChainMeshServer_HealthEndpoint(t *testing.T) {
+	config := &meshconfig.Config{
+		NodeAPI: "http://localhost:8669",
+		Network: meshcommon.TestNetwork,
+		Mode:    meshcommon.OfflineMode,
+		Port:    8080,
+	}
+
+	asrt, err := createTestAsserter()
+	if err != nil {
+		t.Fatalf("Failed to create asserter: %v", err)
+	}
+
+	server, err := NewVeChainMeshServer(config, asrt)
+	if err != nil {
+		t.Fatalf("NewVeChainMeshServer() error = %v", err)
+	}
+
+	// Test health endpoint
+	req := httptest.NewRequest(http.MethodGet, meshcommon.HealthEndpoint, nil)
+	w := httptest.NewRecorder()
+
+	server.server.Handler.ServeHTTP(w, req)
+
+	// Verify response
+	if w.Code != http.StatusOK {
+		t.Errorf("health endpoint status code = %v, want %v", w.Code, http.StatusOK)
+	}
+
+	if contentType := w.Header().Get("Content-Type"); contentType != "application/json" {
+		t.Errorf("health endpoint content-type = %v, want application/json", contentType)
+	}
+
+	// Parse and verify response body
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal health response: %v", err)
+	}
+
+	if status, ok := response["status"]; !ok || status != "ok" {
+		t.Errorf("health endpoint response = %v, want {\"status\":\"ok\"}", response)
 	}
 }

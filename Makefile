@@ -112,7 +112,7 @@ test-e2e-full:
 	@echo "2. Waiting for services to be ready..."
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+		if curl -sf http://localhost:8080/health > /dev/null 2>&1; then \
 			echo "✅ Mesh API server is ready!"; \
 			break; \
 		fi; \
@@ -165,7 +165,7 @@ test-e2e-offline-full:
 	@echo "3. Waiting for server to be ready..."
 	@timeout=30; \
 	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+		if curl -sf http://localhost:8080/health > /dev/null 2>&1; then \
 			echo "✅ Mesh API server (offline mode) is ready!"; \
 			break; \
 		fi; \
@@ -207,7 +207,7 @@ _e2e-solo-wrapper:
 	@echo "2. Waiting for services to be ready..."
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+		if curl -sf http://localhost:8080/health > /dev/null 2>&1; then \
 			echo "✅ Mesh API server is ready!"; \
 			break; \
 		fi; \
@@ -314,7 +314,7 @@ mesh-cli-check-data:
 	@echo "2. Waiting for services to be ready..."
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+		if curl -sf http://localhost:8080/health > /dev/null 2>&1; then \
 			echo "✅ Mesh API server is ready!"; \
 			break; \
 		fi; \
@@ -374,7 +374,7 @@ mesh-cli-check-construction:
 	@echo "2. Waiting for services to be ready..."
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
-		if curl -s http://localhost:8080/health > /dev/null 2>&1; then \
+		if curl -sf http://localhost:8080/health > /dev/null 2>&1; then \
 			echo "✅ Mesh API server is ready!"; \
 			break; \
 		fi; \

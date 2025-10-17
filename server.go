@@ -59,8 +59,19 @@ func NewVeChainMeshServer(cfg *meshconfig.Config, asrt *asserter.Asserter) (*VeC
 		callController,
 	)
 
+	// Create a custom mux to add health endpoint
+	mux := http.NewServeMux()
+	mux.HandleFunc(meshcommon.HealthEndpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	// All other routes go through the Mesh router and middleware
+	mux.Handle("/", router)
+
 	// Apply middleware stack: offline mode validation, logging, and CORS
-	offlineRouter := services.OfflineModeMiddleware(cfg)(router)
+	offlineRouter := services.OfflineModeMiddleware(cfg)(mux)
 	loggedRouter := server.LoggerMiddleware(offlineRouter)
 	corsRouter := server.CorsMiddleware(loggedRouter)
 
@@ -95,6 +106,7 @@ func (v *VeChainMeshServer) Stop(ctx context.Context) error {
 func (v *VeChainMeshServer) GetEndpoints() ([]string, error) {
 	// Return standard Mesh API endpoints
 	endpoints := []string{
+		fmt.Sprintf("GET %s", meshcommon.HealthEndpoint),
 		fmt.Sprintf("POST %s", meshcommon.NetworkListEndpoint),
 		fmt.Sprintf("POST %s", meshcommon.NetworkOptionsEndpoint),
 		fmt.Sprintf("POST %s", meshcommon.NetworkStatusEndpoint),
