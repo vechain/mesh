@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
       security-events: write
     steps:
       - name: Checkout code
@@ -38,7 +39,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run vulnerability scanner
+      - name: Run vulnerability scan and log results
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mesh-test:${{ github.event.release.tag_name }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+        env:
+          # See https://github.com/aquasecurity/trivy/discussions/7538
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
+
+      - name: Create vulnerability scan report
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: mesh-test:${{ github.event.release.tag_name }}
@@ -50,7 +62,7 @@ jobs:
           # See https://github.com/aquasecurity/trivy/discussions/7538
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
 
-      - name: Upload Trivy results to GitHub Security tab
+      - name: Upload scan report to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
