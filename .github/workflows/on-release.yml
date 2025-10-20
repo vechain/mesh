@@ -67,11 +67,9 @@ jobs:
           - arch: amd64
             platform: linux/amd64
             runner: ubuntu-latest
-            cacheRef: buildcache-amd64
           - arch: arm64
             platform: linux/arm64
             runner: docker-build-arm64
-            cacheRef: buildcache-arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,8 +102,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-buildcache:${{ matrix.cacheRef }}
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-buildcache:${{ matrix.cacheRef }},mode=max
+          cache-from: type=gha,scope=mesh-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=mesh-${{ matrix.arch }}
           provenance: false
           sbom: false
           build-args: |
