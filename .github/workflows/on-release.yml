@@ -152,8 +152,8 @@ jobs:
           done
           docker buildx imagetools create \
             "${ARGS[@]}" \
-            "$REPO:v${VERSION}-amd64" \
-            "$REPO:v${VERSION}-arm64"
+            "$REPO:${VERSION}-amd64" \
+            "$REPO:${VERSION}-arm64"
 
   e2e-tests:
     name: E2E against published image
