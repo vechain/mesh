@@ -3,7 +3,7 @@
 GO_PACKAGES_TEST = $(shell go list ./... | grep -v /tests | grep -v /scripts | grep -v /common/vip180/contracts)
 COVERAGE_EXCLUDE_PATTERN = _test\.go\|_mock\.go\|/main\.go
 
-.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-offline test-e2e-offline-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full test-e2e-delegation test-e2e-delegation-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction
+.PHONY: help build test-unit test-unit-coverage-threshold test-unit-coverage-threshold-custom test-unit-coverage-html test-e2e test-e2e-verbose test-e2e-full test-e2e-offline test-e2e-offline-full test-e2e-vip180 test-e2e-vip180-full test-e2e-call test-e2e-call-full test-e2e-delegation test-e2e-delegation-full clean docker-build docker-up docker-down docker-logs docker-clean docker-solo-up docker-solo-down docker-solo-logs mesh-cli-build mesh-cli-check-data mesh-cli-check-construction test-e2e-full-image
 
 # Default target
 help:
@@ -145,6 +145,14 @@ test-e2e-full:
 	@echo "✅ ALL E2E TESTS PASSED (online + offline)!"
 	@echo "════════════════════════════════════════════════════════════════"
 
+# Usage: make test-e2e-full-image TAG=v0.1.1
+test-e2e-full-image:
+	@if [ -z "$(TAG)" ]; then \
+		echo "❌ Error: TAG parameter is required. Use: make test-e2e-full-image TAG=<version>"; \
+		exit 1; \
+	fi
+	IMAGE_TAG=$(TAG) $(MAKE) test-e2e-full
+
 test-e2e-vip180:
 	@echo "Running VIP180 e2e test..."
 	@echo "Make sure the mesh server is running in solo mode: make docker-solo-up"
@@ -279,9 +287,27 @@ docker-clean:
 	docker compose down --rmi all --volumes --remove-orphans
 
 docker-solo-up:
-	NETWORK=solo docker compose up --build -d
+	@if [ -n "$(IMAGE_TAG)" ]; then \
+		echo "Starting solo mode using published image ghcr.io/vechain/mesh:$(IMAGE_TAG) ..."; \
+		docker pull ghcr.io/vechain/mesh:$(IMAGE_TAG); \
+		docker volume inspect mesh_thor-data >/dev/null 2>&1 || docker volume create mesh_thor-data >/dev/null; \
+		docker run -d --rm \
+			--name vechain-mesh-release \
+			-p 8080:8080 \
+			-p 8669:8669 \
+			-p 11235:11235 \
+			-p 11235:11235/udp \
+			-e MODE=$${MODE:-online} \
+			-e NETWORK=solo \
+			-e PORT=8080 \
+			-v mesh_thor-data:/tmp/thor_data \
+			ghcr.io/vechain/mesh:$(IMAGE_TAG); \
+	else \
+		NETWORK=solo docker compose up --build -d; \
+	fi
 
 docker-solo-down:
+	-@docker rm -f vechain-mesh-release >/dev/null 2>&1 || true
 	NETWORK=solo docker compose down
 
 docker-solo-logs:
