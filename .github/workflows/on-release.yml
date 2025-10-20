@@ -95,6 +95,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}},suffix=-${{ matrix.arch }}
             type=semver,pattern={{major}}.{{minor}},suffix=-${{ matrix.arch }}
+            type=raw,value=latest,suffix=-${{ matrix.arch }},enable={{is_default_branch}}
 
       - name: Build and push (${{ matrix.arch }})
         uses: docker/build-push-action@v5
@@ -143,10 +144,13 @@ jobs:
         shell: bash
         run: |
           REPO="ghcr.io/${{ github.repository }}"
-          echo "${{ steps.meta.outputs.tags }}" | while read -r TAG; do
-            BASENAME="${TAG#${REPO}:}"
-            docker buildx imagetools create \
-              -t "$TAG" \
-              "$REPO:${BASENAME}-amd64" \
-              "$REPO:${BASENAME}-arm64"
+          VERSION="${{ steps.meta.outputs.version }}"
+          mapfile -t TAGS < <(echo "${{ steps.meta.outputs.tags }}")
+          ARGS=()
+          for t in "${TAGS[@]}"; do
+            ARGS+=( -t "$t" )
           done
+          docker buildx imagetools create \
+            "${ARGS[@]}" \
+            "$REPO:${VERSION}-amd64" \
+            "$REPO:${VERSION}-arm64"
