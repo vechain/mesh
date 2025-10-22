@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -116,6 +117,35 @@ func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 
 	if response == nil {
 		t.Error("NetworkStatus() returned nil response")
+	}
+	if response.SyncStatus == nil || response.SyncStatus.Synced == nil || !*response.SyncStatus.Synced {
+		t.Errorf("NetworkStatus() expected synced=true, got %+v", response.SyncStatus)
+	}
+	if response.CurrentBlockTimestamp <= 0 {
+		t.Errorf("NetworkStatus() expected positive CurrentBlockTimestamp, got %d", response.CurrentBlockTimestamp)
+	}
+}
+
+func TestNetworkService_NetworkStatus_TimestampOverflow(t *testing.T) {
+	config := &meshconfig.Config{}
+	mockClient := meshthor.NewMockVeChainClient()
+	// Force best block timestamp such that timestamp*1000 > MaxInt64
+	if mockClient.MockBlock != nil && mockClient.MockBlock.JSONBlockSummary != nil {
+		mockClient.MockBlock.JSONBlockSummary.Timestamp = uint64(math.MaxInt64/1000 + 1)
+	}
+	service := NewNetworkService(mockClient, config)
+
+	request := &types.NetworkRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    meshcommon.TestNetwork,
+		},
+	}
+
+	ctx := context.Background()
+	_, err := service.NetworkStatus(ctx, request)
+	if err == nil {
+		t.Fatalf("NetworkStatus() expected error for timestamp overflow")
 	}
 }
 

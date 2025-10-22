@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -266,8 +267,131 @@ func TestConstructionService_ConstructionMetadata_ValidRequest(t *testing.T) {
 	if response.Metadata == nil {
 		t.Errorf("ConstructionMetadata() metadata is nil")
 	}
+	if ct, ok := response.Metadata["chainTag"]; !ok {
+		t.Errorf("ConstructionMetadata() missing chainTag in metadata")
+	} else {
+		switch v := ct.(type) {
+		case uint8, int, float64:
+			// ok
+		default:
+			t.Errorf("ConstructionMetadata() chainTag has unexpected type %T", v)
+		}
+	}
 	if len(response.SuggestedFee) == 0 {
 		t.Errorf("ConstructionMetadata() suggested fee is empty")
+	}
+}
+
+func TestConstructionService_ConstructionMetadata_ChainTagMatchesConfig(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	cfg := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      meshcommon.TestNetwork,
+		Mode:         meshcommon.OnlineMode,
+		BaseGasPrice: "1000000000000000000",
+	}
+	// Derive fields based on network
+	// replicate logic from config.setDerivedFields minimally for tests
+	switch cfg.Network {
+	case meshcommon.MainNetwork, "mainnet":
+		cfg.ChainTag = 0x4a
+	case meshcommon.TestNetwork, "testnet":
+		cfg.ChainTag = 0x27
+	case meshcommon.SoloNetwork:
+		cfg.ChainTag = 0xf6
+	}
+	service := NewConstructionService(mockClient, cfg)
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    meshcommon.TestNetwork,
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeLegacy,
+			"clauses": []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	response, err := service.ConstructionMetadata(ctx, request)
+	if err != nil {
+		t.Fatalf("ConstructionMetadata() error = %v", err)
+	}
+	if response.Metadata == nil {
+		t.Fatalf("ConstructionMetadata() metadata is nil")
+	}
+	if ct, ok := response.Metadata["chainTag"]; !ok {
+		t.Fatalf("ConstructionMetadata() missing chainTag in metadata")
+	} else {
+		switch v := ct.(type) {
+		case uint8:
+			if v != cfg.ChainTag {
+				t.Errorf("chainTag value %d != %d", v, cfg.ChainTag)
+			}
+		case int:
+			if byte(v) != cfg.ChainTag {
+				t.Errorf("chainTag value %d != %d", v, cfg.ChainTag)
+			}
+		case float64:
+			if byte(v) != cfg.ChainTag {
+				t.Errorf("chainTag value %v != %d", v, cfg.ChainTag)
+			}
+		default:
+			t.Errorf("unexpected chainTag type %T", v)
+		}
+	}
+}
+
+func TestConstructionService_ConstructionMetadata_Dynamic_BaseFeeZero(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	cfg := &meshconfig.Config{
+		NodeAPI:      "http://localhost:8669",
+		Network:      meshcommon.TestNetwork,
+		Mode:         meshcommon.OnlineMode,
+		BaseGasPrice: "1000000000000000000",
+	}
+	service := NewConstructionService(mockClient, cfg)
+	// Force dynamic gas price BaseFee=0 path
+	mockClient.MockGasPrice.BaseFee = big.NewInt(0)
+
+	request := &types.ConstructionMetadataRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    meshcommon.TestNetwork,
+		},
+		Options: map[string]any{
+			"transactionType": meshcommon.TransactionTypeDynamic,
+			"clauses": []any{
+				map[string]any{
+					"to":    meshtests.TestAddress1,
+					"value": "1000000000000000000",
+					"data":  "0x",
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	response, err := service.ConstructionMetadata(ctx, request)
+	if err != nil {
+		t.Fatalf("ConstructionMetadata(dynamic, baseFee=0) error = %v", err)
+	}
+	if response.Metadata == nil {
+		t.Fatalf("ConstructionMetadata(dynamic, baseFee=0) metadata is nil")
+	}
+	if v, ok := response.Metadata["maxPriorityFeePerGas"]; !ok {
+		t.Fatalf("expected maxPriorityFeePerGas in metadata")
+	} else {
+		if n, ok := v.(int); !ok || n != 0 {
+			t.Errorf("expected maxPriorityFeePerGas=0, got %v", v)
+		}
 	}
 }
 

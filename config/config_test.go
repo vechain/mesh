@@ -433,6 +433,58 @@ func TestPrintConfig(t *testing.T) {
 	}
 }
 
+func TestNewConfig_UsesRootScopedRead(t *testing.T) {
+	// Prepare a temporary directory with a config/ subdirectory
+	tempDir := t.TempDir()
+	cfgDir := filepath.Join(tempDir, "config")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	// Minimal valid config JSON
+	jsonContent := `{
+        "meshVersion": "test",
+        "port": 8081,
+        "mode": "online",
+        "network": "test",
+        "nodeApi": "http://localhost:8669",
+        "apiVersion": "v1",
+        "nodeVersion": "v1",
+        "serviceName": "svc",
+        "baseGasPrice": "0",
+        "initialBaseFee": "0",
+        "expiration": 720
+    }`
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(jsonContent), 0o644); err != nil {
+		t.Fatalf("failed to write temp config.json: %v", err)
+	}
+
+	// Change to tempDir so NewConfig opens config/config.json from the secure root
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("failed to chdir to temp dir: %v", err)
+	}
+
+	cfg, err := NewConfig()
+	if err != nil {
+		t.Fatalf("NewConfig() failed: %v", err)
+	}
+	if cfg.Port != 8081 {
+		t.Errorf("expected port 8081, got %d", cfg.Port)
+	}
+	if cfg.NetworkIdentifier == nil {
+		t.Errorf("expected NetworkIdentifier to be set")
+	}
+}
+
 func TestGetBaseGasPrice(t *testing.T) {
 	tests := []struct {
 		name           string
