@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -187,7 +188,14 @@ func (c *ConstructionService) ConstructionMetadata(
 	}
 
 	// Calculate fee and build response
-	fee := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
+	if gas > math.MaxInt64 {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": "Gas is too large",
+		})
+	}
+	safeGas := int64(gas)
+	fee := new(big.Int).Mul(big.NewInt(safeGas), gasPrice)
+
 	return &types.ConstructionMetadataResponse{
 		Metadata: metadata,
 		SuggestedFee: []*types.Amount{
@@ -347,7 +355,14 @@ func (c *ConstructionService) ConstructionParse(
 	}
 
 	// Calculate fee amount
-	feeAmount := new(big.Int).Mul(big.NewInt(int64(meshTx.Gas())), gasPrice)
+	gas := meshTx.Gas()
+	if gas > math.MaxInt64 {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": "Gas is too large",
+		})
+	}
+	safeGas := int64(gas)
+	feeAmount := new(big.Int).Mul(big.NewInt(safeGas), gasPrice)
 
 	// Add fee operation
 	delegatorAddr := thor.BytesToAddress(meshTx.Delegator)
