@@ -575,7 +575,6 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create request with invalid public key
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -603,7 +602,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
