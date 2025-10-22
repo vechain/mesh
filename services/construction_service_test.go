@@ -478,7 +478,7 @@ func TestConstructionService_ConstructionMetadata_InvalidDynamicMetadata(t *test
 func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create valid request
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -506,7 +506,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -529,7 +529,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create request with mismatched origin address
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -557,7 +557,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -621,6 +621,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 func TestConstructionService_ConstructionPayloads_NoPublicKeys(t *testing.T) {
 	service := createMockConstructionService()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -643,7 +644,7 @@ func TestConstructionService_ConstructionPayloads_NoPublicKeys(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -661,6 +662,7 @@ func TestConstructionService_ConstructionPayloads_NoPublicKeys(t *testing.T) {
 func TestConstructionService_ConstructionPayloads_TooManyPublicKeys(t *testing.T) {
 	service := createMockConstructionService()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -696,7 +698,7 @@ func TestConstructionService_ConstructionPayloads_TooManyPublicKeys(t *testing.T
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -714,7 +716,7 @@ func TestConstructionService_ConstructionPayloads_TooManyPublicKeys(t *testing.T
 func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create request with fee delegation but mismatched delegator address
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := &types.ConstructionPayloadsRequest{
 		NetworkIdentifier: &types.NetworkIdentifier{
 			Blockchain: meshcommon.BlockchainName,
@@ -746,7 +748,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 		Metadata: map[string]any{
 			"transactionType":                      meshcommon.TransactionTypeLegacy,
 			"blockRef":                             "0x0000000000000000",
-			"chainTag":                             byte(1),
+			"chainTag":                             float64(1),
 			"gas":                                  float64(21000),
 			"nonce":                                "0x1",
 			"gasPriceCoef":                         uint8(128),
@@ -1213,7 +1215,7 @@ func TestConstructionService_ConstructionSubmit_InvalidTransactionBytes(t *testi
 func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create a valid VeChain transaction for testing using thor.Builder
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
@@ -1243,7 +1245,7 @@ func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -1305,7 +1307,7 @@ func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create a valid VeChain transaction
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
@@ -1324,7 +1326,7 @@ func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t 
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -1359,7 +1361,7 @@ func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t 
 func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *testing.T) {
 	service := createMockConstructionService()
 
-	// Create a valid VeChain transaction
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		NetworkIdentifier: createTestNetworkIdentifier(meshcommon.TestNetwork),
 		Operations: []*types.Operation{
@@ -1378,7 +1380,7 @@ func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *te
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),

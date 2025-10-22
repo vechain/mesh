@@ -133,7 +133,7 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 	}
 
 	// Set common fields
-	builder.ChainTag(byte(chainTag))
+	builder.ChainTag(chainTag)
 
 	blockRefBytes, err := b.bytesHandler.DecodeHexStringWithPrefix(blockRef)
 	if err != nil {

@@ -138,6 +138,7 @@ func TestCreateTransactionBuilder(t *testing.T) {
 func TestBuildTransactionFromRequest(t *testing.T) {
 	config := createTestConfig()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		Operations: []*types.Operation{
 			{
@@ -155,7 +156,7 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        byte(1),
+			"chainTag":        float64(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -175,6 +176,7 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 	config := createTestConfig()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		Operations: []*types.Operation{
 			{
@@ -203,7 +205,7 @@ func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType":                      meshcommon.TransactionTypeDynamic,
 			"blockRef":                             "0x0000000000000000",
-			"chainTag":                             byte(1),
+			"chainTag":                             float64(1),
 			"gas":                                  float64(21000),
 			"nonce":                                "0x1",
 			"maxFeePerGas":                         "1000000000000000",
@@ -230,6 +232,7 @@ func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 	config := createTestConfig()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	tests := []struct {
 		name     string
 		metadata map[string]any
@@ -239,7 +242,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			name: "missing blockRef",
 			metadata: map[string]any{
 				"transactionType": meshcommon.TransactionTypeLegacy,
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             float64(21000),
 				"nonce":           "0x1",
 				"gasPriceCoef":    uint8(128),
@@ -251,7 +254,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			metadata: map[string]any{
 				"transactionType": meshcommon.TransactionTypeLegacy,
 				"blockRef":        123456,
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             float64(21000),
 				"nonce":           "0x1",
 				"gasPriceCoef":    uint8(128),
@@ -275,7 +278,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			metadata: map[string]any{
 				"transactionType": meshcommon.TransactionTypeLegacy,
 				"blockRef":        "0x0000000000000000",
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             "invalid",
 				"nonce":           "0x1",
 				"gasPriceCoef":    uint8(128),
@@ -287,7 +290,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			metadata: map[string]any{
 				"transactionType": 123,
 				"blockRef":        "0x0000000000000000",
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             float64(21000),
 				"nonce":           "0x1",
 				"gasPriceCoef":    uint8(128),
@@ -299,7 +302,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			metadata: map[string]any{
 				"transactionType": meshcommon.TransactionTypeLegacy,
 				"blockRef":        "0x0000000000000000",
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             float64(21000),
 				"nonce":           123456,
 				"gasPriceCoef":    uint8(128),
@@ -311,7 +314,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			metadata: map[string]any{
 				"transactionType": meshcommon.TransactionTypeLegacy,
 				"blockRef":        "invalid_hex",
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             float64(21000),
 				"nonce":           "0x1",
 				"gasPriceCoef":    uint8(128),
@@ -323,7 +326,7 @@ func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 			metadata: map[string]any{
 				"transactionType": meshcommon.TransactionTypeLegacy,
 				"blockRef":        "0x0000000000000000",
-				"chainTag":        byte(1),
+				"chainTag":        float64(1),
 				"gas":             float64(21000),
 				"nonce":           "0xZZZ",
 				"gasPriceCoef":    uint8(128),
