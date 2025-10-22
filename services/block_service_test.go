@@ -313,7 +313,7 @@ func TestBlockService_Block_TimestampOverflow(t *testing.T) {
 
 	// Force block timestamp such that timestamp*1000 > MaxInt64
 	if mockClient.MockBlock != nil && mockClient.MockBlock.JSONBlockSummary != nil {
-		mockClient.MockBlock.JSONBlockSummary.Timestamp = uint64(math.MaxInt64/1000 + 1)
+		mockClient.MockBlock.Timestamp = uint64(math.MaxInt64/1000 + 1)
 	}
 
 	request := &types.BlockRequest{
