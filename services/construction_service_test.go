@@ -506,7 +506,7 @@ func TestConstructionService_ConstructionPayloads_ValidRequest(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -557,7 +557,7 @@ func TestConstructionService_ConstructionPayloads_OriginAddressMismatch(t *testi
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -603,7 +603,7 @@ func TestConstructionService_ConstructionPayloads_InvalidPublicKey(t *testing.T)
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -643,7 +643,7 @@ func TestConstructionService_ConstructionPayloads_NoPublicKeys(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -696,7 +696,7 @@ func TestConstructionService_ConstructionPayloads_TooManyPublicKeys(t *testing.T
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -746,7 +746,7 @@ func TestConstructionService_ConstructionPayloads_DelegatorAddressMismatch(t *te
 		Metadata: map[string]any{
 			"transactionType":                      meshcommon.TransactionTypeLegacy,
 			"blockRef":                             "0x0000000000000000",
-			"chainTag":                             float64(1),
+			"chainTag":                             byte(1),
 			"gas":                                  float64(21000),
 			"nonce":                                "0x1",
 			"gasPriceCoef":                         uint8(128),
@@ -1243,7 +1243,7 @@ func TestConstructionService_createDelegatorPayload_ValidRequest(t *testing.T) {
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -1324,7 +1324,7 @@ func TestConstructionService_createDelegatorPayload_InvalidDelegatorPublicKey(t 
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
@@ -1378,7 +1378,7 @@ func TestConstructionService_createDelegatorPayload_InvalidOriginPublicKey(t *te
 		Metadata: map[string]any{
 			"transactionType": meshcommon.TransactionTypeLegacy,
 			"blockRef":        "0x0000000000000000",
-			"chainTag":        float64(1),
+			"chainTag":        byte(1),
 			"gas":             float64(21000),
 			"nonce":           "0x1",
 			"gasPriceCoef":    uint8(128),
