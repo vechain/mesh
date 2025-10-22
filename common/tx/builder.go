@@ -145,7 +145,6 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 
 	// Set expiration from configuration
 	builder.Expiration(expiration)
-
 	builder.Gas(uint64(gas))
 	builder.Nonce(nonceValue.Uint64())
 

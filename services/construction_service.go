@@ -180,7 +180,7 @@ func (c *ConstructionService) ConstructionMetadata(
 	}
 
 	// Build metadata based on transaction type
-	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), uint64(c.config.ChainTag), gas, nonce)
+	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), c.config.ChainTag, gas, nonce)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
@@ -552,7 +552,7 @@ func (c *ConstructionService) calculateGas(options map[string]any) (uint64, erro
 }
 
 // buildMetadata builds metadata based on transaction type
-func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag byte, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	if transactionType == meshcommon.TransactionTypeLegacy {
 		return c.buildLegacyMetadata(blockRef, chainTag, gas, nonce)
 	}
@@ -560,7 +560,7 @@ func (c *ConstructionService) buildMetadata(transactionType, blockRef string, ch
 }
 
 // buildLegacyMetadata builds metadata for legacy transactions
-func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag byte, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	// Generate random gasPriceCoef (0-255)
 	randomBytes := make([]byte, 1)
 	if _, err := rand.Read(randomBytes); err != nil {
@@ -581,7 +581,7 @@ func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas
 }
 
 // buildDynamicMetadata builds metadata for dynamic fee transactions
-func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag byte, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	// Get dynamic gas price from network
 	dynamicGasPrice, err := c.vechainClient.GetDynamicGasPrice()
 	if err != nil {

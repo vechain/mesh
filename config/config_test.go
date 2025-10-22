@@ -148,8 +148,8 @@ func TestSetDerivedFields(t *testing.T) {
 	tests := []struct {
 		name            string
 		network         string
-		chainTag        int
-		expectedTag     int
+		chainTag        byte
+		expectedTag     byte
 		expectedNetwork string
 	}{
 		{

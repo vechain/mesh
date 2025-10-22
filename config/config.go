@@ -19,7 +19,7 @@ type Config struct {
 	Mode              string                   `json:"mode"`
 	Network           string                   `json:"network"`
 	NodeAPI           string                   `json:"nodeApi"`
-	ChainTag          int                      `json:"chainTag"`
+	ChainTag          byte                     `json:"chainTag"`
 	APIVersion        string                   `json:"apiVersion"`
 	NodeVersion       string                   `json:"nodeVersion"`
 	ServiceName       string                   `json:"serviceName"`
