@@ -20,20 +20,6 @@ import (
 	"github.com/vechain/thor/v2/abi"
 )
 
-// Expected metadata fields based on the actual implementation
-type ExpectedMetadata struct {
-	TransactionType string
-	BlockRef        string
-	ChainTag        byte
-	Gas             int64
-	Nonce           string
-	// Legacy specific fields
-	GasPriceCoef *int64
-	// Dynamic specific fields
-	MaxFeePerGas         *string
-	MaxPriorityFeePerGas *string
-}
-
 // HTTPClient wraps http.Client with test configuration
 type HTTPClient struct {
 	client  *http.Client
