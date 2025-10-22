@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"math"
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -98,12 +99,20 @@ func (n *NetworkService) NetworkStatus(
 	stage := "block sync"
 	synced := progress == 1.0
 
+	bestBlockTimestamp := bestBlock.Timestamp * 1000 // Convert to milliseconds
+	if bestBlockTimestamp > math.MaxInt64 {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": "Best block timestamp is too large",
+		})
+	}
+	safeBestBlockTimestamp := int64(bestBlockTimestamp)
+
 	return &types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
 			Index: int64(bestBlock.Number),
 			Hash:  bestBlock.ID.String(),
 		},
-		CurrentBlockTimestamp: int64(bestBlock.Timestamp) * 1000, // Convert to milliseconds
+		CurrentBlockTimestamp: safeBestBlockTimestamp,
 		GenesisBlockIdentifier: &types.BlockIdentifier{
 			Index: int64(genesisBlock.Number),
 			Hash:  genesisBlock.ID.String(),

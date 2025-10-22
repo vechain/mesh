@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -304,6 +305,34 @@ func TestBlockService_Block_ErrorCases(t *testing.T) {
 			t.Error("Block() expected error but got none")
 		}
 	})
+}
+
+func TestBlockService_Block_TimestampOverflow(t *testing.T) {
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewBlockService(mockClient)
+
+	// Force block timestamp such that timestamp*1000 > MaxInt64
+	if mockClient.MockBlock != nil && mockClient.MockBlock.JSONBlockSummary != nil {
+		mockClient.MockBlock.Timestamp = uint64(math.MaxInt64/1000 + 1)
+	}
+
+	request := &types.BlockRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{
+			Blockchain: meshcommon.BlockchainName,
+			Network:    meshcommon.TestNetwork,
+		},
+		BlockIdentifier: &types.PartialBlockIdentifier{
+			Index: func() *int64 { i := int64(100); return &i }(),
+		},
+	}
+
+	_, err := service.Block(context.Background(), request)
+	if err == nil {
+		t.Fatalf("Block() expected error on timestamp overflow")
+	}
+	if err.Code != int32(meshcommon.ErrInternalServerError) {
+		t.Errorf("Block() error code = %d, want %d", err.Code, meshcommon.ErrInternalServerError)
+	}
 }
 
 func TestBlockService_Block_WithHashBlockIdentifier(t *testing.T) {

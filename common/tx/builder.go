@@ -96,10 +96,12 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 		return nil, fmt.Errorf("blockRef is required and must be a string")
 	}
 
+	// encoding/json deserializes byte as float64
 	chainTagFloat, ok := metadata["chainTag"].(float64)
-	if !ok {
-		return nil, fmt.Errorf("chainTag is required and must be a number")
+	if !ok || chainTagFloat < 0 || chainTagFloat > 255 {
+		return nil, fmt.Errorf("chainTag must be integer in [0,255]")
 	}
+	chainTag := byte(chainTagFloat)
 
 	gasFloat, ok := metadata["gas"].(float64)
 	if !ok {
@@ -116,9 +118,6 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 		return nil, fmt.Errorf("nonce is required and must be a string")
 	}
 
-	chainTag := int(chainTagFloat)
-	gas := int64(gasFloat)
-
 	// Parse nonce to uint64
 	nonceStr := strings.TrimPrefix(nonce, "0x")
 	nonceValue := new(big.Int)
@@ -134,7 +133,7 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 	}
 
 	// Set common fields
-	builder.ChainTag(byte(chainTag))
+	builder.ChainTag(chainTag)
 
 	blockRefBytes, err := b.bytesHandler.DecodeHexStringWithPrefix(blockRef)
 	if err != nil {
@@ -145,8 +144,7 @@ func (b *TransactionBuilder) BuildTransactionFromRequest(request types.Construct
 
 	// Set expiration from configuration
 	builder.Expiration(expiration)
-
-	builder.Gas(uint64(gas))
+	builder.Gas(uint64(gasFloat))
 	builder.Nonce(nonceValue.Uint64())
 
 	if _, hasDelegator := metadata[meshcommon.DelegatorAccountMetadataKey]; hasDelegator {

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
@@ -166,10 +167,16 @@ func (b *BlockService) buildMeshBlock(block, parent *api.JSONExpandedBlock) (*ty
 		}
 	}
 
+	bestBlockTimestamp := block.Timestamp * 1000 // Convert to milliseconds
+	if bestBlockTimestamp > math.MaxInt64 {
+		return nil, fmt.Errorf("block timestamp is too large")
+	}
+	safeBestBlockTimestamp := int64(bestBlockTimestamp)
+
 	meshBlock := &types.Block{
 		BlockIdentifier:       blockIdentifier,
 		ParentBlockIdentifier: parentBlockIdentifier,
-		Timestamp:             int64(block.Timestamp) * 1000, // Convert to milliseconds
+		Timestamp:             safeBestBlockTimestamp,
 		Transactions:          transactions,
 	}
 

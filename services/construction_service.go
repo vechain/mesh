@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -179,7 +180,7 @@ func (c *ConstructionService) ConstructionMetadata(
 	}
 
 	// Build metadata based on transaction type
-	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), uint64(c.config.ChainTag), gas, nonce)
+	metadata, gasPrice, err := c.buildMetadata(transactionType, fmt.Sprintf("0x%x", blockRef), c.config.ChainTag, gas, nonce)
 	if err != nil {
 		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrGettingBlockchainMetadata, map[string]any{
 			"error": err.Error(),
@@ -187,7 +188,14 @@ func (c *ConstructionService) ConstructionMetadata(
 	}
 
 	// Calculate fee and build response
-	fee := new(big.Int).Mul(big.NewInt(int64(gas)), gasPrice)
+	if gas > math.MaxInt64 {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": "Gas is too large",
+		})
+	}
+	safeGas := int64(gas)
+	fee := new(big.Int).Mul(big.NewInt(safeGas), gasPrice)
+
 	return &types.ConstructionMetadataResponse{
 		Metadata: metadata,
 		SuggestedFee: []*types.Amount{
@@ -347,7 +355,14 @@ func (c *ConstructionService) ConstructionParse(
 	}
 
 	// Calculate fee amount
-	feeAmount := new(big.Int).Mul(big.NewInt(int64(meshTx.Gas())), gasPrice)
+	gas := meshTx.Gas()
+	if gas > math.MaxInt64 {
+		return nil, meshcommon.GetErrorWithMetadata(meshcommon.ErrInternalServerError, map[string]any{
+			"error": "Gas is too large",
+		})
+	}
+	safeGas := int64(gas)
+	feeAmount := new(big.Int).Mul(big.NewInt(safeGas), gasPrice)
 
 	// Add fee operation
 	delegatorAddr := thor.BytesToAddress(meshTx.Delegator)
@@ -537,7 +552,7 @@ func (c *ConstructionService) calculateGas(options map[string]any) (uint64, erro
 }
 
 // buildMetadata builds metadata based on transaction type
-func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildMetadata(transactionType, blockRef string, chainTag byte, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	if transactionType == meshcommon.TransactionTypeLegacy {
 		return c.buildLegacyMetadata(blockRef, chainTag, gas, nonce)
 	}
@@ -545,7 +560,7 @@ func (c *ConstructionService) buildMetadata(transactionType, blockRef string, ch
 }
 
 // buildLegacyMetadata builds metadata for legacy transactions
-func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag byte, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	// Generate random gasPriceCoef (0-255)
 	randomBytes := make([]byte, 1)
 	if _, err := rand.Read(randomBytes); err != nil {
@@ -566,7 +581,7 @@ func (c *ConstructionService) buildLegacyMetadata(blockRef string, chainTag, gas
 }
 
 // buildDynamicMetadata builds metadata for dynamic fee transactions
-func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag, gas uint64, nonce string) (map[string]any, *big.Int, error) {
+func (c *ConstructionService) buildDynamicMetadata(blockRef string, chainTag byte, gas uint64, nonce string) (map[string]any, *big.Int, error) {
 	// Get dynamic gas price from network
 	dynamicGasPrice, err := c.vechainClient.GetDynamicGasPrice()
 	if err != nil {

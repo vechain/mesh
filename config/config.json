@@ -9,6 +9,6 @@
   "serviceName": "VeChain Mesh API",
   "expiration": 180,
   "baseGasPrice":"10000000000000",
-  "chainTag":0,
+  "chainTag":39,
   "initialBaseFee":"10000000000000"
 }

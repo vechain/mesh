@@ -124,3 +124,24 @@ jobs:
 
       - name: Run mesh-cli ${{ matrix.validation }} validation on ${{ matrix.env }}
         run: make mesh-cli-check-${{ matrix.validation }} ENV=${{ matrix.env }}
+
+  security-scan:
+    name: Security Scan (gosec)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Run Gosec
+        uses: securego/gosec@v2.22.10
+        with:
+          args: ./...

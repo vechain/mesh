@@ -81,7 +81,7 @@ func testOfflineTransactionFlow(t *testing.T, client *HTTPClient, networkIdentif
 	t.Log("Step 2: Testing /construction/payloads with offline metadata")
 	offlineMetadata := map[string]any{
 		"blockRef":        "0x0000000000000000", // Mock block ref
-		"chainTag":        float64(0xf6),        // Chain tag for the network  (solo)
+		"chainTag":        byte(0xf6),           // Chain tag for the network (solo)
 		"gas":             float64(21000),       // Standard transfer gas
 		"nonce":           "0x12345678",         // Mock nonce
 		"transactionType": meshcommon.TransactionTypeLegacy,

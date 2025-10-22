@@ -77,6 +77,11 @@ func testTransactionFlow(t *testing.T, client *HTTPClient, networkIdentifier *ty
 		t.Fatalf("Metadata validation failed: %v", err)
 	}
 
+	// solo chain tag is 0xf6
+	if metadataResp.Metadata["chainTag"] != float64(0xf6) {
+		t.Fatalf("chainTag in metadata response is not 0xf6, got %v", metadataResp.Metadata["chainTag"])
+	}
+
 	// Construction Payloads
 	t.Logf("Testing /construction/payloads for %s transaction", transactionType)
 	payloadsResp, err := testConstructionPayloads(client, networkIdentifier, metadataResp, config, transactionType)

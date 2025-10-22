@@ -138,6 +138,7 @@ func TestCreateTransactionBuilder(t *testing.T) {
 func TestBuildTransactionFromRequest(t *testing.T) {
 	config := createTestConfig()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		Operations: []*types.Operation{
 			{
@@ -175,6 +176,7 @@ func TestBuildTransactionFromRequest(t *testing.T) {
 func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 	config := createTestConfig()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	request := types.ConstructionPayloadsRequest{
 		Operations: []*types.Operation{
 			{
@@ -230,6 +232,7 @@ func TestBuildTransactionFromRequest_WithFeeDelegation(t *testing.T) {
 func TestBuildTransactionFromRequest_ValidationErrors(t *testing.T) {
 	config := createTestConfig()
 
+	// regarding chainTag, it is deserialized as float64 by encoding/json
 	tests := []struct {
 		name     string
 		metadata map[string]any

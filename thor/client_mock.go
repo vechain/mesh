@@ -56,6 +56,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 					hash, _ := thor.ParseBytes32("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
 					return hash
 				}(),
+				// #nosec G115
 				Timestamp: uint64(time.Now().Unix()),
 				GasLimit:  10000000,
 				GasUsed:   5000000,
@@ -120,6 +121,7 @@ func NewMockVeChainClient() *MockVeChainClient {
 					hash, _ := thor.ParseBytes32("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
 					return hash
 				}(),
+				// #nosec G115
 				Timestamp: uint64(time.Now().Unix()),
 				GasLimit:  10000000,
 				GasUsed:   5000000,
@@ -240,7 +242,8 @@ func NewMockVeChainClient() *MockVeChainClient {
 					hash, _ := thor.ParseBytes32("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
 					return hash
 				}(),
-				BlockNumber:    100,
+				BlockNumber: 100,
+				// #nosec G115
 				BlockTimestamp: uint64(time.Now().Unix()),
 			},
 		},

@@ -148,8 +148,8 @@ func TestSetDerivedFields(t *testing.T) {
 	tests := []struct {
 		name            string
 		network         string
-		chainTag        int
-		expectedTag     int
+		chainTag        byte
+		expectedTag     byte
 		expectedNetwork string
 	}{
 		{
@@ -350,9 +350,13 @@ func TestNewConfigWithMissingFile(t *testing.T) {
 }
 
 func TestNewConfigWithInvalidJSON(t *testing.T) {
-	// Create a temporary config file with invalid JSON
+	// Create a temporary config dir with invalid JSON file
 	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "config.json")
+	cfgDir := filepath.Join(tempDir, "config")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatalf("Failed to create config dir: %v", err)
+	}
+	configPath := filepath.Join(cfgDir, "config.json")
 
 	invalidJSON := `{"invalid": json}`
 	if err := os.WriteFile(configPath, []byte(invalidJSON), 0644); err != nil {
@@ -378,6 +382,35 @@ func TestNewConfigWithInvalidJSON(t *testing.T) {
 	_, err = NewConfig()
 	if err == nil {
 		t.Errorf("NewConfig() expected error for invalid JSON, got nil")
+	}
+}
+
+func TestNewConfig_ConfigDirExistsButFileMissing(t *testing.T) {
+	// Create a temporary config dir without config.json
+	tempDir := t.TempDir()
+	cfgDir := filepath.Join(tempDir, "config")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatalf("Failed to create config dir: %v", err)
+	}
+
+	// Change to temp directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("Failed to change to temp directory: %v", err)
+	}
+
+	// Expect error opening config file
+	_, err = NewConfig()
+	if err == nil {
+		t.Errorf("NewConfig() expected error when config.json is missing inside config/, got nil")
 	}
 }
 
@@ -430,6 +463,58 @@ func TestPrintConfig(t *testing.T) {
 		if !strings.Contains(output, field) {
 			t.Errorf("PrintConfig() output should contain %s, got: %s", field, output)
 		}
+	}
+}
+
+func TestNewConfig_UsesRootScopedRead(t *testing.T) {
+	// Prepare a temporary directory with a config/ subdirectory
+	tempDir := t.TempDir()
+	cfgDir := filepath.Join(tempDir, "config")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	// Minimal valid config JSON
+	jsonContent := `{
+        "meshVersion": "test",
+        "port": 8081,
+        "mode": "online",
+        "network": "test",
+        "nodeApi": "http://localhost:8669",
+        "apiVersion": "v1",
+        "nodeVersion": "v1",
+        "serviceName": "svc",
+        "baseGasPrice": "0",
+        "initialBaseFee": "0",
+        "expiration": 720
+    }`
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(jsonContent), 0o644); err != nil {
+		t.Fatalf("failed to write temp config.json: %v", err)
+	}
+
+	// Change to tempDir so NewConfig opens config/config.json from the secure root
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("Failed to change to original directory: %v", err)
+		}
+	}()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("failed to chdir to temp dir: %v", err)
+	}
+
+	cfg, err := NewConfig()
+	if err != nil {
+		t.Fatalf("NewConfig() failed: %v", err)
+	}
+	if cfg.Port != 8081 {
+		t.Errorf("expected port 8081, got %d", cfg.Port)
+	}
+	if cfg.NetworkIdentifier == nil {
+		t.Errorf("expected NetworkIdentifier to be set")
 	}
 }
 

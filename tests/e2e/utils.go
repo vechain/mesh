@@ -20,20 +20,6 @@ import (
 	"github.com/vechain/thor/v2/abi"
 )
 
-// Expected metadata fields based on the actual implementation
-type ExpectedMetadata struct {
-	TransactionType string
-	BlockRef        string
-	ChainTag        int64
-	Gas             int64
-	Nonce           string
-	// Legacy specific fields
-	GasPriceCoef *int64
-	// Dynamic specific fields
-	MaxFeePerGas         *string
-	MaxPriorityFeePerGas *string
-}
-
 // HTTPClient wraps http.Client with test configuration
 type HTTPClient struct {
 	client  *http.Client
@@ -330,8 +316,10 @@ func ValidateMetadataFields(metadata map[string]any) error {
 		}
 	}
 
-	if chainTag, ok := metadata["chainTag"].(float64); !ok || chainTag <= 0 {
-		return fmt.Errorf("chainTag not found or invalid in metadata")
+	// encoding/json deserializes byte as float64
+	chainTagFloat, ok := metadata["chainTag"].(float64)
+	if !ok || chainTagFloat < 0 || chainTagFloat > 255 {
+		return fmt.Errorf("chainTag must be integer in [0,255]")
 	}
 
 	if gas, ok := metadata["gas"].(float64); !ok || gas <= 0 {
