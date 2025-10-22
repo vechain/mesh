@@ -2,15 +2,19 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"math/big"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	meshcommon "github.com/vechain/mesh/common"
+	meshtx "github.com/vechain/mesh/common/tx"
 	meshconfig "github.com/vechain/mesh/config"
 	meshtests "github.com/vechain/mesh/tests"
 	meshthor "github.com/vechain/mesh/thor"
+	"github.com/vechain/thor/v2/thor"
+	thortx "github.com/vechain/thor/v2/tx"
 )
 
 func createMockConstructionService() *ConstructionService {
@@ -392,6 +396,45 @@ func TestConstructionService_ConstructionMetadata_Dynamic_BaseFeeZero(t *testing
 		if n, ok := v.(int); !ok || n != 0 {
 			t.Errorf("expected maxPriorityFeePerGas=0, got %v", v)
 		}
+	}
+}
+
+func TestConstructionService_ConstructionParse_GasOverflow(t *testing.T) {
+	service := createMockConstructionService()
+
+	// Build a Thor transaction with gas > math.MaxInt64
+	b := thortx.NewBuilder(thortx.TypeLegacy)
+	b.ChainTag(0x27)
+	b.BlockRef(thortx.BlockRef(make([]byte, 8)))
+	b.Expiration(720)
+	// Set gas to a very large value that exceeds int64 when read back as uint64
+	b.Gas(^uint64(0))
+	to, _ := thor.ParseAddress(meshtests.TestAddress1)
+	b.Clause(thortx.NewClause(&to))
+	tx := b.Build()
+
+	originAddr, _ := thor.ParseAddress(meshtests.FirstSoloAddress)
+	meshBytes, err := service.encoder.EncodeTransaction(&meshtx.MeshTransaction{
+		Transaction: tx,
+		Origin:      originAddr.Bytes(),
+		Delegator:   nil,
+	})
+	if err != nil {
+		t.Fatalf("failed to encode mesh tx: %v", err)
+	}
+
+	req := &types.ConstructionParseRequest{
+		NetworkIdentifier: &types.NetworkIdentifier{Blockchain: meshcommon.BlockchainName, Network: meshcommon.TestNetwork},
+		Signed:            false,
+		Transaction:       "0x" + hex.EncodeToString(meshBytes),
+	}
+
+	_, rerr := service.ConstructionParse(context.Background(), req)
+	if rerr == nil {
+		t.Fatalf("expected error due to gas overflow, got nil")
+	}
+	if rerr.Code != int32(meshcommon.ErrInternalServerError) {
+		t.Errorf("error code = %d, want %d", rerr.Code, meshcommon.ErrInternalServerError)
 	}
 }
 
