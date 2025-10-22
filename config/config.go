@@ -3,9 +3,9 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -32,8 +32,27 @@ type Config struct {
 // NewConfig creates a new configuration by loading from JSON and environment variables
 func NewConfig() (*Config, error) {
 	// Load base config from JSON file
-	configPath := filepath.Join("config", "config.json")
-	configData, err := os.ReadFile(configPath)
+	rootDir, err := os.OpenRoot("config")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open config root: %v", err)
+	}
+	defer func() {
+		if err := rootDir.Close(); err != nil {
+			fmt.Printf("failed to close config root: %v", err)
+		}
+	}()
+
+	f, err := rootDir.Open("config.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open config file: %v", err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Printf("failed to close config file: %v", err)
+		}
+	}()
+
+	configData, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %v", err)
 	}

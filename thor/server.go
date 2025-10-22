@@ -75,6 +75,7 @@ func (ts *Server) AttachToPublicNetworkAndStart() error {
 	}
 
 	// Create the command
+	// #nosec G204 - args are constructed from controlled configuration and constants
 	ts.process = exec.CommandContext(ts.ctx, ts.thorPath, args...)
 
 	// Set up process attributes
@@ -130,6 +131,7 @@ func (ts *Server) StartSoloNode() error {
 	}
 
 	// Create the command
+	// #nosec G204 - args are constructed from controlled configuration and constants
 	ts.process = exec.CommandContext(ts.ctx, ts.thorPath, args...)
 
 	// Set up process attributes
