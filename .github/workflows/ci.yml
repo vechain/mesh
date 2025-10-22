@@ -143,3 +143,5 @@ jobs:
 
       - name: Run Gosec
         uses: securego/gosec@v2.22.10
+        with:
+          args: ./...

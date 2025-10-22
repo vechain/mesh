@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 
@@ -115,10 +116,7 @@ func TestNetworkService_NetworkStatus_ValidRequest(t *testing.T) {
 		t.Fatalf("NetworkStatus() error = %v", err)
 	}
 
-	if response == nil {
-		t.Error("NetworkStatus() returned nil response")
-	}
-	if response.SyncStatus == nil || response.SyncStatus.Synced == nil || !*response.SyncStatus.Synced {
+	if response == nil || response.SyncStatus == nil || response.SyncStatus.Synced == nil || !*response.SyncStatus.Synced {
 		t.Errorf("NetworkStatus() expected synced=true, got %+v", response.SyncStatus)
 	}
 	if response.CurrentBlockTimestamp <= 0 {
@@ -131,7 +129,7 @@ func TestNetworkService_NetworkStatus_TimestampOverflow(t *testing.T) {
 	mockClient := meshthor.NewMockVeChainClient()
 	// Force best block timestamp such that timestamp*1000 > MaxInt64
 	if mockClient.MockBlock != nil && mockClient.MockBlock.JSONBlockSummary != nil {
-		mockClient.MockBlock.JSONBlockSummary.Timestamp = uint64(math.MaxInt64/1000 + 1)
+		mockClient.MockBlock.Timestamp = uint64(math.MaxInt64/1000 + 1)
 	}
 	service := NewNetworkService(mockClient, config)
 
@@ -146,6 +144,24 @@ func TestNetworkService_NetworkStatus_TimestampOverflow(t *testing.T) {
 	_, err := service.NetworkStatus(ctx, request)
 	if err == nil {
 		t.Fatalf("NetworkStatus() expected error for timestamp overflow")
+	}
+}
+
+func TestNetworkService_NetworkStatus_ClientErrors(t *testing.T) {
+	config := &meshconfig.Config{}
+	mockClient := meshthor.NewMockVeChainClient()
+	service := NewNetworkService(mockClient, config)
+
+	mockClient.SetMockBlockError(fmt.Errorf("boom"))
+	req := &types.NetworkRequest{NetworkIdentifier: &types.NetworkIdentifier{Blockchain: meshcommon.BlockchainName, Network: meshcommon.TestNetwork}}
+	if _, err := service.NetworkStatus(context.Background(), req); err == nil {
+		t.Errorf("expected error on best block failure")
+	}
+
+	mockClient.SetMockBlockError(nil)
+	mockClient.SetMockError(fmt.Errorf("genesis boom"))
+	if _, err := service.NetworkStatus(context.Background(), req); err == nil {
+		t.Errorf("expected error on genesis block failure")
 	}
 }
 
