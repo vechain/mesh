@@ -1,4 +1,4 @@
-//go:generate sh -c "docker run --rm -v $(pwd):/sources ethereum/solc:0.8.20 --evm-version paris --overwrite --optimize --optimize-runs 200 -o /sources/compiled --abi --bin /sources/IVIP180.sol /sources/VIP180.sol"
+//go:generate sh -c "docker run --rm -v $(pwd):/sources ghcr.io/argotorg/solc:0.8.20 --evm-version paris --overwrite --optimize --optimize-runs 200 -o /sources/compiled --abi --bin /sources/IVIP180.sol /sources/VIP180.sol"
 
 package contracts
 
