@@ -568,3 +568,48 @@ func TestGetBaseGasPrice(t *testing.T) {
 		})
 	}
 }
+
+// TODO: Delete the test once Thor is updated again in this regard
+func TestLoadFromEnv_SoloOnDemand(t *testing.T) {
+	t.Run("sets true when SOLO_ONDEMAND=true", func(t *testing.T) {
+		err := os.Setenv("SOLO_ONDEMAND", "true")
+		if err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		defer os.Unsetenv("SOLO_ONDEMAND")
+
+		cfg := &Config{SoloOnDemand: false}
+		cfg.loadFromEnv()
+		if !cfg.SoloOnDemand {
+			t.Errorf("SoloOnDemand = %v, want true", cfg.SoloOnDemand)
+		}
+	})
+
+	t.Run("sets false when SOLO_ONDEMAND=false", func(t *testing.T) {
+		err := os.Setenv("SOLO_ONDEMAND", "false")
+		if err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		defer os.Unsetenv("SOLO_ONDEMAND")
+
+		cfg := &Config{SoloOnDemand: true}
+		cfg.loadFromEnv()
+		if cfg.SoloOnDemand {
+			t.Errorf("SoloOnDemand = %v, want false", cfg.SoloOnDemand)
+		}
+	})
+
+	t.Run("ignores invalid values", func(t *testing.T) {
+		err := os.Setenv("SOLO_ONDEMAND", "notabool")
+		if err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		defer os.Unsetenv("SOLO_ONDEMAND")
+
+		cfg := &Config{SoloOnDemand: false}
+		cfg.loadFromEnv()
+		if cfg.SoloOnDemand {
+			t.Errorf("SoloOnDemand changed on invalid value, want unchanged false")
+		}
+	})
+}
