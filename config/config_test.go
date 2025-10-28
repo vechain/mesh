@@ -576,7 +576,12 @@ func TestLoadFromEnv_SoloOnDemand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to set env: %v", err)
 		}
-		defer os.Unsetenv("SOLO_ONDEMAND")
+		defer func() {
+			err = os.Unsetenv("SOLO_ONDEMAND")
+			if err != nil {
+				t.Fatalf("failed to unset env: %v", err)
+			}
+		}()
 
 		cfg := &Config{SoloOnDemand: false}
 		cfg.loadFromEnv()
@@ -590,7 +595,12 @@ func TestLoadFromEnv_SoloOnDemand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to set env: %v", err)
 		}
-		defer os.Unsetenv("SOLO_ONDEMAND")
+		defer func() {
+			err = os.Unsetenv("SOLO_ONDEMAND")
+			if err != nil {
+				t.Fatalf("failed to unset env: %v", err)
+			}
+		}()
 
 		cfg := &Config{SoloOnDemand: true}
 		cfg.loadFromEnv()
@@ -604,7 +614,12 @@ func TestLoadFromEnv_SoloOnDemand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to set env: %v", err)
 		}
-		defer os.Unsetenv("SOLO_ONDEMAND")
+		defer func() {
+			err = os.Unsetenv("SOLO_ONDEMAND")
+			if err != nil {
+				t.Fatalf("failed to unset env: %v", err)
+			}
+		}()
 
 		cfg := &Config{SoloOnDemand: false}
 		cfg.loadFromEnv()
