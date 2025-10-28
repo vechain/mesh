@@ -80,7 +80,8 @@ func createThorConfig(cfg *meshconfig.Config) thor.Config {
 	}
 
 	if cfg.Network == meshcommon.SoloNetwork {
-		thorConfig.OnDemand = true
+		// TODO: Put back to true once Thor is updated again in this regard
+		thorConfig.OnDemand = false
 		thorConfig.Persist = true
 		thorConfig.APICORS = "*"
 	}
