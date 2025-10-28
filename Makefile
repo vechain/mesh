@@ -108,7 +108,7 @@ test-e2e-full:
 	@echo "PHASE 1: Online Mode Tests (with Thor node)"
 	@echo "════════════════════════════════════════════════════════════════"
 	@echo "1. Starting solo mode services..."
-	@$(MAKE) docker-solo-up
+	@SOLO_ONDEMAND=true $(MAKE) docker-solo-up
 	@echo "2. Waiting for services to be ready..."
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
@@ -211,7 +211,7 @@ test-e2e-offline-full:
 _e2e-solo-wrapper:
 	@echo "Starting full $(TEST_NAME) e2e test cycle..."
 	@echo "1. Starting solo mode services..."
-	@$(MAKE) docker-solo-up
+	@SOLO_ONDEMAND=true $(MAKE) docker-solo-up
 	@echo "2. Waiting for services to be ready..."
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
@@ -300,10 +300,11 @@ docker-solo-up:
 			-e MODE=$${MODE:-online} \
 			-e NETWORK=solo \
 			-e PORT=8080 \
+			-e SOLO_ONDEMAND=$${SOLO_ONDEMAND:-false} \
 			-v mesh_thor-data:/tmp/thor_data \
 			ghcr.io/vechain/mesh:$(IMAGE_TAG); \
 	else \
-		NETWORK=solo docker compose up --build -d; \
+		SOLO_ONDEMAND=$${SOLO_ONDEMAND:-false} NETWORK=solo docker compose up --build -d; \
 	fi
 
 docker-solo-down:
