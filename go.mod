@@ -11,8 +11,8 @@ require (
 	github.com/coinbase/rosetta-sdk-go/types v1.0.0
 	github.com/ethereum/go-ethereum v1.10.21
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.4
-	github.com/vechain/thor/v2 v2.3.2-rc.1.0.20250923124135-c090c1abb138
+	github.com/stretchr/testify v1.10.0
+	github.com/vechain/thor/v2 v2.4.0
 )
 
 require (
@@ -31,6 +31,7 @@ require (
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -42,7 +43,7 @@ require (
 	github.com/qianbin/directcache v0.9.7 // indirect
 	github.com/qianbin/drlp v0.0.0-20240102101024-e0e02518b5f9 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
-	github.com/vechain/go-ecvrf v0.0.0-20220525125849-96fa0442e765 // indirect
+	github.com/vechain/go-ecvrf v0.0.0-20251023142748-481dd12dec86 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect

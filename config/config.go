@@ -27,6 +27,7 @@ type Config struct {
 	InitialBaseFee    string                   `json:"initialBaseFee"`
 	Expiration        uint32                   `json:"expiration"`
 	NetworkIdentifier *types.NetworkIdentifier `json:"-"`
+	SoloOnDemand      bool                     `json:"soloOnDemand"`
 }
 
 // NewConfig creates a new configuration by loading from JSON and environment variables
@@ -84,6 +85,13 @@ func (c *Config) loadFromEnv() {
 	if port := os.Getenv("PORT"); port != "" {
 		if p, err := strconv.Atoi(port); err == nil {
 			c.Port = p
+		}
+	}
+
+	// TODO: Delete the snippet (will always be true) once Thor is updated again in this regard
+	if soloOnDemand := os.Getenv("SOLO_ONDEMAND"); soloOnDemand != "" {
+		if soloOnDemandBool, err := strconv.ParseBool(soloOnDemand); err == nil {
+			c.SoloOnDemand = soloOnDemandBool
 		}
 	}
 }

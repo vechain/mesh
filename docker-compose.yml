@@ -15,6 +15,7 @@ services:
       - MODE=${MODE:-online}
       - NETWORK=${NETWORK:-test}
       - PORT=8080
+      - SOLO_ONDEMAND=${SOLO_ONDEMAND:-false}
     restart: unless-stopped
     volumes:
       - thor-data:/tmp/thor_data
