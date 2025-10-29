@@ -42,7 +42,10 @@ USER mesh
 # Set data directory as volume
 VOLUME ["/data"]
 
+# Set permissions for non-root user
+RUN chown -R 1000:1000 /app /data
+USER 1000
+
 # Default command shows help
 ENTRYPOINT ["./mesh-cli"]
 CMD ["--help"]
-
