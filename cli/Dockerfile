@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN useradd -m -s /bin/bash mesh
+
 # Create data directory for mesh-cli
 RUN mkdir -p /data
 
@@ -29,6 +32,12 @@ COPY --from=builder /app/mesh-cli .
 
 # Make it executable
 RUN chmod +x mesh-cli
+
+# Change ownership to mesh user
+RUN chown -R mesh:mesh /app
+
+# Switch to non-root user
+USER mesh
 
 # Set data directory as volume
 VOLUME ["/data"]
